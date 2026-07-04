@@ -32,27 +32,47 @@ nella pagina dell'add-on: basta premere **Aggiorna**. Niente più ricostruzioni 
 
 ---
 
-## 🏠 Renderla la schermata principale
+## 🏠 Renderla la plancia predefinita
 
-> **Nota tecnica:** Home Assistant **non** permette di impostare un add-on *ingress*
-> come dashboard predefinita tramite `configuration.yaml` (l'URL ingress non è un
-> pannello Lovelace). Di seguito i metodi che funzionano davvero.
+> **Nota tecnica:** Home Assistant non permette di impostare un add-on *ingress*
+> direttamente come dashboard predefinita da `configuration.yaml` (l'URL ingress non
+> è un pannello Lovelace). Il metodo qui sotto aggira il limite con una dashboard
+> "contenitore" e **funziona per tutti gli utenti**.
 
-### Su tutti i dispositivi (per utente)
-Ogni utente può aprirla all'avvio dal proprio profilo:
-**profilo utente (in basso a sinistra) → "Dashboard predefinita" → Liquid Dashboard**.
-
-### Su un tablet / pannello a muro (consigliato)
-Nel browser in modalità kiosk (es. *Fully Kiosk Browser*) imposta come **URL di avvio**:
+### 1. Trova lo *slug* dell'add-on
+Apri la Liquid Dashboard e guarda l'URL del browser:
 ```
-http://homeassistant.local:8123/hassio/ingress/liquid_dashboard
+…/hassio/ingress/XXXXXXXX
 ```
-Questo percorso con lo *slug* è stabile. L'add-on ha già una **modalità kiosk**
-integrata (barra di HA nascosta) che parte da sola.
+`XXXXXXXX` è lo slug. Per l'add-on **locale** è di solito `local_liquid_dashboard`;
+installato **da questo repo** sarà simile a `a1b2c3d4_liquid_dashboard`.
+
+### 2. Crea la dashboard contenitore
+**Impostazioni → Dashboard → Aggiungi dashboard → Nuova dashboard dall'inizio**
+(titolo es. *Casa*). Aprila → **✏️ Modifica** → menù ⋮ → **Modifica in YAML** e incolla
+(sostituendo lo slug del punto 1):
+```yaml
+title: Casa
+views:
+  - type: panel
+    title: Casa
+    cards:
+      - type: iframe
+        url: /hassio/ingress/local_liquid_dashboard
+        aspect_ratio: 100%
+```
+
+### 3. Impostala come predefinita
+**Profilo utente** (in basso a sinistra) → **Dashboard predefinita → Casa**.
+Ogni utente lo fa dal proprio profilo → all'avvio si apre la Liquid Dashboard a tutto schermo.
+
+### Alternativa: tablet / pannello a muro (più pulito)
+Niente iframe: nel browser kiosk (es. *Fully Kiosk Browser*) imposta come **URL di avvio**
+`http://homeassistant.local:8123/hassio/ingress/local_liquid_dashboard`.
+L'add-on ha già la **modalità kiosk** integrata (barra di HA nascosta).
 
 ### Sul telefono
-Apri quell'URL nel browser e usa **"Aggiungi a schermata Home"**: si apre come app a
-tutto schermo.
+Apri quell'URL nel browser e usa **"Aggiungi a schermata Home"**: si apre come app a tutto schermo.
 
 ---
 
