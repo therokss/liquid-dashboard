@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.27.0] — 2026-07-04
+### Modificato
+- **Tema "Auto"** ora segue il tema chiaro/scuro del dispositivo (`prefers-color-scheme`), non più sempre scuro.
+- La sezione **"Plancia a schermo intero"** mostra il tasto *Crea dashboard* solo se la plancia
+  non esiste; se è già configurata mostra lo stato, e ricompare se un giorno manca.
+
 ## [1.26.0] — 2026-07-04
 ### Aggiunto
 - **Auto‑retry di connessione**: al primo avvio (es. mentre Home Assistant si sta

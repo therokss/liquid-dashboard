@@ -24,8 +24,17 @@ function ThemeApplier() {
     root.style.setProperty('--glass-intensity', String(theme.glassIntensity))
     root.style.setProperty('--accent-hue', String(theme.accentHue))
 
-    // Il tema Liquid Glass è dark-first: 'auto' e 'dark' → scuro
-    root.setAttribute('data-theme', theme.mode === 'light' ? 'light' : 'dark')
+    // 'auto' segue il tema chiaro/scuro del dispositivo; 'light'/'dark' forzati
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const apply = () => {
+      const dark = theme.mode === 'dark' || (theme.mode === 'auto' && mq.matches)
+      root.setAttribute('data-theme', dark ? 'dark' : 'light')
+    }
+    apply()
+    if (theme.mode === 'auto') {
+      mq.addEventListener('change', apply)
+      return () => mq.removeEventListener('change', apply)
+    }
   }, [theme])
 
   return null

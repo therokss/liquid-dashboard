@@ -248,7 +248,7 @@ function haCommandsSequential(cmds) {
       if (msg.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: SUPERVISOR_TOKEN }));
       else if (msg.type === 'auth_ok') sendNext();
       else if (msg.type === 'auth_invalid') finish(results);
-      else if (msg.type === 'result') { results.push({ success: msg.success, error: msg.error }); idx++; sendNext(); }
+      else if (msg.type === 'result') { results.push({ success: msg.success, error: msg.error, result: msg.result }); idx++; sendNext(); }
     });
     ws.on('error', () => finish(results));
     setTimeout(() => finish(results), 8000);
@@ -281,6 +281,24 @@ async function createDashboardHandler(req, res) {
 }
 if (INGRESS_ENTRY) app.post(`${INGRESS_ENTRY}/api/create-dashboard`, createDashboardHandler);
 app.post('/api/create-dashboard', createDashboardHandler);
+
+// Verifica se la plancia esiste già (pannello hass_ingress "liquid" o dashboard "liquid-dashboard")
+async function dashboardStatusHandler(req, res) {
+  try {
+    const results = await haCommandsSequential([{ type: 'get_panels' }]);
+    const panels = (results[0] && results[0].result) || {};
+    let exists = false;
+    for (const key of Object.keys(panels)) {
+      const p = panels[key] || {};
+      if (key === 'liquid' || key === 'liquid-dashboard' || p.url_path === 'liquid' || p.url_path === 'liquid-dashboard') { exists = true; break; }
+    }
+    res.json({ exists });
+  } catch (err) {
+    res.json({ exists: false });
+  }
+}
+if (INGRESS_ENTRY) app.get(`${INGRESS_ENTRY}/api/dashboard-status`, dashboardStatusHandler);
+app.get('/api/dashboard-status', dashboardStatusHandler);
 
 app.use(INGRESS_ENTRY, express.static(WWW, {
   setHeaders: (res, filePath) => {
@@ -376,7 +394,7 @@ function proxyToHA(browserWs) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Liquid Dashboard] v1.26.0 — porta ${PORT}`);
+  console.log(`[Liquid Dashboard] v1.27.0 — porta ${PORT}`);
   console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
   console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
   if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);

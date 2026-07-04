@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sun, Moon, Sparkles, Upload, Trash2, RefreshCw, Server, ChevronRight } from 'lucide-react'
 import { useStore } from '../store'
@@ -294,7 +294,7 @@ export function SettingsPage() {
         {/* Info */}
         <Section title="Informazioni">
           <SettingRow label="Versione">
-            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.26.0</span>
+            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.27.0</span>
           </SettingRow>
           <SettingRow label="Progetto">
             <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Liquid Dashboard</span>
@@ -371,48 +371,64 @@ export function SettingsPage() {
   )
 }
 
+function apiBaseUrl(): string {
+  const { origin, pathname } = window.location
+  const base = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname.replace(/\/[^/]*$/, '')
+  return origin + base
+}
+
 function FullscreenDashboardSetup() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle')
   const [msg, setMsg] = useState('')
+  const [exists, setExists] = useState<boolean | null>(null)
+
+  // All'avvio verifica se la plancia esiste già: il tasto compare solo se manca
+  useEffect(() => {
+    fetch(apiBaseUrl() + '/api/dashboard-status')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setExists(d ? Boolean(d.exists) : null))
+      .catch(() => setExists(null))
+  }, [])
 
   const create = async () => {
     setStatus('loading')
     try {
-      const { origin, pathname } = window.location
-      const base = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname.replace(/\/[^/]*$/, '')
-      const r = await fetch(origin + base + '/api/create-dashboard', { method: 'POST' })
+      const r = await fetch(apiBaseUrl() + '/api/create-dashboard', { method: 'POST' })
       const d = await r.json().catch(() => null)
-      if (r.ok && d?.ok) { setStatus('ok'); setMsg('Dashboard "Casa" creata.') }
+      if (r.ok && d?.ok) { setStatus('ok'); setMsg('Dashboard "Casa" creata.'); setExists(true) }
       else { setStatus('err'); setMsg(d?.error || 'Errore nella creazione') }
     } catch {
       setStatus('err'); setMsg('Server non raggiungibile')
     }
   }
 
+  const configured = exists === true
+
   return (
     <div>
       <div className="text-caption" style={{ marginBottom: 10 }}>Plancia a schermo intero</div>
       <div className="glass-panel" style={{ padding: 'var(--space-md) var(--space-lg)' }}>
-        <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>
-          Crea automaticamente una dashboard <b>Casa</b> che apre la Liquid Dashboard a tutto schermo.
-          Poi impostala come predefinita dal tuo profilo per aprirla all'avvio.
-        </p>
-        <button
-          onClick={create}
-          disabled={status === 'loading'}
-          className="glass-btn glass-btn-accent"
-          style={{ width: '100%', opacity: status === 'loading' ? 0.7 : 1 }}
-        >
-          {status === 'loading' ? 'Creazione…' : status === 'ok' ? 'Ricrea dashboard «Casa»' : 'Crea dashboard «Casa»'}
-        </button>
-        {status === 'ok' && (
-          <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, background: 'var(--accent-glow)', border: '1px solid var(--glass-border)', borderRadius: 10, padding: '10px 12px' }}>
-            ✓ {msg}<br />
-            Ora vai in <b>Profilo</b> (in basso a sinistra) → <b>Dashboard predefinita</b> → <b>Casa</b>.
+        {configured ? (
+          <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>✓</span>
+            <span>Plancia <b>Casa</b> configurata. {status === 'ok' ? <>Impostala dal tuo <b>Profilo → Dashboard predefinita → Casa</b>.</> : 'Si apre a tutto schermo dal pannello «Casa».'}</span>
           </div>
-        )}
-        {status === 'err' && (
-          <div style={{ marginTop: 12, fontSize: 13, color: '#ff8f8f' }}>{msg}</div>
+        ) : (
+          <>
+            <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>
+              La plancia a schermo intero non risulta configurata. Creane una che apre la Liquid Dashboard a tutto schermo,
+              poi impostala come predefinita dal tuo profilo.
+            </p>
+            <button
+              onClick={create}
+              disabled={status === 'loading'}
+              className="glass-btn glass-btn-accent"
+              style={{ width: '100%', opacity: status === 'loading' ? 0.7 : 1 }}
+            >
+              {status === 'loading' ? 'Creazione…' : 'Crea dashboard «Casa»'}
+            </button>
+            {status === 'err' && <div style={{ marginTop: 12, fontSize: 13, color: '#ff8f8f' }}>{msg}</div>}
+          </>
         )}
       </div>
     </div>
