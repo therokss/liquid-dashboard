@@ -219,6 +219,69 @@ async function userHandler(req, res) {
 if (INGRESS_ENTRY) app.get(`${INGRESS_ENTRY}/api/user`, userHandler);
 app.get('/api/user', userHandler);
 
+// --- Crea automaticamente una dashboard "contenitore" che apre la Liquid Dashboard ---
+// Legge lo slug reale dell'add-on dal Supervisor e crea una dashboard Lovelace
+// (view panel + card iframe verso l'ingress). Serve un solo click dell'admin.
+function getAddonSlug() {
+  return new Promise((resolve) => {
+    const req = http.request('http://supervisor/addons/self/info',
+      { headers: { Authorization: `Bearer ${SUPERVISOR_TOKEN}` } },
+      (up) => { let b = ''; up.on('data', (c) => (b += c)); up.on('end', () => { try { resolve(JSON.parse(b)?.data?.slug || ''); } catch { resolve(''); } }); });
+    req.on('error', () => resolve(''));
+    req.setTimeout(4000, () => { req.destroy(); resolve(''); });
+    req.end();
+  });
+}
+
+function haCommandsSequential(cmds) {
+  return new Promise((resolve) => {
+    const results = [];
+    let idx = 0, nextId = 10, done = false;
+    const ws = new WebSocket(HA_WS_URL);
+    const finish = (v) => { if (!done) { done = true; try { ws.close(); } catch {} resolve(v); } };
+    const sendNext = () => {
+      if (idx >= cmds.length) { finish(results); return; }
+      ws.send(JSON.stringify({ id: nextId++, ...cmds[idx] }));
+    };
+    ws.on('message', (data) => {
+      let msg; try { msg = JSON.parse(data.toString()); } catch { return; }
+      if (msg.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: SUPERVISOR_TOKEN }));
+      else if (msg.type === 'auth_ok') sendNext();
+      else if (msg.type === 'auth_invalid') finish(results);
+      else if (msg.type === 'result') { results.push({ success: msg.success, error: msg.error }); idx++; sendNext(); }
+    });
+    ws.on('error', () => finish(results));
+    setTimeout(() => finish(results), 8000);
+  });
+}
+
+async function createDashboardHandler(req, res) {
+  const uid = req.headers['x-remote-user-id'] || '';
+  let isAdmin = false;
+  try { if (uid && SUPERVISOR_TOKEN) { const ids = await refreshAdminIds(); isAdmin = ids.has(uid); } } catch {}
+  if (!isAdmin) { res.status(403).json({ ok: false, error: 'forbidden' }); return; }
+  try {
+    const slug = await getAddonSlug();
+    if (!slug) { res.status(500).json({ ok: false, error: 'slug non disponibile' }); return; }
+    const urlPath = 'liquid-dashboard';
+    const config = {
+      title: 'Casa',
+      views: [{ title: 'Casa', path: 'casa', type: 'panel', cards: [{ type: 'iframe', url: `/hassio/ingress/${slug}`, aspect_ratio: '100%' }] }],
+    };
+    const results = await haCommandsSequential([
+      { type: 'lovelace/dashboards/create', url_path: urlPath, mode: 'storage', title: 'Casa', icon: 'mdi:water', show_in_sidebar: true, require_admin: false },
+      { type: 'lovelace/config/save', url_path: urlPath, config },
+    ]);
+    const saved = results[results.length - 1];
+    if (saved && saved.success === false) { res.status(500).json({ ok: false, error: (saved.error && saved.error.message) || 'save fallito', slug }); return; }
+    res.json({ ok: true, url_path: urlPath, slug });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+}
+if (INGRESS_ENTRY) app.post(`${INGRESS_ENTRY}/api/create-dashboard`, createDashboardHandler);
+app.post('/api/create-dashboard', createDashboardHandler);
+
 app.use(INGRESS_ENTRY, express.static(WWW, {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) {
@@ -313,7 +376,7 @@ function proxyToHA(browserWs) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Liquid Dashboard] v1.24.0 — porta ${PORT}`);
+  console.log(`[Liquid Dashboard] v1.25.0 — porta ${PORT}`);
   console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
   console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
   if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);

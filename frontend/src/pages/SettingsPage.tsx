@@ -97,6 +97,9 @@ export function SettingsPage() {
           </div>
         )}
 
+        {/* Plancia a schermo intero — solo amministratori */}
+        {isAdmin && <FullscreenDashboardSetup />}
+
         {/* Permessi utenti — solo amministratori */}
         {isAdmin && <PermissionsPanel />}
 
@@ -291,7 +294,7 @@ export function SettingsPage() {
         {/* Info */}
         <Section title="Informazioni">
           <SettingRow label="Versione">
-            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.24.0</span>
+            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.25.0</span>
           </SettingRow>
           <SettingRow label="Progetto">
             <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Liquid Dashboard</span>
@@ -364,6 +367,54 @@ export function SettingsPage() {
       <AnimatePresence>
         {showServer && <ServerPage onBack={() => setShowServer(false)} />}
       </AnimatePresence>
+    </div>
+  )
+}
+
+function FullscreenDashboardSetup() {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle')
+  const [msg, setMsg] = useState('')
+
+  const create = async () => {
+    setStatus('loading')
+    try {
+      const { origin, pathname } = window.location
+      const base = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname.replace(/\/[^/]*$/, '')
+      const r = await fetch(origin + base + '/api/create-dashboard', { method: 'POST' })
+      const d = await r.json().catch(() => null)
+      if (r.ok && d?.ok) { setStatus('ok'); setMsg('Dashboard "Casa" creata.') }
+      else { setStatus('err'); setMsg(d?.error || 'Errore nella creazione') }
+    } catch {
+      setStatus('err'); setMsg('Server non raggiungibile')
+    }
+  }
+
+  return (
+    <div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>Plancia a schermo intero</div>
+      <div className="glass-panel" style={{ padding: 'var(--space-md) var(--space-lg)' }}>
+        <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>
+          Crea automaticamente una dashboard <b>Casa</b> che apre la Liquid Dashboard a tutto schermo.
+          Poi impostala come predefinita dal tuo profilo per aprirla all'avvio.
+        </p>
+        <button
+          onClick={create}
+          disabled={status === 'loading'}
+          className="glass-btn glass-btn-accent"
+          style={{ width: '100%', opacity: status === 'loading' ? 0.7 : 1 }}
+        >
+          {status === 'loading' ? 'Creazione…' : status === 'ok' ? 'Ricrea dashboard «Casa»' : 'Crea dashboard «Casa»'}
+        </button>
+        {status === 'ok' && (
+          <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, background: 'var(--accent-glow)', border: '1px solid var(--glass-border)', borderRadius: 10, padding: '10px 12px' }}>
+            ✓ {msg}<br />
+            Ora vai in <b>Profilo</b> (in basso a sinistra) → <b>Dashboard predefinita</b> → <b>Casa</b>.
+          </div>
+        )}
+        {status === 'err' && (
+          <div style={{ marginTop: 12, fontSize: 13, color: '#ff8f8f' }}>{msg}</div>
+        )}
+      </div>
     </div>
   )
 }
