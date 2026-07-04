@@ -1,0 +1,374 @@
+/* ─── Reset e base ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+/* ─── App background con wallpaper ─── */
+.app-root {
+  position: fixed;
+  inset: 0;
+  background-color: #051424;
+  background-image: var(--wallpaper-url);
+  background-size: cover;
+  background-position: center;
+  transition: background-image 2s ease;
+}
+
+.app-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 12% 6%, rgba(0, 219, 231, 0.12), transparent 42%),
+    radial-gradient(circle at 88% 94%, rgba(74, 142, 255, 0.14), transparent 46%),
+    var(--wallpaper-overlay);
+  transition: background 2s ease;
+}
+
+.app-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Glass card base ─── */
+.glass-card {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow), var(--glass-inner-shadow);
+  overflow: hidden;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.3s ease;
+}
+
+/* Specular highlight (riflesso superiore) */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--glass-specular);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+.glass-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.glass-card:active {
+  background: var(--glass-bg-active);
+  transform: scale(0.97);
+  transition: transform 0.1s ease, background 0.1s ease;
+}
+
+/* ─── Glass panel (contenitore più grande) ─── */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.8)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.8)) saturate(var(--glass-saturation));
+  border: 1px solid var(--glass-border-dim);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow);
+}
+
+/* ─── Glass input ─── */
+.glass-input {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-text);
+  padding: 14px 16px;
+  font-size: 16px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.glass-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ─── Glass button ─── */
+.glass-btn {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-family: var(--font-text);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 14px 28px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+  letter-spacing: -0.01em;
+}
+
+.glass-btn:active {
+  transform: scale(0.96);
+  background: var(--glass-bg-active);
+}
+
+.glass-btn-accent {
+  background: var(--accent);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+.glass-btn-accent:active {
+  background: var(--accent-dim);
+}
+
+/* ─── Toggle switch ─── */
+.glass-toggle {
+  position: relative;
+  width: 51px;
+  height: 31px;
+  flex-shrink: 0;
+}
+
+.glass-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.glass-toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.glass-toggle input:checked + .glass-toggle-track {
+  background: var(--accent);
+  border-color: transparent;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.glass-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s var(--spring-stiff);
+  pointer-events: none;
+}
+
+.glass-toggle input:checked ~ .glass-toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* ─── Slider pill ─── */
+.glass-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+  cursor: pointer;
+}
+
+.glass-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s var(--spring-stiff);
+}
+
+.glass-slider::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+}
+
+/* ─── Scrollbar custom ─── */
+.glass-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.glass-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.glass-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.glass-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+/* ─── Typography ─── */
+.text-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.text-body {
+  font-family: var(--font-text);
+  color: var(--text-secondary);
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.text-caption {
+  font-family: var(--font-text);
+  color: var(--accent);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+[data-theme="light"] .text-caption {
+  color: var(--text-tertiary);
+}
+
+/* ─── Glow effect per entità attive ─── */
+.entity-glow {
+  box-shadow: var(--glass-shadow), var(--glass-inner-shadow), 0 0 24px var(--entity-color, var(--accent-glow));
+}
+
+/* ─── Layout utilities ─── */
+.flex-row { display: flex; flex-direction: row; align-items: center; }
+.flex-col { display: flex; flex-direction: column; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.gap-xs { gap: var(--space-xs); }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }
+.gap-lg { gap: var(--space-lg); }
+.flex-1 { flex: 1; }
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+
+/* ─── Page container ─── */
+.page {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-lg) var(--space-md);
+  padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom) + var(--space-md));
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+}
+
+.page::-webkit-scrollbar { display: none; }
+
+.page-header {
+  padding: var(--space-xl) var(--space-md) var(--space-md);
+  padding-top: max(var(--space-xl), env(safe-area-inset-top, 20px));
+}
+
+/* ─── Griglie fluide responsive (mai overflow orizzontale) ─── */
+/* minmax con min fisso: il numero di colonne si adatta alla larghezza e le
+   tracce non vengono mai allargate dal contenuto (fix card tagliate su mobile). */
+.grid-fluid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-sm);
+}
+.grid-fluid-lg {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-md);
+}
+.grid-fluid > *,
+.grid-fluid-lg > * { min-width: 0; }
+
+/* ─── Select a tendina in stile vetro ─── */
+.ld-select {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-family: var(--font-text);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 12px;
+  max-width: 190px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.ld-select option {
+  color: #000;
+  background: #fff;
+}
+
+/* ─── Contrasto controlli nel tema chiaro (altrimenti spariscono su card bianche) ─── */
+[data-theme="light"] .glass-toggle-track {
+  background: rgba(0, 0, 0, 0.14);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+[data-theme="light"] .glass-slider {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* ─── Desktop / tablet: centra e limita la larghezza del contenuto ─── */
+@media (min-width: 768px) {
+  .page {
+    padding-left: var(--space-xl);
+    padding-right: var(--space-xl);
+  }
+  .page > * {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

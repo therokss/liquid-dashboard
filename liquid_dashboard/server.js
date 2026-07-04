@@ -1,0 +1,320 @@
+const express = require('express');
+const path = require('path');
+const http = require('http');
+const WebSocket = require('ws');
+const fs = require('fs');
+
+const PORT = 8099;
+const WWW = path.join(__dirname, 'www');
+const INGRESS_ENTRY = process.env.INGRESS_ENTRY || '';
+const CREDS_PATH = '/data/ld_credentials.json';
+const PREFS_PATH = '/data/ld_prefs.json';
+const USER_CFG_PATH = '/data/ld_user_configs.json';
+
+// Cerca SUPERVISOR_TOKEN in env e nelle directory s6-rc (HA base image)
+function detectSupervisorToken() {
+  const fromEnv = process.env.SUPERVISOR_TOKEN || process.env.HASSIO_TOKEN || '';
+  if (fromEnv) return fromEnv;
+  const s6paths = [
+    '/var/run/s6/container_environment/SUPERVISOR_TOKEN',
+    '/run/s6/container_environment/SUPERVISOR_TOKEN',
+    '/var/run/s6/container_environment/HASSIO_TOKEN',
+  ];
+  for (const p of s6paths) {
+    try {
+      const val = fs.readFileSync(p, 'utf8').trim();
+      if (val) return val;
+    } catch {}
+  }
+  return '';
+}
+
+const SUPERVISOR_TOKEN = detectSupervisorToken();
+const HA_WS_URL =
+  process.env.HOMEASSISTANT_WEBSOCKET_API ||
+  'ws://supervisor/core/websocket';
+
+const app = express();
+app.use(express.json());
+
+function readConfig() {
+  let haOptions = {};
+  let ldCreds = {};
+  try { haOptions = JSON.parse(fs.readFileSync('/data/options.json', 'utf8')); } catch {}
+  try { ldCreds = JSON.parse(fs.readFileSync(CREDS_PATH, 'utf8')); } catch {}
+  return {
+    token: haOptions.token || ldCreds.token || '',
+    ha_url: haOptions.ha_url || ldCreds.ha_url || 'http://homeassistant.local:8123',
+    has_supervisor_token: Boolean(SUPERVISOR_TOKEN),
+  };
+}
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    ha_ws_url: HA_WS_URL,
+    has_token: Boolean(SUPERVISOR_TOKEN),
+    ingress_entry: INGRESS_ENTRY,
+    env_keys: Object.keys(process.env).filter(k =>
+      k.includes('TOKEN') || k.includes('HASSIO') || k.includes('SUPERVISOR')
+    ),
+  });
+});
+
+function addonConfigHandler(req, res) { res.json(readConfig()); }
+
+function addonConfigSaveHandler(req, res) {
+  const { token, ha_url } = req.body || {};
+  try {
+    fs.writeFileSync(CREDS_PATH, JSON.stringify({ token: token || '', ha_url: ha_url || '' }));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+}
+
+if (INGRESS_ENTRY) {
+  app.get(`${INGRESS_ENTRY}/api/addon-config`, addonConfigHandler);
+  app.post(`${INGRESS_ENTRY}/api/addon-config/save`, addonConfigSaveHandler);
+}
+app.get('/api/addon-config', addonConfigHandler);
+app.post('/api/addon-config/save', addonConfigSaveHandler);
+
+// --- Preferenze condivise (impostate dall'admin, valide per tutti gli utenti) ---
+// Salvate lato addon in /data così sono uguali per ogni utente (localStorage è per-dispositivo).
+const DEFAULT_PERMISSIONS = {
+  rooms: true, visibility: true, weather: true, energy: true,
+  waste: true, appearance: true, wallpapers: true, reset: true,
+};
+function readPrefs() {
+  try { return JSON.parse(fs.readFileSync(PREFS_PATH, 'utf8')); } catch { return {}; }
+}
+function mergedPermissions(stored) {
+  return { ...DEFAULT_PERMISSIONS, ...((stored || {}).permissions || {}) };
+}
+function prefsGetHandler(req, res) {
+  const stored = readPrefs();
+  res.json({ permissions: mergedPermissions(stored), house: stored.house || {} });
+}
+async function prefsSaveHandler(req, res) {
+  const uid = req.headers['x-remote-user-id'] || '';
+  let isAdmin = false;
+  try { if (uid && SUPERVISOR_TOKEN) { const ids = await refreshAdminIds(); isAdmin = ids.has(uid); } } catch {}
+  if (!isAdmin) { res.status(403).json({ ok: false, error: 'forbidden' }); return; }
+  const body = req.body || {};
+  const stored = readPrefs();
+  const next = { ...stored, permissions: { ...mergedPermissions(stored), ...(body.permissions || {}) } };
+  // Config "casa" condivisa (rifiuti, meteo, energia, aree): impostata dall'admin, vista da tutti
+  if (body.house) next.house = { ...(stored.house || {}), ...body.house };
+  try {
+    fs.writeFileSync(PREFS_PATH, JSON.stringify(next));
+    res.json({ ok: true, permissions: next.permissions, house: next.house || {} });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+}
+if (INGRESS_ENTRY) {
+  app.get(`${INGRESS_ENTRY}/api/prefs`, prefsGetHandler);
+  app.post(`${INGRESS_ENTRY}/api/prefs`, prefsSaveHandler);
+}
+app.get('/api/prefs', prefsGetHandler);
+app.post('/api/prefs', prefsSaveHandler);
+
+// --- Preferenze per-utente: ogni utente salva le proprie (per ID utente ingress) ---
+// Così le preferenze seguono l'utente su tutti i dispositivi invece di restare nel browser.
+function readUserConfigs() {
+  try { return JSON.parse(fs.readFileSync(USER_CFG_PATH, 'utf8')); } catch { return {}; }
+}
+function userConfigGetHandler(req, res) {
+  const uid = req.headers['x-remote-user-id'] || '';
+  if (!uid) { res.json({ config: null, user: null }); return; }
+  const all = readUserConfigs();
+  res.json({ config: all[uid] || null, user: uid });
+}
+function userConfigSaveHandler(req, res) {
+  const uid = req.headers['x-remote-user-id'] || '';
+  if (!uid) { res.status(400).json({ ok: false, error: 'no user' }); return; }
+  const cfg = (req.body || {}).config;
+  if (cfg == null || typeof cfg !== 'object' || Array.isArray(cfg)) {
+    res.status(400).json({ ok: false, error: 'bad config' }); return;
+  }
+  const all = readUserConfigs();
+  all[uid] = cfg;
+  try { fs.writeFileSync(USER_CFG_PATH, JSON.stringify(all)); res.json({ ok: true }); }
+  catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+}
+if (INGRESS_ENTRY) {
+  app.get(`${INGRESS_ENTRY}/api/user-config`, userConfigGetHandler);
+  app.post(`${INGRESS_ENTRY}/api/user-config`, userConfigSaveHandler);
+}
+app.get('/api/user-config', userConfigGetHandler);
+app.post('/api/user-config', userConfigSaveHandler);
+
+// Proxy immagini (cover media, entity_picture): il browser non può caricare gli URL
+// relativi /api/... di HA in contesto ingress → li recuperiamo lato server con il token.
+function mediaProxyHandler(req, res) {
+  const p = req.query.url;
+  if (typeof p !== 'string' || !p.startsWith('/')) { res.status(400).end(); return; }
+  if (!SUPERVISOR_TOKEN) { res.status(503).end(); return; }
+  const upstream = http.request(
+    'http://supervisor/core' + p,
+    { method: 'GET', headers: { Authorization: `Bearer ${SUPERVISOR_TOKEN}` } },
+    (up) => {
+      res.status(up.statusCode || 502);
+      if (up.headers['content-type']) res.setHeader('Content-Type', up.headers['content-type']);
+      res.setHeader('Cache-Control', 'public, max-age=120');
+      up.pipe(res);
+    }
+  );
+  upstream.on('error', () => { if (!res.headersSent) res.status(502).end(); });
+  upstream.end();
+}
+if (INGRESS_ENTRY) app.get(`${INGRESS_ENTRY}/media-proxy`, mediaProxyHandler);
+app.get('/media-proxy', mediaProxyHandler);
+
+// Elenco utenti admin da HA (per sapere se chi guarda è amministratore).
+// In ingress HA passa gli header X-Remote-User-*; incrociamo l'id con config/auth/list.
+function fetchAuthUsers() {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (val) => { if (!done) { done = true; try { ws.close(); } catch {} resolve(val); } };
+    const ws = new WebSocket(HA_WS_URL);
+    ws.on('message', (data) => {
+      let msg; try { msg = JSON.parse(data.toString()); } catch { return; }
+      if (msg.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: SUPERVISOR_TOKEN }));
+      else if (msg.type === 'auth_ok') ws.send(JSON.stringify({ id: 1, type: 'config/auth/list' }));
+      else if (msg.type === 'result' && msg.id === 1) finish(msg.success ? (msg.result || []) : []);
+      else if (msg.type === 'auth_invalid') finish([]);
+    });
+    ws.on('error', () => finish([]));
+    setTimeout(() => finish([]), 5000);
+  });
+}
+
+let adminCache = { at: 0, ids: new Set() };
+async function refreshAdminIds() {
+  if (Date.now() - adminCache.at < 300000) return adminCache.ids;
+  const users = await fetchAuthUsers();
+  const ids = new Set(
+    users
+      .filter((u) => u.is_owner || (u.group_ids || []).includes('system-admin'))
+      .map((u) => u.id)
+  );
+  adminCache = { at: Date.now(), ids };
+  return ids;
+}
+
+async function userHandler(req, res) {
+  const id = req.headers['x-remote-user-id'] || '';
+  const name = req.headers['x-remote-user-display-name'] || req.headers['x-remote-user-name'] || '';
+  let isAdmin = false;
+  try {
+    if (id && SUPERVISOR_TOKEN) {
+      const ids = await refreshAdminIds();
+      isAdmin = ids.has(id);
+    }
+  } catch {}
+  res.json({ id, name, is_admin: isAdmin });
+}
+if (INGRESS_ENTRY) app.get(`${INGRESS_ENTRY}/api/user`, userHandler);
+app.get('/api/user', userHandler);
+
+app.use(INGRESS_ENTRY, express.static(WWW, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
+app.get(`${INGRESS_ENTRY}/*`, (req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(WWW, 'index.html'));
+});
+app.get('*', (req, res) => {
+  res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(WWW, 'index.html'));
+});
+
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ noServer: true });
+
+server.on('upgrade', (req, socket, head) => {
+  const url = req.url || '';
+  const isWs =
+    url.endsWith('/api/websocket') || url.includes('/api/websocket?') ||
+    url.endsWith('/ha-ws') || url.includes('/ha-ws?');
+  if (isWs) {
+    console.log('[LD] Upgrade WS:', url);
+    wss.handleUpgrade(req, socket, head, (ws) => proxyToHA(ws));
+  } else {
+    console.log('[LD] Upgrade rifiutato:', url);
+    socket.destroy();
+  }
+});
+
+function proxyToHA(browserWs) {
+  if (!SUPERVISOR_TOKEN) {
+    console.error('[LD] SUPERVISOR_TOKEN non disponibile');
+    browserWs.close(1008, 'No supervisor token');
+    return;
+  }
+
+  const haWs = new WebSocket(HA_WS_URL);
+
+  haWs.on('open', () => {
+    console.log('[LD] Proxy connesso a HA');
+  });
+
+  // Da HA verso il browser. Il proxy si autentica DA SOLO con SUPERVISOR_TOKEN
+  // appena HA invia auth_required. Inoltra tutto (incluso auth_ok) al browser,
+  // così la libreria completa il suo handshake standard.
+  haWs.on('message', (data) => {
+    const str = data.toString();
+    let msg = null;
+    try { msg = JSON.parse(str); } catch {}
+
+    if (msg && msg.type === 'auth_required') {
+      haWs.send(JSON.stringify({ type: 'auth', access_token: SUPERVISOR_TOKEN }));
+    } else if (msg && msg.type === 'auth_ok') {
+      console.log('[LD] HA autenticato (auth_ok) →', msg.ha_version);
+    } else if (msg && msg.type === 'auth_invalid') {
+      console.error('[LD] HA auth_invalid:', msg.message);
+    }
+
+    if (browserWs.readyState === WebSocket.OPEN) browserWs.send(str);
+  });
+
+  // Dal browser verso HA. Scarta l'auth del browser (token dummy): l'autenticazione
+  // la fa il proxy con il SUPERVISOR_TOKEN reale.
+  browserWs.on('message', (data) => {
+    let msg = null;
+    try { msg = JSON.parse(data.toString()); } catch { return; }
+    if (msg.type === 'auth') return;
+    if (haWs.readyState === WebSocket.OPEN) haWs.send(data.toString());
+  });
+
+  browserWs.on('close', (code) => {
+    console.log('[LD] Browser WS chiuso:', code);
+    if (haWs.readyState === WebSocket.OPEN || haWs.readyState === WebSocket.CONNECTING)
+      haWs.close();
+  });
+
+  haWs.on('close', (code) => {
+    console.log('[LD] HA WS chiuso:', code);
+    if (browserWs.readyState === WebSocket.OPEN) browserWs.close();
+  });
+
+  haWs.on('error', (err) => {
+    console.error('[LD] HA WS error:', err.message);
+    if (browserWs.readyState === WebSocket.OPEN) browserWs.close();
+  });
+}
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Liquid Dashboard] v1.24.0 — porta ${PORT}`);
+  console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
+  console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
+  if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);
+});

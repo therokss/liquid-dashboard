@@ -1,0 +1,24 @@
+name: "Liquid Dashboard"
+description: "Dashboard iOS 26 Liquid Glass per Home Assistant"
+version: "1.24.0"
+slug: "liquid_dashboard"
+init: false
+homeassistant_api: true
+ingress: true
+ingress_port: 8099
+ingress_stream: true
+panel_icon: "mdi:water-outline"
+panel_title: "Liquid Dashboard"
+panel_admin: false
+options:
+  ha_url: ""
+  token: ""
+schema:
+  ha_url: str?
+  token: str?
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
