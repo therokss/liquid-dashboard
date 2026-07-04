@@ -117,6 +117,9 @@ export function SettingsPage() {
           </Section>
         )}
 
+        {/* Stanze visibili — config casa, solo admin */}
+        {isAdmin && <AreaVisibilitySettings />}
+
         {/* Visibilità dispositivi */}
         {can('visibility') && (
           <div>
@@ -294,7 +297,7 @@ export function SettingsPage() {
         {/* Info */}
         <Section title="Informazioni">
           <SettingRow label="Versione">
-            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.27.0</span>
+            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.28.0</span>
           </SettingRow>
           <SettingRow label="Progetto">
             <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Liquid Dashboard</span>
@@ -375,6 +378,43 @@ function apiBaseUrl(): string {
   const { origin, pathname } = window.location
   const base = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname.replace(/\/[^/]*$/, '')
   return origin + base
+}
+
+function AreaVisibilitySettings() {
+  const areas = useStore((s) => s.areas)
+  const enabledAreas = useStore((s) => s.enabledAreas)
+  const setEnabledAreas = useStore((s) => s.setEnabledAreas)
+
+  if (areas.length === 0) return null
+  const allIds = areas.map((a) => a.area_id)
+  const shown = (id: string) => enabledAreas.length === 0 || enabledAreas.includes(id)
+
+  const toggle = (id: string) => {
+    let next: string[]
+    if (enabledAreas.length === 0) next = allIds.filter((x) => x !== id) // tutte visibili → nascondi questa
+    else if (enabledAreas.includes(id)) next = enabledAreas.filter((x) => x !== id)
+    else next = [...enabledAreas, id]
+    if (allIds.every((x) => next.includes(x))) next = [] // tutte visibili → stato pulito
+    setEnabledAreas(next)
+  }
+
+  const sorted = [...areas].sort((a, b) => a.name.localeCompare(b.name))
+  return (
+    <div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>Stanze visibili</div>
+      <div className="glass-panel" style={{ padding: 'var(--space-md) var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', paddingBottom: 4, lineHeight: 1.5 }}>
+          Spegni le stanze che non vuoi mostrare nella dashboard.
+        </div>
+        {sorted.map((a) => (
+          <div key={a.area_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--glass-border-dim)' }}>
+            <span style={{ fontSize: 15, color: 'var(--text-primary)' }}>{a.name}</span>
+            <Toggle checked={shown(a.area_id)} onChange={() => toggle(a.area_id)} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function FullscreenDashboardSetup() {

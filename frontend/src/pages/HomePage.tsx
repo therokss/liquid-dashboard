@@ -76,10 +76,10 @@ export function HomePage() {
       g.count += 1
     }
     return areas
-      .filter((a) => agg[a.area_id]?.count)
+      .filter((a) => agg[a.area_id]?.count && (enabledAreas.length === 0 || enabledAreas.includes(a.area_id)))
       .map((a) => ({ id: a.area_id, name: a.name, avg: agg[a.area_id].sum / agg[a.area_id].count, sensorId: agg[a.area_id].sensorId }))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [entities, entityAreas, hiddenEntities, userHidden, areas])
+  }, [entities, entityAreas, hiddenEntities, userHidden, areas, enabledAreas])
 
   // Media player attivo
   const featuredMedia = useMemo(() => {

@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.28.0] — 2026-07-04
+### Aggiunto
+- **Card Philips Hue Play (HDMI Sync Box)** nella stanza del dispositivo: accensione, 4 sorgenti
+  HDMI, toggle sincronizzazione luci e luminosità (mostrata solo se disponibile).
+- **Stanze visibili**: in Impostazioni (admin) puoi nascondere singole stanze dalla dashboard.
+
 ## [1.27.0] — 2026-07-04
 ### Modificato
 - **Tema "Auto"** ora segue il tema chiaro/scuro del dispositivo (`prefers-color-scheme`), non più sempre scuro.

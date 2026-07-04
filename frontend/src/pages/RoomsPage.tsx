@@ -6,6 +6,7 @@ import { useHA } from '../hooks/useHA'
 import { LightCard } from '../components/cards/LightCard'
 import { ClimateCard } from '../components/cards/ClimateCard'
 import { AppliancesSection } from '../components/cards/ApplianceCard'
+import { HueSyncSection } from '../components/cards/HueSyncCard'
 import { getDomain } from '../types/ha'
 import type { HassArea, HassEntity } from '../types/ha'
 
@@ -297,6 +298,8 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
         )}
 
         <AppliancesSection areaEntities={areaEntities} />
+
+        <HueSyncSection areaEntities={areaEntities} />
 
         {switches.length > 0 && (
           <div>
