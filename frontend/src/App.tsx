@@ -59,14 +59,26 @@ function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
   const hassUrl = useStore((s) => s.hassUrl)
   const [everConnected, setEverConnected] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('home')
+  const [retries, setRetries] = useState(0)
+  const MAX_RETRIES = 40 // ~3 min a 5s: copre il tempo di riavvio di HA
 
   useEffect(() => {
     if (connected) setEverConnected(true)
   }, [connected])
 
+  // Auto-retry al primo avvio (es. mentre Home Assistant si sta riavviando):
+  // riprova da solo senza mostrare subito l'errore.
+  useEffect(() => {
+    if (connected || everConnected || retries >= MAX_RETRIES) return
+    const t = setTimeout(() => { reconnect(); setRetries((r) => r + 1) }, 5000)
+    return () => clearTimeout(t)
+  }, [connected, everConnected, retries, reconnect])
+
   if (loading) return <LoadingScreen />
 
   if (!connected && !everConnected) {
+    // Sta ancora ritentando (es. HA in riavvio): mostra il caricamento, non l'errore
+    if (retries < MAX_RETRIES) return <LoadingScreen />
     return (
       <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, padding: '0 32px' }}>
         <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
@@ -83,7 +95,7 @@ function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
           {hassUrl}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
-          <button className="glass-btn glass-btn-accent" onClick={() => reconnect()}>
+          <button className="glass-btn glass-btn-accent" onClick={() => { setRetries(0); reconnect() }}>
             Riprova
           </button>
           <button className="glass-btn" onClick={onReconfigure}>

@@ -3,6 +3,11 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.26.0] — 2026-07-04
+### Aggiunto
+- **Auto‑retry di connessione**: al primo avvio (es. mentre Home Assistant si sta
+  riavviando) la dashboard riprova da sola a connettersi, senza mostrare subito l'errore.
+
 ## [1.25.0] — 2026-07-04
 ### Aggiunto
 - **Creazione automatica della plancia**: pulsante in Impostazioni (admin) che crea una
