@@ -3,6 +3,11 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.45.1] — 2026-07-05
+### Aggiunto
+- **Rinomina dashboard dalla lista**: tocca il nome di una dashboard in Impostazioni →
+  Dashboard per modificarlo al volo (oltre al campo nome nell'editor).
+
 ## [1.45.0] — 2026-07-05
 ### Aggiunto
 - **Editor di dashboard custom**: da Impostazioni → Dashboard puoi creare le tue
