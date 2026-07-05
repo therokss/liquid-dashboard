@@ -76,17 +76,18 @@ function UpdateRow({ e, onInstall, willBackup }: { e: HassEntity; onInstall: (id
 export function UpdatesPage({ onBack }: { onBack: () => void }) {
   const { callService } = useHA()
   const entities = useStore((s) => s.entities)
-  const hidden = useStore((s) => s.hiddenEntities)
-  const userHidden = useStore((s) => s.userHiddenEntities)
   const [confirmAll, setConfirmAll] = useState(false)
   const [backup, setBackup] = useState(true)
 
+  // Nota: NON filtriamo per hidden/userHidden — gli update.* hanno spesso
+  // entity_category 'config'/'diagnostic' e verrebbero esclusi dall'auto-nascondi,
+  // ma in questa pagina dedicata li vogliamo tutti.
   const { available, upToDateCount } = useMemo(() => {
-    const all = Object.values(entities).filter((e) => e.entity_id.startsWith('update.') && !hidden[e.entity_id] && !userHidden[e.entity_id] && e.state !== 'unavailable')
+    const all = Object.values(entities).filter((e) => e.entity_id.startsWith('update.') && e.state !== 'unavailable')
     const available = all.filter((e) => e.state === 'on').sort((a, b) => titleOf(a).localeCompare(titleOf(b)))
     const upToDateCount = all.length - available.length
     return { available, upToDateCount }
-  }, [entities, hidden, userHidden])
+  }, [entities])
 
   const anyInProgress = available.some(isInProgress)
   const installable = available.filter((e) => !isInProgress(e) && canInstall(e))
@@ -106,6 +107,7 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
 
   return createPortal(
     <motion.div
+      data-theme="dark"
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       style={{

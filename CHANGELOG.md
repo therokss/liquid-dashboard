@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.36.0] — 2026-07-05
+### Corretto
+- **Aggiornamenti non visibili**: gli `update.*` (con categoria config/diagnostic) venivano
+  esclusi dall'auto-nascondi. La pagina Aggiornamenti ora li mostra tutti.
+- **Testo illeggibile in tema chiaro** nelle schermate a sfondo scuro (Aggiornamenti, Server,
+  onboarding e i pannelli dei dispositivi/videocamera): forzato il contrasto chiaro al loro interno.
+
 ## [1.35.0] — 2026-07-05
 ### Aggiunto
 - **Backup prima di aggiornare**: interruttore (attivo di default) nella pagina Aggiornamenti.
