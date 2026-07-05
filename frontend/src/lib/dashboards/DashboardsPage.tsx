@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { ChevronLeft, Plus, Pencil, Trash2, Monitor, Check } from 'lucide-react'
-import { loadDashboards, deleteDashboard, setDeviceAssignment, type DashboardsData } from './store'
+import { loadDashboards, deleteDashboard, setDeviceAssignment, saveDashboard, type DashboardsData } from './store'
 import { DashboardEditor } from './DashboardEditor'
 import { emptyDashboard, type CustomDashboard } from './types'
 import { getScreenId, getScreenName } from './deviceId'
@@ -12,6 +12,8 @@ export function DashboardsPage({ onBack }: { onBack: () => void }) {
   const [data, setData] = useState<DashboardsData>({ dashboards: [], deviceMap: {} })
   const [editing, setEditing] = useState<CustomDashboard | null>(null)
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
+  const [renaming, setRenaming] = useState<string | null>(null)
+  const [renameText, setRenameText] = useState('')
   const screenId = getScreenId()
   const assigned = data.deviceMap[screenId] || null
 
@@ -20,6 +22,11 @@ export function DashboardsPage({ onBack }: { onBack: () => void }) {
 
   async function assign(id: string | null) { await setDeviceAssignment(screenId, id); reload() }
   async function remove(id: string) { await deleteDashboard(id); setConfirmDel(null); reload() }
+  async function doRename(d: CustomDashboard) {
+    const name = renameText.trim()
+    setRenaming(null)
+    if (name && name !== d.name) { await saveDashboard({ ...d, name }); reload() }
+  }
 
   return createPortal(
     <motion.div
@@ -64,7 +71,24 @@ export function DashboardsPage({ onBack }: { onBack: () => void }) {
             {data.dashboards.map((d) => (
               <div key={d.id} className="glass-panel" style={{ padding: 'var(--space-md) var(--space-lg)', display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{d.name}</div>
+                  {renaming === d.id ? (
+                    <input
+                      className="glass-input"
+                      value={renameText}
+                      onChange={(e) => setRenameText(e.target.value)}
+                      onBlur={() => doRename(d)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') doRename(d); if (e.key === 'Escape') setRenaming(null) }}
+                      autoFocus
+                      style={{ fontSize: 15, padding: '5px 10px' }}
+                    />
+                  ) : (
+                    <div
+                      onClick={() => { setRenaming(d.id); setRenameText(d.name) }}
+                      style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', cursor: 'text' }}
+                    >
+                      {d.name}
+                    </div>
+                  )}
                   <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{d.cards.length} card{assigned === d.id ? ' · su questo schermo' : ''}</div>
                 </div>
                 <button onClick={() => assign(d.id)} aria-label="Assegna" className="glass-btn" style={{ padding: '7px 10px', flexShrink: 0, color: assigned === d.id ? 'var(--accent)' : undefined }}>
