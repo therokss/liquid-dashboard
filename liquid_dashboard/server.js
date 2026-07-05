@@ -37,6 +37,16 @@ const HA_WS_URL =
 const app = express();
 app.use(express.json());
 
+// CORS per la porta diretta (client app esterni). Le API sono protette dal token
+// di Home Assistant (Bearer), quindi Allow-Origin * è sicuro: niente cookie/sessione.
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+  next();
+});
+
 function readConfig() {
   let haOptions = {};
   let ldCreds = {};
@@ -92,15 +102,18 @@ function readPrefs() {
 function mergedPermissions(stored) {
   return { ...DEFAULT_PERMISSIONS, ...((stored || {}).permissions || {}) };
 }
-function prefsGetHandler(req, res) {
+async function prefsGetHandler(req, res) {
+  // Sulla porta diretta (niente header ingress) serve un token HA valido.
+  if (!req.headers['x-remote-user-id']) {
+    const user = await getUser(req);
+    if (!user) { res.status(401).json({ error: 'unauthorized' }); return; }
+  }
   const stored = readPrefs();
   res.json({ permissions: mergedPermissions(stored), house: stored.house || {} });
 }
 async function prefsSaveHandler(req, res) {
-  const uid = req.headers['x-remote-user-id'] || '';
-  let isAdmin = false;
-  try { if (uid && SUPERVISOR_TOKEN) { const ids = await refreshAdminIds(); isAdmin = ids.has(uid); } } catch {}
-  if (!isAdmin) { res.status(403).json({ ok: false, error: 'forbidden' }); return; }
+  const user = await getUser(req);
+  if (!user || !user.is_admin) { res.status(403).json({ ok: false, error: 'forbidden' }); return; }
   const body = req.body || {};
   const stored = readPrefs();
   const next = { ...stored, permissions: { ...mergedPermissions(stored), ...(body.permissions || {}) } };
@@ -125,14 +138,16 @@ app.post('/api/prefs', prefsSaveHandler);
 function readUserConfigs() {
   try { return JSON.parse(fs.readFileSync(USER_CFG_PATH, 'utf8')); } catch { return {}; }
 }
-function userConfigGetHandler(req, res) {
-  const uid = req.headers['x-remote-user-id'] || '';
+async function userConfigGetHandler(req, res) {
+  const user = await getUser(req);
+  const uid = user?.id || '';
   if (!uid) { res.json({ config: null, user: null }); return; }
   const all = readUserConfigs();
   res.json({ config: all[uid] || null, user: uid });
 }
-function userConfigSaveHandler(req, res) {
-  const uid = req.headers['x-remote-user-id'] || '';
+async function userConfigSaveHandler(req, res) {
+  const user = await getUser(req);
+  const uid = user?.id || '';
   if (!uid) { res.status(400).json({ ok: false, error: 'no user' }); return; }
   const cfg = (req.body || {}).config;
   if (cfg == null || typeof cfg !== 'object' || Array.isArray(cfg)) {
@@ -211,17 +226,54 @@ async function refreshAdminIds() {
   return ids;
 }
 
+// --- Autenticazione per la porta diretta (app) tramite token HA dell'utente ------
+// Valida il token aprendo una WS a HA autenticata CON QUEL token e chiedendo
+// auth/current_user: così otteniamo id + is_admin senza fidarci del client. Cache 5 min.
+const userTokenCache = new Map();
+function resolveUser(token) {
+  if (!token) return Promise.resolve(null);
+  const cached = userTokenCache.get(token);
+  if (cached && cached.exp > Date.now()) return Promise.resolve(cached);
+  return new Promise((resolve) => {
+    let done = false;
+    const ws = new WebSocket(HA_WS_URL);
+    const finish = (val) => {
+      if (done) return;
+      done = true;
+      try { ws.close(); } catch {}
+      if (val) userTokenCache.set(token, { ...val, exp: Date.now() + 300000 });
+      resolve(val);
+    };
+    ws.on('message', (data) => {
+      let msg; try { msg = JSON.parse(data.toString()); } catch { return; }
+      if (msg.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: token }));
+      else if (msg.type === 'auth_ok') ws.send(JSON.stringify({ id: 1, type: 'auth/current_user' }));
+      else if (msg.type === 'auth_invalid') finish(null);
+      else if (msg.type === 'result' && msg.id === 1) {
+        finish(msg.success && msg.result ? { id: msg.result.id, is_admin: Boolean(msg.result.is_admin) } : null);
+      }
+    });
+    ws.on('error', () => finish(null));
+    setTimeout(() => finish(null), 5000);
+  });
+}
+
+// Identità della richiesta: ingress (header X-Remote-User-Id) oppure token (porta diretta).
+async function getUser(req) {
+  const hdrId = req.headers['x-remote-user-id'];
+  if (hdrId) {
+    let isAdmin = false;
+    try { const ids = await refreshAdminIds(); isAdmin = ids.has(hdrId); } catch {}
+    return { id: hdrId, is_admin: isAdmin };
+  }
+  const m = /^Bearer\s+(.+)$/i.exec(req.headers['authorization'] || '');
+  return m ? await resolveUser(m[1].trim()) : null;
+}
+
 async function userHandler(req, res) {
-  const id = req.headers['x-remote-user-id'] || '';
+  const user = await getUser(req);
   const name = req.headers['x-remote-user-display-name'] || req.headers['x-remote-user-name'] || '';
-  let isAdmin = false;
-  try {
-    if (id && SUPERVISOR_TOKEN) {
-      const ids = await refreshAdminIds();
-      isAdmin = ids.has(id);
-    }
-  } catch {}
-  res.json({ id, name, is_admin: isAdmin });
+  res.json({ id: user?.id || '', name, is_admin: Boolean(user?.is_admin) });
 }
 if (INGRESS_ENTRY) app.get(`${INGRESS_ENTRY}/api/user`, userHandler);
 app.get('/api/user', userHandler);
@@ -401,8 +453,15 @@ function proxyToHA(browserWs) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Liquid Dashboard] v1.38.0 — porta ${PORT}`);
+  console.log(`[Liquid Dashboard] v1.39.0 — porta ${PORT}`);
   console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
   console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
   if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);
+});
+
+// Porta diretta: stesse API REST per i client esterni (app iOS/Android).
+// Protette dal token HA dell'utente → app e dashboard condividono lo stesso /data.
+const DIRECT_PORT = 8098;
+http.createServer(app).listen(DIRECT_PORT, '0.0.0.0', () => {
+  console.log(`[LD] API condivisa (app) → porta ${DIRECT_PORT}`);
 });
