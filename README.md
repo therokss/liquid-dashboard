@@ -7,6 +7,8 @@ stanze, entità e aree.
 
 Architetture: `aarch64`, `amd64`, `armv7`, `armhf`, `i386`.
 
+[![Aggiungi il repository alla tua istanza Home Assistant.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ftherokss%2Fliquid-dashboard)
+
 ---
 
 ## ✅ Requisiti
@@ -21,6 +23,11 @@ un paio di minuti e una connessione a internet). Il frontend è già incluso pro
 ---
 
 ## 📦 Installazione
+
+> ⚡ **Un click**: premi il badge **"Add repository"** qui sopra — si apre la tua istanza
+> Home Assistant già pronta ad aggiungere questo repository. Poi salta al **punto 4**.
+
+In alternativa, manualmente:
 
 1. In Home Assistant vai su **Impostazioni → Add-on → Store add-on**.
 2. In alto a destra apri il menù **⋮ → Repository**.
