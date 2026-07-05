@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.45.0] — 2026-07-05
+### Aggiunto
+- **Editor di dashboard custom**: da Impostazioni → Dashboard puoi creare le tue
+  dashboard trascinando e ridimensionando le card (dispositivo, gruppo, media player,
+  titolo, popup di dettaglio) con la grafica Liquid Glass. Ogni schermo (es. tablet a
+  muro) può mostrare di default una dashboard assegnata, con un tasto per tornare alla
+  predefinita. Le dashboard sono condivise via add-on; l'assegnazione è per-schermo.
+
 ## [1.44.0] — 2026-07-05
 ### Aggiunto
 - **Colonne in tutte le viste**: anche Sicurezza, Media, Clima, Server e Impostazioni
