@@ -226,36 +226,52 @@ async function refreshAdminIds() {
   return ids;
 }
 
-// --- Autenticazione per la porta diretta (app) tramite token HA dell'utente ------
-// Valida il token aprendo una WS a HA autenticata CON QUEL token e chiedendo
-// auth/current_user: così otteniamo id + is_admin senza fidarci del client. Cache 5 min.
-const userTokenCache = new Map();
-function resolveUser(token) {
-  if (!token) return Promise.resolve(null);
-  const cached = userTokenCache.get(token);
-  if (cached && cached.exp > Date.now()) return Promise.resolve(cached);
+// --- Autenticazione porta diretta (app) tramite token HA dell'utente ------------
+// IMPORTANTE: la WS del Supervisor (ws://supervisor/core/websocket) accetta SOLO il
+// token del Supervisor e rifiuta i token utente ("auth_invalid: Invalid access").
+// Quindi validiamo il token utente contro CORE in modo NATIVO, sugli indirizzi interni.
+const CORE_WS_CANDIDATES = [
+  process.env.HOMEASSISTANT_WEBSOCKET_API_NATIVE,
+  'ws://homeassistant:8123/api/websocket',
+  'ws://172.30.32.1:8123/api/websocket',
+].filter(Boolean);
+
+// Prova a validare il token su UN indirizzo core; ritorna esito + motivo.
+function tryValidate(wsUrl, token) {
   return new Promise((resolve) => {
-    let done = false;
-    const ws = new WebSocket(HA_WS_URL);
-    const finish = (val) => {
-      if (done) return;
-      done = true;
-      try { ws.close(); } catch {}
-      if (val) userTokenCache.set(token, { ...val, exp: Date.now() + 300000 });
-      resolve(val);
-    };
+    let done = false, ws;
+    try { ws = new WebSocket(wsUrl); } catch (e) { resolve({ ok: false, reason: 'ws_ctor: ' + e.message }); return; }
+    const finish = (v) => { if (done) return; done = true; try { ws.close(); } catch {} resolve(v); };
     ws.on('message', (data) => {
       let msg; try { msg = JSON.parse(data.toString()); } catch { return; }
       if (msg.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: token }));
       else if (msg.type === 'auth_ok') ws.send(JSON.stringify({ id: 1, type: 'auth/current_user' }));
-      else if (msg.type === 'auth_invalid') finish(null);
+      else if (msg.type === 'auth_invalid') finish({ ok: false, reason: 'auth_invalid: ' + (msg.message || '') });
       else if (msg.type === 'result' && msg.id === 1) {
-        finish(msg.success && msg.result ? { id: msg.result.id, is_admin: Boolean(msg.result.is_admin) } : null);
+        finish(msg.success && msg.result
+          ? { ok: true, user: { id: msg.result.id, name: msg.result.name, is_admin: Boolean(msg.result.is_admin) } }
+          : { ok: false, reason: 'result_not_success' });
       }
     });
-    ws.on('error', () => finish(null));
-    setTimeout(() => finish(null), 5000);
+    ws.on('error', (e) => finish({ ok: false, reason: 'ws_error: ' + e.message }));
+    setTimeout(() => finish({ ok: false, reason: 'timeout' }), 4000);
   });
+}
+
+const userTokenCache = new Map();
+async function resolveUser(token) {
+  if (!token) return null;
+  const cached = userTokenCache.get(token);
+  if (cached && cached.exp > Date.now()) return cached.user;
+  for (const url of CORE_WS_CANDIDATES) {
+    const r = await tryValidate(url, token);
+    if (r.ok) {
+      const user = { id: r.user.id, is_admin: r.user.is_admin };
+      userTokenCache.set(token, { user, exp: Date.now() + 300000 });
+      return user;
+    }
+  }
+  return null;
 }
 
 // Identità della richiesta: ingress (header X-Remote-User-Id) oppure token (porta diretta).
@@ -270,34 +286,22 @@ async function getUser(req) {
   return m ? await resolveUser(m[1].trim()) : null;
 }
 
-// Diagnostica: valida un token e riporta il MOTIVO in caso di fallimento.
+// Diagnostica: prova TUTTI gli indirizzi candidati e riporta l'esito di ciascuno.
 // Uso da browser: http://<ha>:8098/api/whoami?token=<long-lived-token>
-function resolveUserDebug(token) {
-  return new Promise((resolve) => {
-    let done = false;
-    const ws = new WebSocket(HA_WS_URL);
-    const finish = (v) => { if (done) return; done = true; try { ws.close(); } catch {} resolve(v); };
-    ws.on('message', (data) => {
-      let msg; try { msg = JSON.parse(data.toString()); } catch { return; }
-      if (msg.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: token }));
-      else if (msg.type === 'auth_ok') ws.send(JSON.stringify({ id: 1, type: 'auth/current_user' }));
-      else if (msg.type === 'auth_invalid') finish({ ok: false, reason: 'auth_invalid: ' + (msg.message || '') });
-      else if (msg.type === 'result' && msg.id === 1) {
-        finish(msg.success && msg.result
-          ? { ok: true, user: { id: msg.result.id, name: msg.result.name, is_admin: Boolean(msg.result.is_admin) } }
-          : { ok: false, reason: 'result_not_success' });
-      }
-    });
-    ws.on('error', (e) => finish({ ok: false, reason: 'ws_error: ' + e.message }));
-    setTimeout(() => finish({ ok: false, reason: 'timeout_5s (auth/current_user senza risposta)' }), 5000);
-  });
-}
 function whoamiHandler(req, res) {
   const q = typeof req.query.token === 'string' ? req.query.token : '';
   const m = /^Bearer\s+(.+)$/i.exec(req.headers['authorization'] || '');
   const token = q || (m ? m[1].trim() : '');
   if (!token) { res.status(400).json({ ok: false, reason: 'no_token (usa ?token=... o header Bearer)' }); return; }
-  resolveUserDebug(token).then((r) => res.json(r)).catch((e) => res.json({ ok: false, reason: 'exception: ' + e.message }));
+  (async () => {
+    const attempts = [];
+    for (const url of CORE_WS_CANDIDATES) {
+      const r = await tryValidate(url, token);
+      attempts.push({ url, ok: r.ok, reason: r.reason || null });
+      if (r.ok) { res.json({ ok: true, user: r.user, url, attempts }); return; }
+    }
+    res.json({ ok: false, attempts });
+  })().catch((e) => res.json({ ok: false, reason: 'exception: ' + e.message }));
 }
 app.get('/api/whoami', whoamiHandler);
 if (INGRESS_ENTRY) app.get(`${INGRESS_ENTRY}/api/whoami`, whoamiHandler);
@@ -485,7 +489,7 @@ function proxyToHA(browserWs) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Liquid Dashboard] v1.39.1 — porta ${PORT}`);
+  console.log(`[Liquid Dashboard] v1.39.2 — porta ${PORT}`);
   console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
   console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
   if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);
