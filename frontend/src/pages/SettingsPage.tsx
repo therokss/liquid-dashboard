@@ -334,7 +334,7 @@ export function SettingsPage() {
         {/* Info */}
         <Section title="Informazioni">
           <SettingRow label="Versione">
-            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.37.0</span>
+            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.38.0</span>
           </SettingRow>
           <SettingRow label="Progetto">
             <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Liquid Dashboard</span>

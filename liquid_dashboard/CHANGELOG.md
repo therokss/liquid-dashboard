@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.38.0] — 2026-07-05
+### Modificato
+- **Liquid Glass ritarato**: ridotti bianco speculare, rim luminoso, saturazione e alone
+  dell'accent. Il vetro torna più **delicato e translucido** (niente effetto "plastica bianca"),
+  mantenendo l'highlight sul bordo e le animazioni elastiche dei tasti.
+
 ## [1.37.0] — 2026-07-05
 ### Modificato
 - **Effetto "Liquid Glass" più fedele a iOS**: più blur/saturazione, **highlight speculare**

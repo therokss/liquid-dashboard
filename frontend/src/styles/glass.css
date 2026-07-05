@@ -150,10 +150,10 @@ body {
 }
 
 .glass-btn-accent {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.06) 44%, rgba(255, 255, 255, 0) 100%), var(--accent);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 46%, rgba(255, 255, 255, 0) 100%), var(--accent);
+  border-color: rgba(255, 255, 255, 0.2);
   color: white;
-  box-shadow: 0 6px 22px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -3px 8px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 4px 15px rgba(0, 179, 190, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 6px rgba(0, 0, 0, 0.12);
 }
 
 .glass-btn-accent:active {
