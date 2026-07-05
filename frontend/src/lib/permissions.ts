@@ -117,3 +117,19 @@ export function startHouseSync(): void {
     houseTimer = setTimeout(() => { void savePrefs({ house }) }, 800)
   })
 }
+
+// Ricarica le preferenze condivise dal backend e applica la config casa SOLO se è
+// cambiata da remoto (un altro dispositivo). Se c'è una modifica locale in sospeso,
+// vince quella locale. Aggiorna la baseline per non ri-salvarla (niente echo).
+export async function pullPrefs(): Promise<void> {
+  if (!houseSyncStarted) return
+  const { permissions, house } = await loadPrefs()
+  if (permissions) useStore.getState().setUserPermissions(permissions)
+  if (!house) return
+  const remoteStr = JSON.stringify(extractHouse(house))
+  const currentStr = JSON.stringify(extractHouse(useStore.getState() as unknown as Record<string, unknown>))
+  if (remoteStr === currentStr) { lastHouse = remoteStr; return }
+  if (currentStr !== lastHouse) return // modifica locale in sospeso → non sovrascrivere
+  lastHouse = remoteStr
+  applyHouse(house)
+}

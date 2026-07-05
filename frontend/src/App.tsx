@@ -7,6 +7,7 @@ import { useWallpaper, useAccentFromWallpaper } from './hooks/useWallpaper'
 import { setKiosk } from './lib/kiosk'
 import { loadPrefs, applyHouse, extractHouse, savePrefs, startHouseSync } from './lib/permissions'
 import { loadUserConfig, applyUserConfig, startUserConfigSync } from './lib/userConfig'
+import { startLiveSync } from './lib/liveSync'
 import { SetupWizard } from './setup/SetupWizard'
 import { OnboardingWizard } from './pages/OnboardingWizard'
 import { TabBar, type Tab } from './components/nav/TabBar'
@@ -259,6 +260,7 @@ export default function App() {
       if (cancelled) return
       if (res.config) applyUserConfig(res.config)
       startUserConfigSync()
+      startLiveSync() // polling leggero: modifiche da altri dispositivi arrivano live
     })
     return () => { cancelled = true }
   }, [])

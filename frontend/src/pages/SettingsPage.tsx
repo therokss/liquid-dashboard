@@ -10,6 +10,7 @@ import { ServerPage } from './ServerPage'
 import { UpdatesPage } from './UpdatesPage'
 import { CAPABILITIES, canModify, savePermissions } from '../lib/permissions'
 import { WASTE_TYPES, WEEKDAY_ORDER, WEEKDAY_INITIALS, INTERVAL_OPTIONS } from '../lib/waste'
+import { fileToWallpaperDataUrl } from '../lib/image'
 import type { WallpaperSlot } from '../store'
 import type { HassEntity } from '../types/ha'
 
@@ -37,6 +38,18 @@ export function SettingsPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [showServer, setShowServer] = useState(false)
   const [showUpdates, setShowUpdates] = useState(false)
+  const [uploadingSlot, setUploadingSlot] = useState<WallpaperSlot | null>(null)
+
+  async function handleWallpaperPick(slot: WallpaperSlot, file: File) {
+    setUploadingSlot(slot)
+    try {
+      setWallpaper(slot, await fileToWallpaperDataUrl(file))
+    } catch {
+      /* file non leggibile: ignora */
+    } finally {
+      setUploadingSlot(null)
+    }
+  }
 
   const updateCount = useMemo(
     () => Object.values(entities).filter((e) => e.entity_id.startsWith('update.') && e.state === 'on').length,
@@ -284,7 +297,8 @@ export function SettingsPage() {
                         style={{ display: 'none' }}
                         onChange={(e) => {
                           const file = e.target.files?.[0]
-                          if (file) setWallpaper(slot, URL.createObjectURL(file))
+                          if (file) void handleWallpaperPick(slot, file)
+                          e.target.value = '' // consenti di ricaricare lo stesso file
                         }}
                       />
                       <div
@@ -299,10 +313,11 @@ export function SettingsPage() {
                           alignItems: 'center',
                           gap: 4,
                           cursor: 'pointer',
+                          opacity: uploadingSlot === slot ? 0.6 : 1,
                         }}
                       >
                         <Upload size={12} />
-                        {currentWp ? 'Cambia' : 'Carica'}
+                        {uploadingSlot === slot ? 'Carico…' : currentWp ? 'Cambia' : 'Carica'}
                       </div>
                     </label>
                     {currentWp && (
@@ -334,7 +349,7 @@ export function SettingsPage() {
         {/* Info */}
         <Section title="Informazioni">
           <SettingRow label="Versione">
-            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.38.0</span>
+            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.39.0</span>
           </SettingRow>
           <SettingRow label="Progetto">
             <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Liquid Dashboard</span>
