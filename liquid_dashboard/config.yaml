@@ -1,12 +1,16 @@
 name: "Liquid Dashboard"
 description: "Dashboard iOS 26 Liquid Glass per Home Assistant"
-version: "1.38.0"
+version: "1.39.0"
 slug: "liquid_dashboard"
 init: false
 homeassistant_api: true
 ingress: true
 ingress_port: 8099
 ingress_stream: true
+ports:
+  8098/tcp: 8098
+ports_description:
+  8098/tcp: "API condivisa per l'app iOS/Android (protetta dal token di Home Assistant)"
 panel_icon: "mdi:water-outline"
 panel_title: "Liquid Dashboard"
 panel_admin: false

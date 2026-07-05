@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.39.0] — 2026-07-05
+### Aggiunto
+- **API condivisa su porta diretta (8098)**: l'app iOS/Android legge e scrive le **stesse**
+  impostazioni della dashboard (rifiuti, meteo, energia, aree, preferenze per‑utente),
+  autenticandosi col **token di Home Assistant**. Configuri una volta → vale ovunque.
+  Le API restano protette: in lettura serve un token valido, in scrittura della config
+  condivisa serve un amministratore.
+
 ## [1.38.0] — 2026-07-05
 ### Modificato
 - **Liquid Glass ritarato**: ridotti bianco speculare, rim luminoso, saturazione e alone
