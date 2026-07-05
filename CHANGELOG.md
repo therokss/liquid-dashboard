@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.35.0] — 2026-07-05
+### Aggiunto
+- **Backup prima di aggiornare**: interruttore (attivo di default) nella pagina Aggiornamenti.
+  Crea un backup prima di installare, **dove supportato** (Home Assistant Core, add-on).
+  Le voci che verranno salvate mostrano l'etichetta **"backup"**; HACS/firmware lo ignorano.
+
 ## [1.34.0] — 2026-07-05
 ### Aggiunto
 - **Aggiornamenti** (Impostazioni → Sistema, admin): elenco di tutti gli aggiornamenti

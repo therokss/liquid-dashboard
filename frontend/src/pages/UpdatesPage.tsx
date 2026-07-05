@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
-import { ChevronLeft, RefreshCw, ArrowUpCircle, CheckCircle2, ExternalLink, Package } from 'lucide-react'
+import { ChevronLeft, RefreshCw, ArrowUpCircle, CheckCircle2, ExternalLink, Package, ShieldCheck } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import type { HassEntity } from '../types/ha'
@@ -9,9 +9,14 @@ import type { HassEntity } from '../types/ha'
 const attr = (e: HassEntity, k: string) => (e.attributes as Record<string, unknown>)[k]
 const titleOf = (e: HassEntity) => (attr(e, 'title') as string) || (attr(e, 'friendly_name') as string) || e.entity_id
 const FEAT_INSTALL = 1
+const FEAT_BACKUP = 8
 const canInstall = (e: HassEntity) => {
   const f = attr(e, 'supported_features') as number | undefined
   return f == null || (f & FEAT_INSTALL) !== 0
+}
+const supportsBackup = (e: HassEntity) => {
+  const f = attr(e, 'supported_features') as number | undefined
+  return f != null && (f & FEAT_BACKUP) !== 0
 }
 const isInProgress = (e: HassEntity) => attr(e, 'in_progress') === true || typeof attr(e, 'update_percentage') === 'number'
 const progressOf = (e: HassEntity): number | null => {
@@ -19,7 +24,7 @@ const progressOf = (e: HassEntity): number | null => {
   return typeof p === 'number' ? p : null
 }
 
-function UpdateRow({ e, onInstall }: { e: HassEntity; onInstall: (id: string) => void }) {
+function UpdateRow({ e, onInstall, willBackup }: { e: HassEntity; onInstall: (id: string) => void; willBackup: boolean }) {
   const installed = (attr(e, 'installed_version') as string) || '—'
   const latest = (attr(e, 'latest_version') as string) || '—'
   const url = attr(e, 'release_url') as string | undefined
@@ -34,8 +39,13 @@ function UpdateRow({ e, onInstall }: { e: HassEntity; onInstall: (id: string) =>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titleOf(e)}</div>
-          <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>
-            <span style={{ fontFamily: 'monospace' }}>{installed}</span> → <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{latest}</span>
+          <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span><span style={{ fontFamily: 'monospace' }}>{installed}</span> → <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{latest}</span></span>
+            {willBackup && !inProg && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: '#34d399' }}>
+                <ShieldCheck size={12} /> backup
+              </span>
+            )}
           </div>
         </div>
         {inProg ? (
@@ -69,6 +79,7 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
   const hidden = useStore((s) => s.hiddenEntities)
   const userHidden = useStore((s) => s.userHiddenEntities)
   const [confirmAll, setConfirmAll] = useState(false)
+  const [backup, setBackup] = useState(true)
 
   const { available, upToDateCount } = useMemo(() => {
     const all = Object.values(entities).filter((e) => e.entity_id.startsWith('update.') && !hidden[e.entity_id] && !userHidden[e.entity_id] && e.state !== 'unavailable')
@@ -79,8 +90,14 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
 
   const anyInProgress = available.some(isInProgress)
   const installable = available.filter((e) => !isInProgress(e) && canInstall(e))
+  const backupAvailable = available.some(supportsBackup)
 
-  const install = (id: string) => callService('update', 'install', { entity_id: id }).catch(() => {})
+  const install = (id: string) => {
+    const e = entities[id]
+    const data: Record<string, unknown> = { entity_id: id }
+    if (backup && e && supportsBackup(e)) data.backup = true
+    return callService('update', 'install', data).catch(() => {})
+  }
   const installAll = () => {
     if (!confirmAll) { setConfirmAll(true); return }
     setConfirmAll(false)
@@ -133,9 +150,31 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
               </button>
             </div>
 
+            {/* Backup prima di aggiornare (solo dove supportato: Core, add-on) */}
+            {backupAvailable && (
+              <button
+                onClick={() => setBackup((b) => !b)}
+                className="glass-panel"
+                style={{ width: '100%', textAlign: 'left', cursor: 'pointer', padding: 'var(--space-md) var(--space-lg)', marginBottom: 'var(--space-lg)', display: 'flex', alignItems: 'center', gap: 14, background: 'transparent' }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: 'var(--accent-glow)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                  <ShieldCheck size={20} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Backup prima di aggiornare</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>Consigliato · dove supportato (Core, add-on)</div>
+                </div>
+                <label className="glass-toggle" style={{ flexShrink: 0 }} onClick={(ev) => ev.stopPropagation()}>
+                  <input type="checkbox" checked={backup} onChange={() => setBackup((b) => !b)} />
+                  <div className="glass-toggle-track" />
+                  <div className="glass-toggle-thumb" style={{ transform: backup ? 'translateX(20px)' : 'translateX(0)' }} />
+                </label>
+              </button>
+            )}
+
             {/* Elenco */}
             <div className="glass-panel" style={{ padding: 0, overflow: 'hidden', marginBottom: 'var(--space-lg)' }}>
-              {available.map((e) => <UpdateRow key={e.entity_id} e={e} onInstall={install} />)}
+              {available.map((e) => <UpdateRow key={e.entity_id} e={e} onInstall={install} willBackup={backup && supportsBackup(e)} />)}
             </div>
 
             {upToDateCount > 0 && (
