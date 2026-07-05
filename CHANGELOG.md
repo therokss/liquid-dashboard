@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.45.3] — 2026-07-05
+### Corretto
+- **"I miei dispositivi" unisce i doppioni**: se lo stesso telefono è registrato più
+  volte (es. dalla nostra app e dall'app HA ufficiale), la card ora lo mostra come un
+  unico dispositivo, unendo i dati e dando priorità ai valori più recenti.
+
 ## [1.45.2] — 2026-07-05
 ### Corretto
 - **Editor con lo sfondo reale**: l'editor mostra ora il wallpaper della dashboard,
