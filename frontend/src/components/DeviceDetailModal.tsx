@@ -95,6 +95,7 @@ export function DeviceDetailModal({ entityId, onClose }: { entityId: string; onC
 
   return createPortal(
     <motion.div
+      data-theme="dark"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 3400, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', background: 'rgba(3,10,20,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}

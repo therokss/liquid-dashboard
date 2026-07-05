@@ -23,6 +23,7 @@ export function OnboardingWizard({ onDone }: { onDone: () => void }) {
 
   return (
     <div
+      data-theme="dark"
       style={{
         position: 'fixed', inset: 0, zIndex: 3000, overflowY: 'auto',
         background: '#051424',

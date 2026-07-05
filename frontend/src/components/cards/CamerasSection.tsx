@@ -95,6 +95,7 @@ function CameraView({ entityId, streamType: st }: { entityId: string; streamType
 function CameraModal({ entity, onClose }: { entity: HassEntity; onClose: () => void }) {
   return (
     <motion.div
+      data-theme="dark"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={onClose}
       style={{ position: 'fixed', inset: 0, zIndex: 3400, display: 'flex', flexDirection: 'column', overflowY: 'auto', background: 'rgba(3,8,16,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
