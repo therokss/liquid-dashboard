@@ -368,6 +368,13 @@ body {
   .ld-live-dot { animation: none; }
 }
 
+/* ─── Spinner (aggiornamenti in corso) ─── */
+.ld-spin { animation: ld-spin 1s linear infinite; }
+@keyframes ld-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .ld-spin { animation: none; }
+}
+
 /* ─── Contrasto controlli nel tema chiaro (altrimenti spariscono su card bianche) ─── */
 [data-theme="light"] .glass-toggle-track {
   background: rgba(0, 0, 0, 0.14);

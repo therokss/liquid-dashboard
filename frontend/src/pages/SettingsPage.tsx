@@ -7,6 +7,7 @@ import { getDomain } from '../types/ha'
 import { RoomAssigner } from '../components/RoomAssigner'
 import { VisibilityStepper } from '../components/VisibilityStepper'
 import { ServerPage } from './ServerPage'
+import { UpdatesPage } from './UpdatesPage'
 import { CAPABILITIES, canModify, savePermissions } from '../lib/permissions'
 import { WASTE_TYPES, WEEKDAY_ORDER, WEEKDAY_INITIALS, INTERVAL_OPTIONS } from '../lib/waste'
 import type { WallpaperSlot } from '../store'
@@ -32,8 +33,15 @@ export function SettingsPage() {
   const isAdmin = useStore((s) => s.isAdmin)
   const permissions = useStore((s) => s.userPermissions)
   const resetSetup = useStore((s) => s.resetSetup)
+  const entities = useStore((s) => s.entities)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [showServer, setShowServer] = useState(false)
+  const [showUpdates, setShowUpdates] = useState(false)
+
+  const updateCount = useMemo(
+    () => Object.values(entities).filter((e) => e.entity_id.startsWith('update.') && e.state === 'on').length,
+    [entities]
+  )
 
   const can = (cap: string) => canModify(cap, isAdmin, permissions)
   const anyEditable = CAPABILITIES.some((c) => can(c.key))
@@ -71,29 +79,58 @@ export function SettingsPage() {
           </SettingRow>
         </Section>
 
-        {/* Info server — solo amministratori */}
+        {/* Sistema — solo amministratori */}
         {isAdmin && (
           <div>
             <div className="text-caption" style={{ marginBottom: 10 }}>Sistema</div>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowServer(true)}
-              className="glass-panel"
-              style={{
-                width: '100%', textAlign: 'left', cursor: 'pointer',
-                padding: 'var(--space-md) var(--space-lg)',
-                display: 'flex', alignItems: 'center', gap: 14,
-              }}
-            >
-              <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: 'var(--accent-glow)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
-                <Server size={20} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Informazioni server</div>
-                <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>CPU, memoria, disco, rete e sensori</div>
-              </div>
-              <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
-            </motion.button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowUpdates(true)}
+                className="glass-panel"
+                style={{
+                  width: '100%', textAlign: 'left', cursor: 'pointer',
+                  padding: 'var(--space-md) var(--space-lg)',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: 'var(--accent-glow)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                  <RefreshCw size={20} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Aggiornamenti</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                    {updateCount > 0 ? `${updateCount} ${updateCount === 1 ? 'disponibile' : 'disponibili'}` : 'Tutto aggiornato'}
+                  </div>
+                </div>
+                {updateCount > 0 && (
+                  <span style={{ flexShrink: 0, minWidth: 22, height: 22, padding: '0 7px', borderRadius: 11, background: '#ff5a5f', color: 'white', fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {updateCount}
+                  </span>
+                )}
+                <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+              </motion.button>
+
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowServer(true)}
+                className="glass-panel"
+                style={{
+                  width: '100%', textAlign: 'left', cursor: 'pointer',
+                  padding: 'var(--space-md) var(--space-lg)',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: 'var(--accent-glow)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                  <Server size={20} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Informazioni server</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>CPU, memoria, disco, rete e sensori</div>
+                </div>
+                <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+              </motion.button>
+            </div>
           </div>
         )}
 
@@ -297,7 +334,7 @@ export function SettingsPage() {
         {/* Info */}
         <Section title="Informazioni">
           <SettingRow label="Versione">
-            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.33.0</span>
+            <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>1.34.0</span>
           </SettingRow>
           <SettingRow label="Progetto">
             <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Liquid Dashboard</span>
@@ -369,6 +406,7 @@ export function SettingsPage() {
 
       <AnimatePresence>
         {showServer && <ServerPage onBack={() => setShowServer(false)} />}
+        {showUpdates && <UpdatesPage onBack={() => setShowUpdates(false)} />}
       </AnimatePresence>
     </div>
   )
