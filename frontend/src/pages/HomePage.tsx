@@ -13,6 +13,7 @@ import { CalendarCard } from '../components/cards/CalendarCard'
 import { WasteCard } from '../components/cards/WasteCard'
 import { EnergyCard } from '../components/cards/EnergyCard'
 import { MyDevicesSection } from '../components/cards/MyDevicesCard'
+import { CamerasSection } from '../components/cards/CamerasSection'
 import { usePinnedEntities } from '../hooks/useEntities'
 import { getDomain } from '../types/ha'
 
@@ -209,6 +210,9 @@ export function HomePage() {
 
       {/* I miei dispositivi (telefono/watch dell'utente corrente) — sotto Rifiuti */}
       <MyDevicesSection />
+
+      {/* Sicurezza — videocamere collegate */}
+      <CamerasSection />
 
       {/* Featured media player */}
       {featuredMedia && (

@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.31.0] — 2026-07-05
+### Aggiunto
+- **Luci**: toccando la card si apre un pannello con **luminosità, colori** (preset + colore
+  libero), **temperatura** e le **scene collegate** alla luce.
+- **Sicurezza**: nuova sezione in Home con le **videocamere** collegate (anteprima che si
+  aggiorna, tocca per lo schermo intero).
+
 ## [1.30.0] — 2026-07-05
 ### Corretto
 - Gli interruttori del **ventilatore** e del **Hue Play (Sync Box)** non compaiono più tra gli

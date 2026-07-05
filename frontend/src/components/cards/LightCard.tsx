@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sun, Minus, Plus } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
 import { useHA } from '../../hooks/useHA'
+import { LightDetailModal } from '../LightDetailModal'
 import type { HassEntity, LightAttributes } from '../../types/ha'
 
 interface LightCardProps {
@@ -45,6 +46,7 @@ export function LightCard({ entity, compact }: LightCardProps) {
   const name = attrs.friendly_name ?? entity.entity_id
 
   const [showColorPicker, setShowColorPicker] = useState(false)
+  const [showDetail, setShowDetail] = useState(false)
 
   const glowColor = useMemo(
     () => (isOn && colorCss ? `${colorCss}55` : undefined),
@@ -79,12 +81,13 @@ export function LightCard({ entity, compact }: LightCardProps) {
 
   if (compact) {
     return (
+      <>
       <GlassCard
         glowColor={glowColor}
         active={isOn}
         size="sm"
         style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
-        onClick={toggle}
+        onClick={() => setShowDetail(true)}
       >
         <div
           style={{
@@ -112,14 +115,17 @@ export function LightCard({ entity, compact }: LightCardProps) {
         </div>
         <ToggleSwitch isOn={isOn} onToggle={toggle} color={colorCss} />
       </GlassCard>
+      {showDetail && <LightDetailModal entity={entity} onClose={() => setShowDetail(false)} />}
+      </>
     )
   }
 
   return (
+    <>
     <GlassCard glowColor={glowColor} active={isOn} size="md">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-md)' }}>
-        <div>
+        <div style={{ cursor: 'pointer' }} onClick={() => setShowDetail(true)}>
           <div
             style={{
               width: 44,
@@ -217,6 +223,8 @@ export function LightCard({ entity, compact }: LightCardProps) {
         )}
       </AnimatePresence>
     </GlassCard>
+    {showDetail && <LightDetailModal entity={entity} onClose={() => setShowDetail(false)} />}
+    </>
   )
 }
 
