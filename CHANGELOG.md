@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.40.2] — 2026-07-05
+### Corretto
+- **Testo leggibile su qualsiasi sfondo**: saluto, data e titoli delle sezioni ora si
+  **adattano alla luminosità del wallpaper** (chiari su sfondi scuri e viceversa).
+  Prima, con uno sfondo scuro e tema chiaro, restavano scuri e quasi invisibili.
+
 ## [1.40.1] — 2026-07-05
 ### Modificato
 - **Nuovo logo**: icona "casa Liquid Glass" con goccia (gradiente ciano→viola).

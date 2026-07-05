@@ -174,7 +174,7 @@ export function SecurityPage() {
   return (
     <div className="page">
       <div style={{ marginBottom: 'var(--space-xl)' }}>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.04em' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 800, color: 'var(--on-wallpaper)', letterSpacing: '-0.04em' }}>
           Sicurezza
         </h1>
         {openables.length > 0 && (

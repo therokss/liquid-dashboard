@@ -18,6 +18,53 @@ const FALLBACK_GRADIENTS: Record<TimeSlot, string> = {
   night: 'linear-gradient(160deg, #0c0c1e 0%, #1a1a4e 50%, #0d2137 100%)',
 }
 
+// I gradienti di fallback hanno la parte ALTA (dove sta l'header) chiara tranne la notte.
+const FALLBACK_DARK: Record<TimeSlot, boolean> = {
+  morning: false, day: false, evening: false, night: true,
+}
+
+// Imposta --wallpaper-url e, in base alla luminosità della fascia SUPERIORE del wallpaper
+// (dove stanno saluto/titoli), l'attributo data-wallpaper-dark: così il testo sopra il
+// wallpaper (classi .on-wall/.on-wall-dim) diventa chiaro su sfondi scuri e viceversa.
+function applyWallpaper(root: HTMLElement, slot: TimeSlot, url: string | null): void {
+  if (url) {
+    root.style.setProperty('--wallpaper-url', `url(${url})`)
+    void topLuma(url).then((luma) => {
+      if (luma != null) root.setAttribute('data-wallpaper-dark', luma < 140 ? '1' : '0')
+    })
+  } else {
+    root.style.setProperty('--wallpaper-url', FALLBACK_GRADIENTS[slot])
+    root.setAttribute('data-wallpaper-dark', FALLBACK_DARK[slot] ? '1' : '0')
+  }
+}
+
+// Luminanza media (0–255) della fascia superiore dell'immagine.
+function topLuma(imageUrl: string): Promise<number | null> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const W = 40, H = 40
+        const canvas = document.createElement('canvas')
+        canvas.width = W; canvas.height = H
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { resolve(null); return }
+        ctx.drawImage(img, 0, 0, W, H)
+        const rows = 16 // ~40% superiore: la zona dell'header
+        const data = ctx.getImageData(0, 0, W, rows).data
+        let sum = 0, n = 0
+        for (let i = 0; i < data.length; i += 4) {
+          sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]; n++
+        }
+        resolve(n ? sum / n : null)
+      } catch { resolve(null) }
+    }
+    img.onerror = () => resolve(null)
+    img.src = imageUrl
+  })
+}
+
 export function useWallpaper() {
   const wallpapers = useStore((s) => s.wallpapers)
   const slot = getTimeSlot()
@@ -26,12 +73,7 @@ export function useWallpaper() {
 
   useEffect(() => {
     const root = document.documentElement
-
-    if (wallpaperUrl) {
-      root.style.setProperty('--wallpaper-url', `url(${wallpaperUrl})`)
-    } else {
-      root.style.setProperty('--wallpaper-url', FALLBACK_GRADIENTS[slot])
-    }
+    applyWallpaper(root, slot, wallpaperUrl)
 
     if (prevSlotRef.current !== slot) {
       prevSlotRef.current = slot
@@ -41,12 +83,7 @@ export function useWallpaper() {
     const interval = setInterval(() => {
       const newSlot = getTimeSlot()
       if (newSlot !== prevSlotRef.current) {
-        const newUrl = wallpapers[newSlot]
-        if (newUrl) {
-          root.style.setProperty('--wallpaper-url', `url(${newUrl})`)
-        } else {
-          root.style.setProperty('--wallpaper-url', FALLBACK_GRADIENTS[newSlot])
-        }
+        applyWallpaper(root, newSlot, wallpapers[newSlot])
         prevSlotRef.current = newSlot
       }
     }, 60_000)

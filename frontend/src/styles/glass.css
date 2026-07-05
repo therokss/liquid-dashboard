@@ -298,6 +298,19 @@ body {
   color: var(--text-tertiary);
 }
 
+/* Wallpaper scuro → il testo posato sopra diventa chiaro (impostato da useWallpaper). */
+:root[data-wallpaper-dark="1"] {
+  --on-wallpaper: #ffffff;
+  --on-wallpaper-dim: rgba(255, 255, 255, 0.82);
+}
+
+/* Utility per il testo direttamente sul wallpaper (saluto, data, titoli sezione tab).
+   !important perché deve battere gli override di tema tipo [data-theme] .text-caption. */
+.on-wall { color: var(--on-wallpaper) !important; }
+.on-wall-dim { color: var(--on-wallpaper-dim) !important; }
+/* Ombra tenue per leggibilità sui bordi ad alto contrasto del wallpaper. */
+.on-wall, .on-wall-dim { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+
 /* ─── Glow effect per entità attive ─── */
 .entity-glow {
   box-shadow: var(--glass-shadow), var(--glass-inner-shadow), 0 0 24px var(--entity-color, var(--accent-glow));

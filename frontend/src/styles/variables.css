@@ -33,6 +33,12 @@
   --text-on-card: rgba(20, 20, 30, 0.9);
   --text-on-card-secondary: rgba(20, 20, 30, 0.55);
 
+  /* Testo posato DIRETTAMENTE sul wallpaper (saluto, data, titoli sezione delle tab):
+     dipende dalla luminosità del wallpaper, non dal tema. Default = scuro (wallpaper chiari);
+     con data-wallpaper-dark="1" (impostato da useWallpaper) diventa chiaro. */
+  --on-wallpaper: rgba(17, 24, 39, 0.95);
+  --on-wallpaper-dim: rgba(17, 24, 39, 0.60);
+
   /* Scrim per overlay a tutta pagina (dettaglio stanza) */
   --overlay-scrim: rgba(248, 249, 252, 0.72);
 

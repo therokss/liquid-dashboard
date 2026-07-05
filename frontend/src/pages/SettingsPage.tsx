@@ -73,7 +73,7 @@ export function SettingsPage() {
             fontFamily: 'var(--font-display)',
             fontSize: 34,
             fontWeight: 800,
-            color: 'var(--text-primary)',
+            color: 'var(--on-wallpaper)',
             letterSpacing: '-0.04em',
           }}
         >
