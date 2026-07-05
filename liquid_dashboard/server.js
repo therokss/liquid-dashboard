@@ -270,6 +270,38 @@ async function getUser(req) {
   return m ? await resolveUser(m[1].trim()) : null;
 }
 
+// Diagnostica: valida un token e riporta il MOTIVO in caso di fallimento.
+// Uso da browser: http://<ha>:8098/api/whoami?token=<long-lived-token>
+function resolveUserDebug(token) {
+  return new Promise((resolve) => {
+    let done = false;
+    const ws = new WebSocket(HA_WS_URL);
+    const finish = (v) => { if (done) return; done = true; try { ws.close(); } catch {} resolve(v); };
+    ws.on('message', (data) => {
+      let msg; try { msg = JSON.parse(data.toString()); } catch { return; }
+      if (msg.type === 'auth_required') ws.send(JSON.stringify({ type: 'auth', access_token: token }));
+      else if (msg.type === 'auth_ok') ws.send(JSON.stringify({ id: 1, type: 'auth/current_user' }));
+      else if (msg.type === 'auth_invalid') finish({ ok: false, reason: 'auth_invalid: ' + (msg.message || '') });
+      else if (msg.type === 'result' && msg.id === 1) {
+        finish(msg.success && msg.result
+          ? { ok: true, user: { id: msg.result.id, name: msg.result.name, is_admin: Boolean(msg.result.is_admin) } }
+          : { ok: false, reason: 'result_not_success' });
+      }
+    });
+    ws.on('error', (e) => finish({ ok: false, reason: 'ws_error: ' + e.message }));
+    setTimeout(() => finish({ ok: false, reason: 'timeout_5s (auth/current_user senza risposta)' }), 5000);
+  });
+}
+function whoamiHandler(req, res) {
+  const q = typeof req.query.token === 'string' ? req.query.token : '';
+  const m = /^Bearer\s+(.+)$/i.exec(req.headers['authorization'] || '');
+  const token = q || (m ? m[1].trim() : '');
+  if (!token) { res.status(400).json({ ok: false, reason: 'no_token (usa ?token=... o header Bearer)' }); return; }
+  resolveUserDebug(token).then((r) => res.json(r)).catch((e) => res.json({ ok: false, reason: 'exception: ' + e.message }));
+}
+app.get('/api/whoami', whoamiHandler);
+if (INGRESS_ENTRY) app.get(`${INGRESS_ENTRY}/api/whoami`, whoamiHandler);
+
 async function userHandler(req, res) {
   const user = await getUser(req);
   const name = req.headers['x-remote-user-display-name'] || req.headers['x-remote-user-name'] || '';
@@ -453,7 +485,7 @@ function proxyToHA(browserWs) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Liquid Dashboard] v1.39.0 — porta ${PORT}`);
+  console.log(`[Liquid Dashboard] v1.39.1 — porta ${PORT}`);
   console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
   console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
   if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);
