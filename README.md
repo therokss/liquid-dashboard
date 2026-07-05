@@ -5,6 +5,10 @@ neon, animazioni elastiche e temi per ora del giorno. Gira come **add-on ingress
 **nessun token da configurare**, si autentica da sola tramite il Supervisor e legge le tue
 stanze, entità e aree.
 
+Esiste anche come **app nativa iOS/Android** (vedi [📱 App nativa](#-app-nativa-ios--android))
+che condivide le **stesse** impostazioni dell'add-on e si aggiorna **in tempo reale** con la
+dashboard.
+
 Architetture: `aarch64`, `amd64`, `armv7`, `armhf`, `i386`.
 
 [![Aggiungi il repository alla tua istanza Home Assistant.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ftherokss%2Fliquid-dashboard)
@@ -73,8 +77,31 @@ clima, interruttori, ventilatori (controlli completi al tocco), elettrodomestici
   meteo/energia/rifiuti condivisi.
 
 **Extra** — preferenze **per-utente** sincronizzate lato add-on (seguono l'utente su ogni
-dispositivo), **modalità kiosk** integrata, **auto-retry** di connessione ai riavvii di HA,
-tema **Auto** che segue il sistema.
+dispositivo), **sync "live"** tra dashboard e app (una modifica su un dispositivo compare
+sull'altro in pochi secondi), **modalità kiosk** integrata, **auto-retry** di connessione ai
+riavvii di HA, tema **Auto** che segue il sistema.
+
+---
+
+## 📱 App nativa (iOS / Android)
+
+Oltre all'add-on, Liquid Dashboard esiste come **app client nativa** (React + Capacitor),
+pensata per il telefono e il tablet quando non vuoi passare dal browser.
+
+- **Stesse impostazioni della dashboard**: l'app parla con l'add-on su una porta dedicata
+  (`8098`, protetta dal **token di Home Assistant**), così rifiuti, meteo, energia, aree,
+  sfondi e preferenze sono **condivisi** — configuri una volta, vale ovunque.
+- **Sync in tempo reale**: cambi qualcosa sull'app e compare sulla dashboard (e viceversa)
+  entro pochi secondi, senza ricaricare.
+- **Doppio indirizzo interno/esterno**: imposti un **URL interno** (rete di casa) e uno
+  **esterno** (Nabu Casa o dominio remoto); l'app prova prima l'interno e, se sei fuori casa,
+  ripiega **automaticamente** sull'esterno.
+- **Accesso con token**: si collega direttamente a Home Assistant con un long-lived token
+  (Profilo → Token di lunga durata). Puoi cambiare indirizzi e token in qualsiasi momento da
+  **Impostazioni → Connessione** senza rifare la configurazione.
+
+> L'app è un progetto Capacitor separato: richiede Home Assistant raggiungibile dal
+> dispositivo e l'add-on installato per la condivisione delle impostazioni.
 
 ---
 
