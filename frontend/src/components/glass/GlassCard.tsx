@@ -33,7 +33,8 @@ export function GlassCard({
         ...(glowColor ? { '--entity-color': glowColor } as CSSProperties : {}),
         ...style,
       }}
-      whileTap={{ scale: 0.96, transition: { duration: 0.1 } }}
+      whileTap={{ scale: 0.94 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 24, mass: 0.7 }}
       {...props}
     >
       {children}
