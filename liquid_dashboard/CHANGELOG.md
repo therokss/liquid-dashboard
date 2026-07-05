@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.41.0] — 2026-07-05
+### Aggiunto
+- **Risposta immediata dei comandi (optimistic UI)**: quando accendi/spegni luci,
+  interruttori, prese o ventilatori, l'interfaccia cambia **subito**, senza aspettare
+  il round-trip verso il dispositivo. Se il dispositivo conferma, resta così; se **non
+  risponde** entro pochi secondi, l'interfaccia **torna indietro** da sola allo stato
+  reale. Vale anche per la luminosità impostata all'accensione.
+
 ## [1.40.2] — 2026-07-05
 ### Corretto
 - **Testo leggibile su qualsiasi sfondo**: saluto, data e titoli delle sezioni ora si
