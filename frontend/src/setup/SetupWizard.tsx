@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ConnectStep } from './steps/ConnectStep'
 import { RoomsStep } from './steps/RoomsStep'
 import { ThemeStep } from './steps/ThemeStep'
+import logoUrl from '../assets/logo.png'
 
 interface SetupWizardProps {
   onComplete: () => void
@@ -38,22 +39,16 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
           >
             <div
               style={{
-                width: 64,
-                height: 64,
+                width: 76,
+                height: 76,
                 borderRadius: 20,
-                background: 'var(--glass-bg)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
+                overflow: 'hidden',
                 border: '1px solid var(--glass-border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
                 margin: '0 auto 16px',
                 boxShadow: '0 0 40px var(--accent-glow)',
-                fontSize: 28,
               }}
             >
-              💧
+              <img src={logoUrl} alt="Liquid Dashboard" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
           </motion.div>
           <h1
