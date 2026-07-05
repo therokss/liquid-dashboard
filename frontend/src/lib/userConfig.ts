@@ -30,7 +30,11 @@ export function extractSyncConfig(state: Record<string, unknown>): Record<string
 }
 
 export function applyUserConfig(config: Record<string, unknown>): void {
-  useStore.setState(config as Partial<StoreState>)
+  // Applica solo le chiavi definite: una config remota priva di una chiave non
+  // deve azzerarla in locale (es. sfondi non presenti nel payload dell'altro device).
+  const patch: Record<string, unknown> = {}
+  for (const k of Object.keys(config)) if (config[k] !== undefined) patch[k] = config[k]
+  useStore.setState(patch as Partial<StoreState>)
 }
 
 export interface UserConfigResult { config: Record<string, unknown> | null; hasUser: boolean }
@@ -80,4 +84,20 @@ export function startUserConfigSync(): void {
     if (timer) clearTimeout(timer)
     timer = setTimeout(() => { void saveUserConfig(cfg) }, 800)
   })
+}
+
+// Ricarica la config per-utente dal backend e la applica SOLO se è cambiata da
+// remoto (un altro dispositivo). Se c'è una modifica locale non ancora salvata,
+// vince quella locale. Aggiorna la baseline per non ri-salvarla (niente echo).
+export async function pullUserConfig(): Promise<void> {
+  if (!syncStarted) return
+  const res = await loadUserConfig()
+  if (!res.config) return
+  const incoming = extractSyncConfig(res.config)
+  const remoteStr = JSON.stringify(incoming)
+  const currentStr = JSON.stringify(extractSyncConfig(useStore.getState() as unknown as Record<string, unknown>))
+  if (remoteStr === currentStr) { lastSerialized = remoteStr; return }
+  if (currentStr !== lastSerialized) return // modifica locale in sospeso → non sovrascrivere
+  lastSerialized = remoteStr
+  applyUserConfig(incoming)
 }

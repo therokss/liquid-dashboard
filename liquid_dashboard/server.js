@@ -35,7 +35,9 @@ const HA_WS_URL =
   'ws://supervisor/core/websocket';
 
 const app = express();
-app.use(express.json());
+// Limite alto: la config per-utente include gli sfondi (foto in base64, ~MB).
+// Col default di 100 KB il salvataggio di uno sfondo verrebbe rifiutato (413).
+app.use(express.json({ limit: '12mb' }));
 
 // CORS per la porta diretta (client app esterni). Le API sono protette dal token
 // di Home Assistant (Bearer), quindi Allow-Origin * è sicuro: niente cookie/sessione.
@@ -164,6 +166,17 @@ if (INGRESS_ENTRY) {
 }
 app.get('/api/user-config', userConfigGetHandler);
 app.post('/api/user-config', userConfigSaveHandler);
+
+// --- Versione della config (solo timestamp dei file) per il sync "live" ------------
+// Il polling di app/dashboard interroga questo endpoint leggerissimo ogni ~10s:
+// ricarica la config piena SOLO se un timestamp cambia (evita di riscaricare i MB
+// degli sfondi a vuoto). Niente token: espone solo due numeri (mtime).
+function configVersionHandler(req, res) {
+  const mtime = (p) => { try { return fs.statSync(p).mtimeMs; } catch { return 0; } };
+  res.json({ prefs: mtime(PREFS_PATH), userConfig: mtime(USER_CFG_PATH) });
+}
+if (INGRESS_ENTRY) app.get(`${INGRESS_ENTRY}/api/config-version`, configVersionHandler);
+app.get('/api/config-version', configVersionHandler);
 
 // Proxy immagini (cover media, entity_picture): il browser non può caricare gli URL
 // relativi /api/... di HA in contesto ingress → li recuperiamo lato server con il token.
@@ -489,7 +502,7 @@ function proxyToHA(browserWs) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Liquid Dashboard] v1.39.2 — porta ${PORT}`);
+  console.log(`[Liquid Dashboard] v1.40.0 — porta ${PORT}`);
   console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
   console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
   if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);

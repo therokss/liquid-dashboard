@@ -3,6 +3,22 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.40.0] — 2026-07-05
+### Aggiunto
+- **Sync "live" tra i dispositivi**: una modifica fatta sull'app compare sulla dashboard
+  (e viceversa) entro pochi secondi, senza ricaricare. Un endpoint leggerissimo
+  `/api/config-version` (solo timestamp) viene interrogato in polling e al ritorno in
+  primo piano; la config piena si riscarica **solo** se qualcosa è cambiato.
+### Corretto
+- **Sfondi che non si sincronizzavano**: venivano salvati come blob URL locale
+  (`blob:…`), valido solo nella sessione corrente e non trasferibile. Ora la foto è
+  convertita in un data URL **ridimensionato** (canvas) → si salva davvero nel backend
+  condiviso e compare su tutti i dispositivi.
+- **Salvataggio sfondi rifiutato (413)**: alzato il limite del body JSON del server da
+  100 KB a 12 MB (le foto in base64 pesano vari MB).
+- **Config casa vuota in fallback**: se il backend risponde ma la config è ancora vuota,
+  si recupera dallo storage per‑utente di Home Assistant (dati di versioni precedenti).
+
 ## [1.39.0] — 2026-07-05
 ### Aggiunto
 - **API condivisa su porta diretta (8098)**: l'app iOS/Android legge e scrive le **stesse**
