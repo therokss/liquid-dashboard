@@ -430,30 +430,25 @@ body {
   }
 }
 
-/* iPad landscape / desktop: le sezioni della home si dispongono su 2 colonne
-   (masonry via column-count: il wrapper .page-grid non ha scroll proprio, quindi
-   le colonne si bilanciano in altezza senza scroll orizzontale). Le griglie interne
-   (dispositivi, stanze) usano già auto-fill e si espandono da sole col contenitore. */
+/* iPad landscape / desktop: allarga il contenuto e ingrandisci le card con nome.
+   Il masonry a colonne della Home è fatto in JS (MasonryColumns), non con column-count
+   CSS, perché Safari non renderizza il backdrop-filter dentro le colonne CSS. */
 @media (min-width: 1080px) {
   .page > * {
     max-width: 1100px;
   }
-  .page-grid {
-    column-count: 2;
-    column-gap: var(--space-xl);
+  /* Card con nome+controllo (luci, dispositivi): più larghe così i nomi non si tagliano. */
+  .grid-fluid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
-  .page-grid > * {
-    break-inside: avoid;
-    -webkit-column-break-inside: avoid;
+  .grid-fluid-lg {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   }
 }
 
-/* Schermi molto ampi: 3 colonne */
+/* Schermi molto ampi: contenuto ancora più largo (le colonne masonry salgono a 3 via JS) */
 @media (min-width: 1600px) {
   .page > * {
     max-width: 1500px;
-  }
-  .page-grid {
-    column-count: 3;
   }
 }

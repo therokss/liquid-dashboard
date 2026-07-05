@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.42.1] — 2026-07-05
+### Corretto
+- **Card che sparivano su desktop**: su schermi larghi alcune card (Calendario, Rifiuti,
+  dispositivi) non venivano disegnate per un bug di Safari con il layout a colonne CSS +
+  effetto vetro. Il masonry ora è calcolato in modo affidabile, senza sparizioni.
+- **Nomi delle luci tagliati**: nelle stanze le card di luci/dispositivi ora sono più
+  larghe su schermi grandi, così i nomi si leggono per intero.
+
 ## [1.42.0] — 2026-07-05
 ### Aggiunto
 - **Layout ottimizzato per iPad e computer**: su schermi larghi le sezioni della Home
