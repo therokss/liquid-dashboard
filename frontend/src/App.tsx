@@ -8,6 +8,10 @@ import { setKiosk } from './lib/kiosk'
 import { loadPrefs, applyHouse, extractHouse, savePrefs, startHouseSync } from './lib/permissions'
 import { loadUserConfig, applyUserConfig, startUserConfigSync } from './lib/userConfig'
 import { startLiveSync } from './lib/liveSync'
+import { CustomDashboardView } from './lib/dashboards/CustomDashboardView'
+import { loadDashboards } from './lib/dashboards/store'
+import { getScreenId } from './lib/dashboards/deviceId'
+import type { CustomDashboard } from './lib/dashboards/types'
 import { SetupWizard } from './setup/SetupWizard'
 import { OnboardingWizard } from './pages/OnboardingWizard'
 import { TabBar, type Tab } from './components/nav/TabBar'
@@ -71,10 +75,21 @@ function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
   const [everConnected, setEverConnected] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [retries, setRetries] = useState(0)
+  const [assignedDash, setAssignedDash] = useState<CustomDashboard | null>(null)
+  const [showDefault, setShowDefault] = useState(false)
   const MAX_RETRIES = 40 // ~3 min a 5s: copre il tempo di riavvio di HA
 
   useEffect(() => {
     if (connected) setEverConnected(true)
+  }, [connected])
+
+  // Questo schermo ha una dashboard custom assegnata? La mostra di default.
+  useEffect(() => {
+    if (!connected) return
+    void loadDashboards().then(({ dashboards, deviceMap }) => {
+      const id = deviceMap[getScreenId()]
+      setAssignedDash(id ? dashboards.find((d) => d.id === id) ?? null : null)
+    })
   }, [connected])
 
   // Auto-retry al primo avvio (es. mentre Home Assistant si sta riavviando):
@@ -115,6 +130,11 @@ function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
         </div>
       </div>
     )
+  }
+
+  // Schermo con dashboard custom assegnata: la mostra di default (tasto per la predefinita).
+  if (assignedDash && !showDefault) {
+    return <CustomDashboardView dashboard={assignedDash} onDefault={() => setShowDefault(true)} />
   }
 
   return (

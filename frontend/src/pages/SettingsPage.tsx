@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sun, Moon, Sparkles, Upload, Trash2, RefreshCw, Server, ChevronRight } from 'lucide-react'
+import { Sun, Moon, Sparkles, Upload, Trash2, RefreshCw, Server, ChevronRight, LayoutGrid } from 'lucide-react'
+import { DashboardsPage } from '../lib/dashboards/DashboardsPage'
 import { useStore } from '../store'
 import { clearToken } from '../hooks/useHA'
 import { getDomain } from '../types/ha'
@@ -39,6 +40,7 @@ export function SettingsPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [showServer, setShowServer] = useState(false)
   const [showUpdates, setShowUpdates] = useState(false)
+  const [showDashboards, setShowDashboards] = useState(false)
   const [uploadingSlot, setUploadingSlot] = useState<WallpaperSlot | null>(null)
 
   async function handleWallpaperPick(slot: WallpaperSlot, file: File) {
@@ -141,6 +143,22 @@ export function SettingsPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Informazioni server</div>
                   <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>CPU, memoria, disco, rete e sensori</div>
+                </div>
+                <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+              </motion.button>
+
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowDashboards(true)}
+                className="glass-panel"
+                style={{ width: '100%', textAlign: 'left', cursor: 'pointer', padding: 'var(--space-md) var(--space-lg)', display: 'flex', alignItems: 'center', gap: 14 }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: 'var(--accent-glow)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                  <LayoutGrid size={20} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Dashboard</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>Crea, modifica e assegna dashboard agli schermi</div>
                 </div>
                 <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
               </motion.button>
@@ -421,6 +439,7 @@ export function SettingsPage() {
       </MasonryColumns>
 
       <AnimatePresence>
+        {showDashboards && <DashboardsPage onBack={() => setShowDashboards(false)} />}
         {showServer && <ServerPage onBack={() => setShowServer(false)} />}
         {showUpdates && <UpdatesPage onBack={() => setShowUpdates(false)} />}
       </AnimatePresence>

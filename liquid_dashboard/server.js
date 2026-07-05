@@ -10,6 +10,7 @@ const INGRESS_ENTRY = process.env.INGRESS_ENTRY || '';
 const CREDS_PATH = '/data/ld_credentials.json';
 const PREFS_PATH = '/data/ld_prefs.json';
 const USER_CFG_PATH = '/data/ld_user_configs.json';
+const DASHBOARDS_PATH = '/data/ld_dashboards.json';
 
 // Cerca SUPERVISOR_TOKEN in env e nelle directory s6-rc (HA base image)
 function detectSupervisorToken() {
@@ -167,13 +168,47 @@ if (INGRESS_ENTRY) {
 app.get('/api/user-config', userConfigGetHandler);
 app.post('/api/user-config', userConfigSaveHandler);
 
+// --- Dashboard custom (editor) + assegnazione per-schermo -------------------------
+// Le dashboard sono condivise (viste da ogni schermo); la mappa screenId→dashboardId
+// decide cosa mostra ciascun tablet. In lettura serve un token valido; in scrittura
+// serve un amministratore (la delega ai non-admin arriverà con i permessi).
+function readDashboards() {
+  try { return JSON.parse(fs.readFileSync(DASHBOARDS_PATH, 'utf8')); } catch { return { dashboards: [], deviceMap: {} }; }
+}
+async function dashboardsGetHandler(req, res) {
+  if (!req.headers['x-remote-user-id']) {
+    const user = await getUser(req);
+    if (!user) { res.status(401).json({ error: 'unauthorized' }); return; }
+  }
+  const d = readDashboards();
+  res.json({ dashboards: d.dashboards || [], deviceMap: d.deviceMap || {} });
+}
+async function dashboardsSaveHandler(req, res) {
+  const user = await getUser(req);
+  if (!user || !user.is_admin) { res.status(403).json({ ok: false, error: 'forbidden' }); return; }
+  const body = req.body || {};
+  const cur = readDashboards();
+  const next = {
+    dashboards: Array.isArray(body.dashboards) ? body.dashboards : (cur.dashboards || []),
+    deviceMap: (body.deviceMap && typeof body.deviceMap === 'object') ? body.deviceMap : (cur.deviceMap || {}),
+  };
+  try { fs.writeFileSync(DASHBOARDS_PATH, JSON.stringify(next)); res.json({ ok: true }); }
+  catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+}
+if (INGRESS_ENTRY) {
+  app.get(`${INGRESS_ENTRY}/api/dashboards`, dashboardsGetHandler);
+  app.post(`${INGRESS_ENTRY}/api/dashboards`, dashboardsSaveHandler);
+}
+app.get('/api/dashboards', dashboardsGetHandler);
+app.post('/api/dashboards', dashboardsSaveHandler);
+
 // --- Versione della config (solo timestamp dei file) per il sync "live" ------------
 // Il polling di app/dashboard interroga questo endpoint leggerissimo ogni ~10s:
 // ricarica la config piena SOLO se un timestamp cambia (evita di riscaricare i MB
 // degli sfondi a vuoto). Niente token: espone solo due numeri (mtime).
 function configVersionHandler(req, res) {
   const mtime = (p) => { try { return fs.statSync(p).mtimeMs; } catch { return 0; } };
-  res.json({ prefs: mtime(PREFS_PATH), userConfig: mtime(USER_CFG_PATH) });
+  res.json({ prefs: mtime(PREFS_PATH), userConfig: mtime(USER_CFG_PATH), dashboards: mtime(DASHBOARDS_PATH) });
 }
 if (INGRESS_ENTRY) app.get(`${INGRESS_ENTRY}/api/config-version`, configVersionHandler);
 app.get('/api/config-version', configVersionHandler);
@@ -502,7 +537,7 @@ function proxyToHA(browserWs) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Liquid Dashboard] v1.44.0 — porta ${PORT}`);
+  console.log(`[Liquid Dashboard] v1.45.0 — porta ${PORT}`);
   console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
   console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
   if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);
