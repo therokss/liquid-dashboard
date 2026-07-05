@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Lightbulb, Moon } from 'lucide-react'
 import { useStore } from '../store'
+import { MasonryColumns } from '../components/MasonryColumns'
 import { ClimatePage } from './ClimatePage'
 import { AreaTempCard } from '../components/cards/AreaTempCard'
 import { LightCard } from '../components/cards/LightCard'
@@ -176,8 +177,8 @@ export function HomePage() {
         </div>
       )}
 
-      {/* Sezioni: su schermi larghi vanno su più colonne (masonry) per usare lo spazio */}
-      <div className="page-grid">
+      {/* Sezioni: su schermi larghi vanno su più colonne (masonry JS, niente glitch Safari) */}
+      <MasonryColumns>
       {/* Meteo */}
       {weatherEnabled && hasWeather && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
@@ -269,7 +270,7 @@ export function HomePage() {
           </div>
         </div>
       )}
-      </div>
+      </MasonryColumns>
 
       {createPortal(
         <AnimatePresence>
