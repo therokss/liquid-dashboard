@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.34.0] — 2026-07-05
+### Aggiunto
+- **Aggiornamenti** (Impostazioni → Sistema, admin): elenco di tutti gli aggiornamenti
+  disponibili (Home Assistant, add-on, HACS, firmware…) con versione attuale → nuova,
+  **barra di avanzamento** durante l'installazione e link alle **note di rilascio**.
+- Pulsante **"Aggiorna tutti"** (con conferma) per installare tutti gli aggiornamenti in
+  un colpo. Badge con il numero di aggiornamenti in sospeso sulla voce di menu.
+
 ## [1.33.0] — 2026-07-05
 ### Aggiunto
 - **Videocamere WebRTC**: le camere che lo supportano (go2rtc/Reolink/Frigate…) ora
