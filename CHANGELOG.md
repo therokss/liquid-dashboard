@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.42.0] — 2026-07-05
+### Aggiunto
+- **Layout ottimizzato per iPad e computer**: su schermi larghi le sezioni della Home
+  si dispongono automaticamente su **più colonne** (2 su tablet/desktop, 3 su schermi
+  molto ampi) sfruttando tutto lo spazio, invece di restare una colonna stretta al
+  centro. Le griglie di stanze e dispositivi si allargano di conseguenza.
+
 ## [1.41.0] — 2026-07-05
 ### Aggiunto
 - **Risposta immediata dei comandi (optimistic UI)**: quando accendi/spegni luci,

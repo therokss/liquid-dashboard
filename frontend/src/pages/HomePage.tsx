@@ -176,6 +176,8 @@ export function HomePage() {
         </div>
       )}
 
+      {/* Sezioni: su schermi larghi vanno su più colonne (masonry) per usare lo spazio */}
+      <div className="page-grid">
       {/* Meteo */}
       {weatherEnabled && hasWeather && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
@@ -267,6 +269,7 @@ export function HomePage() {
           </div>
         </div>
       )}
+      </div>
 
       {createPortal(
         <AnimatePresence>
