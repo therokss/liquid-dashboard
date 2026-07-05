@@ -115,18 +115,18 @@ export function HomePage() {
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-xl)' }}>
         <h1
+          className="on-wall"
           style={{
             fontFamily: 'var(--font-display)',
             fontSize: 34,
             fontWeight: 800,
-            color: 'var(--text-primary)',
             letterSpacing: '-0.04em',
             marginBottom: 4,
           }}
         >
           {greeting}
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14, textTransform: 'capitalize' }}>
+        <p className="on-wall-dim" style={{ fontSize: 14, textTransform: 'capitalize' }}>
           {formatDate()}
         </p>
       </div>
@@ -179,7 +179,7 @@ export function HomePage() {
       {/* Meteo */}
       {weatherEnabled && hasWeather && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>Meteo</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>Meteo</div>
           <WeatherCard />
         </div>
       )}
@@ -194,7 +194,7 @@ export function HomePage() {
       {/* Calendario */}
       {calendarEnabled && hasCalendar && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>Calendario</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>Calendario</div>
           <CalendarCard />
         </div>
       )}
@@ -202,7 +202,7 @@ export function HomePage() {
       {/* Rifiuti */}
       {wasteEnabled && hasWaste && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>Rifiuti</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>Rifiuti</div>
           <WasteCard />
         </div>
       )}
@@ -213,7 +213,7 @@ export function HomePage() {
       {/* Featured media player */}
       {featuredMedia && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>In riproduzione</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>In riproduzione</div>
           <motion.div className="anim-slide-up">
             <MediaCard entity={featuredMedia} featured />
           </motion.div>
@@ -223,7 +223,7 @@ export function HomePage() {
       {/* Entità attive */}
       {activeEntities.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>Attivo ora</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>Attivo ora</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }} className="stagger-grid">
             {activeEntities.map((entity, i) => {
               const domain = getDomain(entity.entity_id)
@@ -242,7 +242,7 @@ export function HomePage() {
       {/* Ambienti — temperatura media per stanza */}
       {areaTemps.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>Ambienti</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>Ambienti</div>
           <div className="grid-fluid stagger-grid">
             {areaTemps.map((a, i) => (
               <motion.div key={a.id} className="anim-scale-in" style={{ animationDelay: `${i * 60}ms`, minWidth: 0 }}>
