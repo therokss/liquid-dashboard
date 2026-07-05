@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Tv, Sparkles, Sun } from 'lucide-react'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
+import { DeviceDetailModal } from '../DeviceDetailModal'
 import type { HassEntity } from '../../types/ha'
 
 // Philips Hue Play HDMI Sync Box (integrazione huesyncbox):
@@ -49,6 +50,7 @@ interface Box {
 
 function HueSyncCard({ box }: { box: Box }) {
   const { callService } = useHA()
+  const [detail, setDetail] = useState(false)
   const powerOn = box.power?.state === 'on'
   const syncOn = box.lightSync?.state === 'on'
   const options = (box.hdmi.attributes.options as string[] | undefined) ?? []
@@ -76,9 +78,10 @@ function HueSyncCard({ box }: { box: Box }) {
   const setInput = (opt: string) => callService('select', 'select_option', { entity_id: box.hdmi.entity_id, option: opt })
 
   return (
+    <>
     <div className="glass-card" style={{ padding: 'var(--space-md)' }}>
-      {/* Header + power */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Header + power (tocca per tutte le funzioni) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => setDetail(true)}>
         <div style={{
           width: 42, height: 42, borderRadius: 12, flexShrink: 0,
           background: powerOn ? 'var(--accent-glow)' : 'var(--glass-bg-active)',
@@ -90,10 +93,10 @@ function HueSyncCard({ box }: { box: Box }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Hue Play</div>
-          <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2 }}>{powerOn ? (syncOn ? 'Sincronizzazione attiva' : 'Acceso') : 'Spento'}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2 }}>{powerOn ? (syncOn ? 'Sincronizzazione attiva' : 'Acceso') : 'Spento'} · tocca per i controlli</div>
         </div>
         {box.power && (
-          <label className="glass-toggle" style={{ flexShrink: 0 }}>
+          <label className="glass-toggle" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
             <input type="checkbox" checked={powerOn} onChange={togglePower} />
             <div className="glass-toggle-track" />
             <div className="glass-toggle-thumb" style={{ transform: powerOn ? 'translateX(20px)' : 'translateX(0)' }} />
@@ -165,5 +168,7 @@ function HueSyncCard({ box }: { box: Box }) {
         </>
       )}
     </div>
+    {detail && <DeviceDetailModal entityId={box.hdmi.entity_id} onClose={() => setDetail(false)} />}
+    </>
   )
 }

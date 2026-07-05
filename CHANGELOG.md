@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.30.0] — 2026-07-05
+### Corretto
+- Gli interruttori del **ventilatore** e del **Hue Play (Sync Box)** non compaiono più tra gli
+  "Interruttori": i loro controlli sono nella card dedicata. La card Hue Sync è ora toccabile
+  e apre il pannello con tutte le funzioni (dolby vision, sync mode, intensità…).
+
 ## [1.29.0] — 2026-07-05
 ### Aggiunto
 - **Dispositivi con controlli completi**: i ventilatori compaiono con on/off e, al tocco, un
