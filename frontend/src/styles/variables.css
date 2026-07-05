@@ -10,21 +10,21 @@
 
   /* Glass intensità (0-1, configurabile dall'utente) */
   --glass-intensity: 0.7;
-  --glass-blur: calc(14px + var(--glass-intensity) * 22px);
-  --glass-saturation: 2;
+  --glass-blur: calc(13px + var(--glass-intensity) * 20px);
+  --glass-saturation: 1.7;
 
   /* Light mode glass — card chiare abbastanza opache per testo scuro leggibile */
   --glass-bg: rgba(255, 255, 255, 0.6);
-  --glass-bg-hover: rgba(255, 255, 255, 0.74);
-  --glass-bg-active: rgba(255, 255, 255, 0.9);
+  --glass-bg-hover: rgba(255, 255, 255, 0.72);
+  --glass-bg-active: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(0, 0, 0, 0.07);
   --glass-border-dim: rgba(0, 0, 0, 0.05);
-  --glass-shadow: 0 14px 36px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(15, 23, 42, 0.08);
-  /* Highlight speculare concentrato sul bordo superiore (come il vetro iOS) */
-  --glass-specular: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.16) 14%, rgba(255, 255, 255, 0) 42%);
-  --glass-rim: rgba(255, 255, 255, 0.85);
-  /* Bevel: rim luminoso in alto + anello interno + ombra morbida in basso */
-  --glass-inner-shadow: inset 0 1.5px 0 var(--glass-rim), inset 0 0 0 1px rgba(255, 255, 255, 0.3), inset 0 -14px 24px rgba(15, 23, 42, 0.04);
+  --glass-shadow: 0 12px 30px rgba(15, 23, 42, 0.11), 0 3px 9px rgba(15, 23, 42, 0.06);
+  /* Highlight speculare delicato sul bordo superiore (vetro iOS, non plastica bianca) */
+  --glass-specular: linear-gradient(180deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.07) 16%, rgba(255, 255, 255, 0) 48%);
+  --glass-rim: rgba(255, 255, 255, 0.5);
+  /* Bevel morbido: rim tenue in alto + anello sottile + leggera ombra in basso */
+  --glass-inner-shadow: inset 0 1px 0 var(--glass-rim), inset 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 -12px 20px rgba(15, 23, 42, 0.028);
 
   /* Testo — scuro sul tema chiaro (slate-900) */
   --text-primary: rgba(17, 24, 39, 0.95);
@@ -81,14 +81,14 @@
 /* Dark mode — Liquid Glass oceanico neon */
 [data-theme="dark"] {
   --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-bg-hover: rgba(255, 255, 255, 0.1);
-  --glass-bg-active: rgba(255, 255, 255, 0.16);
-  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-bg-hover: rgba(255, 255, 255, 0.09);
+  --glass-bg-active: rgba(255, 255, 255, 0.13);
+  --glass-border: rgba(255, 255, 255, 0.12);
   --glass-border-dim: rgba(255, 255, 255, 0.07);
-  --glass-shadow: 0 24px 46px rgba(0, 110, 200, 0.2), 0 10px 26px rgba(0, 0, 0, 0.5);
-  --glass-specular: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 16%, rgba(255, 255, 255, 0) 44%);
-  --glass-rim: rgba(255, 255, 255, 0.22);
-  --glass-inner-shadow: inset 0 1px 0 var(--glass-rim), inset 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 -14px 24px rgba(0, 0, 0, 0.32);
+  --glass-shadow: 0 20px 42px rgba(0, 90, 170, 0.16), 0 9px 24px rgba(0, 0, 0, 0.48);
+  --glass-specular: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 18%, rgba(255, 255, 255, 0) 46%);
+  --glass-rim: rgba(255, 255, 255, 0.16);
+  --glass-inner-shadow: inset 0 1px 0 var(--glass-rim), inset 0 0 0 1px rgba(255, 255, 255, 0.04), inset 0 -12px 22px rgba(0, 0, 0, 0.28);
   --text-primary: #d5e4fa;
   --text-secondary: #c1c6d7;
   --text-tertiary: #8b90a0;
