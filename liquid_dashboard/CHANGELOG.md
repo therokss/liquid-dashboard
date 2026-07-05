@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.44.0] — 2026-07-05
+### Aggiunto
+- **Colonne in tutte le viste**: anche Sicurezza, Media, Clima, Server e Impostazioni
+  dispongono le sezioni su più colonne su schermi larghi (iPad/desktop), completando il
+  layout ottimizzato già introdotto in Home, Stanze ed Elettricità.
+
 ## [1.43.0] — 2026-07-05
 ### Aggiunto
 - **Colonne dentro le viste (Stanze ed Elettricità)**: su schermi larghi le sezioni si

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Music } from 'lucide-react'
 import { useStore } from '../store'
 import { MediaCard } from '../components/cards/MediaCard'
+import { MasonryColumns } from '../components/MasonryColumns'
 import { getDomain } from '../types/ha'
 import type { HassEntity } from '../types/ha'
 
@@ -68,6 +69,7 @@ export function MediaPage() {
         </h1>
       </div>
 
+      <MasonryColumns rowGap="0px">
       {playing.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
           <div className="text-caption" style={{ marginBottom: 10 }}>In riproduzione</div>
@@ -107,6 +109,7 @@ export function MediaPage() {
           </div>
         </div>
       )}
+      </MasonryColumns>
     </div>
   )
 }

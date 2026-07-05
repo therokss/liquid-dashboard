@@ -7,6 +7,7 @@ import {
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { CamerasSection } from '../components/cards/CamerasSection'
+import { MasonryColumns } from '../components/MasonryColumns'
 import type { HassEntity } from '../types/ha'
 
 const dom = (id: string) => id.split('.')[0]
@@ -184,6 +185,7 @@ export function SecurityPage() {
         )}
       </div>
 
+      <MasonryColumns rowGap="0px">
       {alarms.length > 0 && (
         <Section title="Allarme">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -218,6 +220,7 @@ export function SecurityPage() {
           <div style={{ fontSize: 14 }}>Videocamere, sensori porte/finestre e allarmi compariranno qui.</div>
         </motion.div>
       )}
+      </MasonryColumns>
     </div>
   )
 }

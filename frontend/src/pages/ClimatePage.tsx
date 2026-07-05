@@ -4,6 +4,7 @@ import { useStore } from '../store'
 import { ClimateCard } from '../components/cards/ClimateCard'
 import { AreaTempCard } from '../components/cards/AreaTempCard'
 import { GlassCard } from '../components/glass/GlassCard'
+import { MasonryColumns } from '../components/MasonryColumns'
 import { getDomain } from '../types/ha'
 
 export function ClimatePage({ onBack }: { onBack: () => void }) {
@@ -71,6 +72,7 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
         </h2>
       </div>
 
+      <MasonryColumns rowGap="0px">
       {/* Media casa */}
       {houseAvg !== null && (
         <GlassCard size="lg" style={{ marginBottom: 'var(--space-xl)' }}>
@@ -114,6 +116,7 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
           <div>Nessun termostato o climatizzatore</div>
         </div>
       )}
+      </MasonryColumns>
     </motion.div>
   )
 }
