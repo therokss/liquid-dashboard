@@ -1,109 +1,143 @@
 # 💧 Liquid Dashboard — Add-on per Home Assistant
 
-Dashboard in stile **iOS 26 "Liquid Glass"** per Home Assistant, con effetto vetro,
-accento neon e temi per ora del giorno. Gira come **add-on ingress**: nessun token da
-configurare, si autentica da sola tramite il Supervisor.
+Dashboard in stile **iOS 26 "Liquid Glass"** per Home Assistant: effetto vetro, accento
+neon, animazioni elastiche e temi per ora del giorno. Gira come **add-on ingress**:
+**nessun token da configurare**, si autentica da sola tramite il Supervisor e legge le tue
+stanze, entità e aree.
 
-Funziona su: `aarch64`, `amd64`, `armv7`, `armhf`, `i386`.
+Architetture: `aarch64`, `amd64`, `armv7`, `armhf`, `i386`.
+
+---
+
+## ✅ Requisiti
+
+> ⚠️ **Serve Home Assistant con Supervisor** — cioè **Home Assistant OS** o **Supervised**.
+> Su **Home Assistant Container** (Docker semplice) o **Core** (venv) gli add-on non
+> esistono e non è installabile.
+
+Alla prima installazione l'add-on viene **compilato in locale** sul tuo HA (ci vogliono
+un paio di minuti e una connessione a internet). Il frontend è già incluso pronto all'uso.
 
 ---
 
 ## 📦 Installazione
 
-1. In Home Assistant vai su **Impostazioni → Add-on → Add-on Store**.
+1. In Home Assistant vai su **Impostazioni → Add-on → Store add-on**.
 2. In alto a destra apri il menù **⋮ → Repository**.
 3. Incolla l'URL di questo repository e premi **Aggiungi**:
    ```
    https://github.com/therokss/liquid-dashboard
    ```
 4. Chiudi, aggiorna la pagina: nello store comparirà **Liquid Dashboard**.
-5. Aprila → **Installa** → **Avvia** (attiva anche *"Mostra nella barra laterale"*).
-6. Apri **Liquid Dashboard** dalla barra laterale.
+5. Aprila → **Installa** → **Avvia** (lascia attivo *"Mostra nella barra laterale"*).
+6. Apri **Liquid Dashboard** dalla barra laterale — **si connette da sola**, senza token.
 
-> Al primo avvio, se sei amministratore, parte un breve wizard di configurazione
-> (assegnazione stanze + visibilità dispositivi). Gli altri utenti vedono subito la dashboard.
+> Al primo avvio, se sei amministratore, parte un breve wizard (assegnazione stanze +
+> visibilità dispositivi). Gli altri utenti vedono subito la dashboard con le impostazioni
+> decise dall'admin.
+
+---
+
+## ✨ Funzionalità
+
+**Casa** — saluto, meteo, energia, calendario, raccolta rifiuti, "In riproduzione",
+i tuoi dispositivi mobili (batteria/posizione, per utente) e le stanze con temperatura media.
+
+**Stanze** — griglia colorata per ambiente; dentro ogni stanza luci (con colori e scene),
+clima, interruttori, ventilatori (controlli completi al tocco), elettrodomestici
+**SmartThings** (lavatrice/lavastoviglie/forno con tempo di completamento) e la card
+**Philips Hue Play (HDMI Sync Box)**. Badge luci accese e finestre aperte.
+
+**🛡️ Sicurezza** (sezione dedicata) —
+- **Videocamere live**: **WebRTC** (video fluido peer-to-peer) con ripiego automatico a
+  MJPEG e snapshot. Al tocco: schermo intero + i **controlli della videocamera**
+  (privacy, luce IR, rilevamenti…).
+- **Porte e finestre**, **movimento**, **serrature**, **allarme** (attiva/disattiva) e
+  **rilevatori** (fumo, gas, CO, perdite).
+
+**Media** — tutti i player, con dedup e riproduzione in evidenza.
+
+**Impostazioni** (admin) —
+- **Aggiornamenti**: elenco di *tutti* gli update (Core, OS, add-on, HACS, firmware) con
+  **"Aggiorna tutti"** e **backup** opzionale prima dell'aggiornamento.
+- **Informazioni server**: CPU, memoria, disco, rete (System Monitor) + sensori aggiuntivi.
+- **Permessi utenti**: l'admin decide cosa possono modificare gli altri.
+- Aspetto (temi, sfondi per ora del giorno, intensità del vetro), stanze visibili,
+  meteo/energia/rifiuti condivisi.
+
+**Extra** — preferenze **per-utente** sincronizzate lato add-on (seguono l'utente su ogni
+dispositivo), **modalità kiosk** integrata, **auto-retry** di connessione ai riavvii di HA,
+tema **Auto** che segue il sistema.
 
 ---
 
 ## 🔄 Aggiornamenti
 
-Quando esce una nuova versione, Home Assistant mostra **"Aggiornamento disponibile"**
-nella pagina dell'add-on: basta premere **Aggiorna**. Niente più ricostruzioni manuali.
+Quando esce una nuova versione, Home Assistant mostra **"Aggiornamento disponibile"** nella
+pagina dell'add-on con il changelog: basta premere **Aggiorna**. Niente ricostruzioni manuali.
 
 ---
 
 ## 🏠 Renderla la plancia predefinita
 
-> **Nota tecnica:** Home Assistant non permette di impostare un add-on *ingress*
-> direttamente come dashboard predefinita da `configuration.yaml` (l'URL ingress non
-> è un pannello Lovelace). Il metodo qui sotto aggira il limite con una dashboard
-> "contenitore" e **funziona per tutti gli utenti**.
+### Modo semplice (consigliato) — dal pannello
+Da **Impostazioni → Plancia a schermo intero → Crea dashboard** (visibile agli admin):
+l'add-on crea da solo una dashboard **"Casa"** che apre la Liquid Dashboard a tutto schermo
+(rileva lo slug in automatico). Poi ogni utente va su **Profilo → Dashboard predefinita →
+Casa**.
 
-### 1. Trova lo *slug* dell'add-on
-Apri la Liquid Dashboard e guarda l'URL del browser:
-```
-…/hassio/ingress/XXXXXXXX
-```
-`XXXXXXXX` è lo slug. Per l'add-on **locale** è di solito `local_liquid_dashboard`;
-installato **da questo repo** sarà simile a `a1b2c3d4_liquid_dashboard`.
+### Manuale (se preferisci)
+1. **Trova lo slug**: apri la dashboard e guarda l'URL `…/hassio/ingress/XXXXXXXX`.
+   Da questo repo è tipo `a1b2c3d4_liquid_dashboard` (per l'add-on *locale* `local_liquid_dashboard`).
+2. **Crea la dashboard contenitore**: Impostazioni → Dashboard → Aggiungi → *Nuova dall'inizio*
+   (titolo *Casa*) → ✏️ Modifica → ⋮ → **Modifica in YAML** e incolla (con il tuo slug):
+   ```yaml
+   title: Casa
+   views:
+     - type: panel
+       title: Casa
+       cards:
+         - type: iframe
+           url: /hassio/ingress/local_liquid_dashboard
+           aspect_ratio: 100%
+   ```
+3. **Profilo utente → Dashboard predefinita → Casa**.
 
-### 2. Crea la dashboard contenitore
-**Impostazioni → Dashboard → Aggiungi dashboard → Nuova dashboard dall'inizio**
-(titolo es. *Casa*). Aprila → **✏️ Modifica** → menù ⋮ → **Modifica in YAML** e incolla
-(sostituendo lo slug del punto 1):
-```yaml
-title: Casa
-views:
-  - type: panel
-    title: Casa
-    cards:
-      - type: iframe
-        url: /hassio/ingress/local_liquid_dashboard
-        aspect_ratio: 100%
-```
-
-### 3. Impostala come predefinita
-**Profilo utente** (in basso a sinistra) → **Dashboard predefinita → Casa**.
-Ogni utente lo fa dal proprio profilo → all'avvio si apre la Liquid Dashboard a tutto schermo.
-
-### Alternativa: tablet / pannello a muro (più pulito)
-Niente iframe: nel browser kiosk (es. *Fully Kiosk Browser*) imposta come **URL di avvio**
-`http://homeassistant.local:8123/hassio/ingress/local_liquid_dashboard`.
-L'add-on ha già la **modalità kiosk** integrata (barra di HA nascosta).
-
-### Sul telefono
-Apri quell'URL nel browser e usa **"Aggiungi a schermata Home"**: si apre come app a tutto schermo.
+### Tablet a muro / telefono
+Nel browser kiosk (es. *Fully Kiosk Browser*) usa come URL di avvio
+`http://homeassistant.local:8123/hassio/ingress/<slug>` — la **modalità kiosk** è già
+integrata (barra di HA nascosta). Sul telefono: apri l'URL e **"Aggiungi a schermata Home"**.
 
 ---
 
 ## ⚙️ Configurazione (opzionale)
 
-L'add-on funziona senza configurazione. Le opzioni disponibili:
+L'add-on funziona **senza configurazione**. Opzioni disponibili solo se *non* usi l'ingress:
 
 | Opzione   | Descrizione |
 |-----------|-------------|
-| `ha_url`  | URL di Home Assistant (solo se non usi l'ingress). Di norma lasciare vuoto. |
-| `token`   | Long-lived token (solo se non usi l'ingress). Di norma lasciare vuoto. |
+| `ha_url`  | URL di Home Assistant. Di norma lasciare vuoto. |
+| `token`   | Long-lived token. Di norma lasciare vuoto. |
 
-Preferenze utente, permessi e visibilità si gestiscono dalla scheda **Impostazioni**
-dentro la dashboard.
+Preferenze, permessi e visibilità si gestiscono dalla scheda **Impostazioni** nella dashboard.
 
 ---
 
 ## 🧑‍💻 Sviluppo
 
-Il codice sorgente del frontend è in [`frontend/`](./frontend) (React 19 + Vite + TypeScript);
-l'add-on è in [`liquid_dashboard/`](./liquid_dashboard) (server Node + `www/` = build).
+Frontend in [`frontend/`](./frontend) (React 19 + Vite + TypeScript); add-on in
+[`liquid_dashboard/`](./liquid_dashboard) (server Node + `www/` = build servita).
 
 ```bash
 cd frontend
 npm install
-npm run build            # genera dist/
-cp -R dist/* ../liquid_dashboard/www/   # aggiorna la build servita dall'add-on
+npm run build                          # genera dist/
+rm -rf ../liquid_dashboard/www
+cp -R dist ../liquid_dashboard/www     # aggiorna la build servita dall'add-on
 ```
 
-Per pubblicare un aggiornamento: aumenta `version` in
-`liquid_dashboard/config.yaml`, committa e fai push → HA proporrà l'update.
+Per pubblicare un aggiornamento: aumenta `version` in `liquid_dashboard/config.yaml`,
+aggiorna il `CHANGELOG.md`, committa e fai push → HA proporrà l'update.
 
 ---
 
