@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.37.0] — 2026-07-05
+### Modificato
+- **Effetto "Liquid Glass" più fedele a iOS**: più blur/saturazione, **highlight speculare**
+  sul bordo superiore, **bevel** con rim luminoso e ombreggiatura più profonda e morbida.
+- **Animazioni dei tasti elastiche**: alla pressione i pulsanti fanno "squish" e tornano con
+  un **rimbalzo** morbido; l'ombra si abbassa al tocco. Toggle e card più fisici.
+  Rispettata la preferenza `prefers-reduced-motion`.
+
 ## [1.36.0] — 2026-07-05
 ### Corretto
 - **Aggiornamenti non visibili**: gli `update.*` (con categoria config/diagnostic) venivano
