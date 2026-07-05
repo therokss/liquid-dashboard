@@ -15,7 +15,9 @@ const nameOf = (e: HassEntity) => ((e.attributes as Record<string, unknown>).fri
 
 const OPEN_DC = new Set(['door', 'window', 'garage_door', 'opening'])
 const MOTION_DC = new Set(['motion', 'occupancy', 'presence', 'moving'])
-const DETECT_DC = new Set(['smoke', 'gas', 'carbon_monoxide', 'moisture', 'safety', 'tamper', 'problem'])
+// Nota: niente 'problem' — è troppo generico e catturerebbe sensori di "salute"
+// (es. VM/dischi di Proxmox) che non c'entrano con la sicurezza.
+const DETECT_DC = new Set(['smoke', 'gas', 'carbon_monoxide', 'moisture', 'safety', 'tamper'])
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

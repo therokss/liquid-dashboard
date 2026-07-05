@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Video, X } from 'lucide-react'
 import { useStore } from '../../store'
 import { DeviceControls } from '../DeviceDetailModal'
+import { WebRTCPlayer } from '../WebRTCPlayer'
 import type { HassEntity } from '../../types/ha'
 
 function apiBase(): string {
@@ -19,6 +20,9 @@ function snapUrl(entityId: string, t: number): string {
 }
 function camName(e: HassEntity): string {
   return (e.attributes.friendly_name as string) ?? e.entity_id
+}
+function streamType(e: HassEntity): string | undefined {
+  return (e.attributes as Record<string, unknown>).frontend_stream_type as string | undefined
 }
 
 export function CamerasSection() {
@@ -39,7 +43,7 @@ export function CamerasSection() {
         {cams.map((c) => (
           <button key={c.entity_id} onClick={() => setFull(c)}
             style={{ position: 'relative', padding: 0, border: 'none', borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', aspectRatio: '16/9', background: '#0a1622', boxShadow: '0 6px 20px rgba(0,0,0,0.25)' }}>
-            <CameraImg entityId={c.entity_id} live />
+            <CameraView entityId={c.entity_id} streamType={streamType(c)} />
             <div style={{ position: 'absolute', top: 8, left: 8, display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(0,0,0,0.45)', borderRadius: 'var(--radius-pill)', padding: '3px 8px' }}>
               <span className="ld-live-dot" />
               <span style={{ color: 'white', fontSize: 10, fontWeight: 800, letterSpacing: '0.06em' }}>LIVE</span>
@@ -62,10 +66,11 @@ export function CamerasSection() {
   )
 }
 
-// Prova prima lo stream MJPEG live; se fallisce ripiega sullo snapshot (refresh 5s),
-// e solo se anche quello fallisce mostra il placeholder.
-function CameraImg({ entityId, live }: { entityId: string; live?: boolean }) {
-  const [mode, setMode] = useState<'live' | 'snap' | 'err'>(live ? 'live' : 'snap')
+// Cascata: WebRTC (video fluido, P2P) → stream MJPEG (via proxy) → snapshot → placeholder.
+// Le camere che espongono frontend_stream_type 'hls' partono direttamente da MJPEG.
+function CameraView({ entityId, streamType: st }: { entityId: string; streamType?: string }) {
+  const preferWebRTC = st !== 'hls'
+  const [mode, setMode] = useState<'webrtc' | 'mjpeg' | 'snap' | 'err'>(preferWebRTC ? 'webrtc' : 'mjpeg')
   const [tick, setTick] = useState(Date.now())
 
   useEffect(() => {
@@ -74,6 +79,7 @@ function CameraImg({ entityId, live }: { entityId: string; live?: boolean }) {
     return () => clearInterval(i)
   }, [mode])
 
+  if (mode === 'webrtc') return <WebRTCPlayer entityId={entityId} onFail={() => setMode('mjpeg')} />
   if (mode === 'err') {
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--text-tertiary)' }}>
@@ -82,8 +88,8 @@ function CameraImg({ entityId, live }: { entityId: string; live?: boolean }) {
       </div>
     )
   }
-  const src = mode === 'live' ? streamUrl(entityId) : snapUrl(entityId, tick)
-  return <img src={src} alt="" onError={() => setMode(mode === 'live' ? 'snap' : 'err')} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+  const src = mode === 'mjpeg' ? streamUrl(entityId) : snapUrl(entityId, tick)
+  return <img src={src} alt="" onError={() => setMode(mode === 'mjpeg' ? 'snap' : 'err')} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
 }
 
 function CameraModal({ entity, onClose }: { entity: HassEntity; onClose: () => void }) {
@@ -103,7 +109,7 @@ function CameraModal({ entity, onClose }: { entity: HassEntity; onClose: () => v
           </button>
         </div>
         <div style={{ width: '100%', borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: '#0a1622', aspectRatio: '16/9' }}>
-          <CameraImg entityId={entity.entity_id} live />
+          <CameraView entityId={entity.entity_id} streamType={streamType(entity)} />
         </div>
         {/* Controlli del dispositivo videocamera (privacy, luce IR, rilevamenti…) */}
         <DeviceControls entityId={entity.entity_id} />
