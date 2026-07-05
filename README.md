@@ -105,13 +105,6 @@ pensata per il telefono e il tablet quando non vuoi passare dal browser.
 
 ---
 
-## 🔄 Aggiornamenti
-
-Quando esce una nuova versione, Home Assistant mostra **"Aggiornamento disponibile"** nella
-pagina dell'add-on con il changelog: basta premere **Aggiorna**. Niente ricostruzioni manuali.
-
----
-
 ## 🏠 Renderla la plancia predefinita
 
 ### Modo semplice (consigliato) — dal pannello
@@ -157,22 +150,4 @@ Preferenze, permessi e visibilità si gestiscono dalla scheda **Impostazioni** n
 
 ---
 
-## 🧑‍💻 Sviluppo
 
-Frontend in [`frontend/`](./frontend) (React 19 + Vite + TypeScript); add-on in
-[`liquid_dashboard/`](./liquid_dashboard) (server Node + `www/` = build servita).
-
-```bash
-cd frontend
-npm install
-npm run build                          # genera dist/
-rm -rf ../liquid_dashboard/www
-cp -R dist ../liquid_dashboard/www     # aggiorna la build servita dall'add-on
-```
-
-Per pubblicare un aggiornamento: aumenta `version` in `liquid_dashboard/config.yaml`,
-aggiorna il `CHANGELOG.md`, committa e fai push → HA proporrà l'update.
-
----
-
-🤖 Add-on generato con [Claude Code](https://claude.com/claude-code)
