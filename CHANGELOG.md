@@ -3,6 +3,11 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.40.1] — 2026-07-05
+### Modificato
+- **Nuovo logo**: icona "casa Liquid Glass" con goccia (gradiente ciano→viola).
+  Applicata a icona/logo dell'add-on, icona dell'app iOS e schermata di setup.
+
 ## [1.40.0] — 2026-07-05
 ### Aggiunto
 - **Sync "live" tra i dispositivi**: una modifica fatta sull'app compare sulla dashboard
