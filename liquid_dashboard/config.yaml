@@ -1,6 +1,6 @@
 name: "Liquid Dashboard"
 description: "Dashboard iOS 26 Liquid Glass per Home Assistant"
-version: "1.45.2"
+version: "1.45.3"
 slug: "liquid_dashboard"
 init: false
 homeassistant_api: true

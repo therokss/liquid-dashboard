@@ -26,6 +26,44 @@ interface MobileDevice {
   activity: string | null
   appVersion: string | null
   lastUpdate: string | null
+  ts: number // timestamp dell'ultimo aggiornamento (per il merge di device doppi)
+}
+
+// Nome "base" per raggruppare lo stesso telefono fisico registrato più volte
+// (es. la nostra app "Mattia · iPhone" e l'app HA ufficiale "iPhone di Mattia").
+function groupName(name: string, first: string): string {
+  let n = name.toLowerCase()
+  if (first) n = n.replace(new RegExp(`\\b${first}\\b`, 'g'), '')
+  return n.replace(/\bdi\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ')
+}
+function displayName(name: string, first: string): string {
+  const n = name.replace(new RegExp(`^\\s*${first}\\s*[·・|\\-]\\s*`, 'i'), '').trim()
+  return n || name
+}
+
+// Unisce i device che sono lo stesso telefono: sui campi presenti in più device
+// vince quello aggiornato più di recente; i campi mancanti si riempiono con l'altro.
+function mergeDevices(list: MobileDevice[], first: string): MobileDevice[] {
+  const groups = new Map<string, MobileDevice[]>()
+  for (const d of list) {
+    const key = d.kind + '|' + groupName(d.name, first)
+    const arr = groups.get(key)
+    if (arr) arr.push(d)
+    else groups.set(key, [d])
+  }
+  const out: MobileDevice[] = []
+  for (const g of groups.values()) {
+    if (g.length === 1) { out.push(g[0]); continue }
+    g.sort((a, b) => b.ts - a.ts) // più recente primo
+    const merged: MobileDevice = { ...g[0], name: displayName(g[0].name, first) }
+    for (const d of g.slice(1)) {
+      for (const k of ['batteryState', 'location', 'connection', 'ssid', 'storage', 'activity', 'appVersion', 'lastUpdate'] as const) {
+        if (merged[k] == null && d[k] != null) merged[k] = d[k]
+      }
+    }
+    out.push(merged)
+  }
+  return out
 }
 
 function kindOf(name: string): Kind {
@@ -145,10 +183,12 @@ export function MyDevicesSection() {
         activity: tr(ACTIVITY, st(findRel('_activity'))),
         appVersion: st(findRel('_app_version')),
         lastUpdate: timeOf(e.last_changed),
+        ts: Date.parse(e.last_changed) || 0,
       })
     }
-    out.sort((a, b) => (a.kind === 'phone' ? 0 : 1) - (b.kind === 'phone' ? 0 : 1) || a.name.localeCompare(b.name))
-    return out
+    const grouped = mergeDevices(out, first)
+    grouped.sort((a, b) => (a.kind === 'phone' ? 0 : 1) - (b.kind === 'phone' ? 0 : 1) || a.name.localeCompare(b.name))
+    return grouped
   }, [entities, entityDevices, currentUserId])
 
   if (devices.length === 0) return null
