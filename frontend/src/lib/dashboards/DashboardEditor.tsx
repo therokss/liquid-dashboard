@@ -40,9 +40,12 @@ export function DashboardEditor({ dashboard, onSaved, onClose }: { dashboard: Cu
   }
 
   return createPortal(
-    <div data-theme="dark" style={{ position: 'fixed', inset: 0, zIndex: 3300, background: '#051424', display: 'flex', flexDirection: 'column' }}>
+    <div data-theme="dark" style={{ position: 'fixed', inset: 0, zIndex: 3300, backgroundColor: '#051424', backgroundImage: 'var(--wallpaper-url)', backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', flexDirection: 'column' }}>
+      {/* Overlay del wallpaper: stessa resa della dashboard reale, così i colori
+          del testo (var --on-wallpaper) si adattano allo sfondo. */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: 'var(--wallpaper-overlay)', pointerEvents: 'none' }} />
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 'calc(env(safe-area-inset-top, 0px) + 12px) var(--space-lg) 12px', borderBottom: '1px solid var(--glass-border)', flexShrink: 0 }}>
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: 'calc(env(safe-area-inset-top, 0px) + 12px) var(--space-lg) 12px', borderBottom: '1px solid var(--glass-border)', background: 'rgba(5,20,36,0.55)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', flexShrink: 0 }}>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -61,7 +64,7 @@ export function DashboardEditor({ dashboard, onSaved, onClose }: { dashboard: Cu
       </div>
 
       {/* Griglia editabile */}
-      <div className="glass-scroll" style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-md)' }}>
+      <div className="glass-scroll" style={{ position: 'relative', zIndex: 1, flex: 1, overflowY: 'auto', padding: 'var(--space-md)' }}>
         {cards.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-tertiary)' }}>
             <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><LayoutGrid size={40} strokeWidth={1.5} /></div>
