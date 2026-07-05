@@ -3,6 +3,15 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.33.0] — 2026-07-05
+### Aggiunto
+- **Videocamere WebRTC**: le camere che lo supportano (go2rtc/Reolink/Frigate…) ora
+  mostrano il **video fluido in tempo reale** via WebRTC (peer-to-peer), con ripiego
+  automatico su MJPEG e poi snapshot se il WebRTC non è disponibile.
+### Corretto
+- **Rilevatori**: non compaiono più i sensori di "stato di salute" di **Proxmox** (VM/dischi)
+  nella sezione Sicurezza — restano solo fumo, gas, CO, perdite, manomissioni.
+
 ## [1.32.0] — 2026-07-05
 ### Aggiunto
 - **Sezione Sicurezza** dedicata nella barra di navigazione: **videocamere**, **porte e

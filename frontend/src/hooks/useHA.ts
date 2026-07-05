@@ -220,6 +220,19 @@ export function useHA() {
     []
   )
 
+  // Sottoscrive un comando WS che emette più eventi (es. camera/webrtc/offer).
+  // Ritorna la funzione di unsubscribe. Se il tipo è sconosciuto, rilancia (per il fallback).
+  const subscribe = useCallback(
+    async <T = unknown>(
+      message: { type: string } & Record<string, unknown>,
+      onEvent: (ev: T) => void,
+    ): Promise<() => void> => {
+      if (!sharedConnection) return () => {}
+      return await sharedConnection.subscribeMessage<T>(onEvent, message)
+    },
+    []
+  )
+
   // Chiama un servizio che restituisce dati (return_response), es. weather.get_forecasts
   const callServiceResponse = useCallback(
     async <T = unknown>(
@@ -289,7 +302,7 @@ export function useHA() {
     []
   )
 
-  return { callService, callServiceResponse, sendMessage, getHistoryForEntity, getEntityHistory, reconnect }
+  return { callService, callServiceResponse, sendMessage, subscribe, getHistoryForEntity, getEntityHistory, reconnect }
 }
 
 export function clearAuth() {
