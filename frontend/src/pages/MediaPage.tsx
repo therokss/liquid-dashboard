@@ -21,6 +21,8 @@ function isNowPlaying(e: HassEntity): boolean {
 
 export function MediaPage() {
   const entities = useStore((s) => s.entities)
+  const hiddenEntities = useStore((s) => s.hiddenEntities)
+  const userHidden = useStore((s) => s.userHiddenEntities)
 
   // Tick periodico per far scadere la "grazia" della pausa anche senza altri eventi.
   const [tick, setTick] = useState(0)
@@ -31,7 +33,8 @@ export function MediaPage() {
 
   const { playing, others } = useMemo(() => {
     const all = Object.values(entities).filter(
-      (e) => getDomain(e.entity_id) === 'media_player' && e.state !== 'unavailable'
+      (e) => getDomain(e.entity_id) === 'media_player' && e.state !== 'unavailable' &&
+        !hiddenEntities[e.entity_id] && !userHidden[e.entity_id]
     )
     const nowPlaying = all
       .filter(isNowPlaying)
@@ -47,7 +50,7 @@ export function MediaPage() {
       (e) => !nowSet.has(e.entity_id) && e.state !== 'off' && e.state !== 'standby'
     )
     return { playing: nowPlaying, others: rest }
-  }, [entities, tick])
+  }, [entities, hiddenEntities, userHidden, tick])
 
   return (
     <div className="page">

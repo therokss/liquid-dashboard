@@ -3,6 +3,15 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.29.0] — 2026-07-05
+### Aggiunto
+- **Dispositivi con controlli completi**: i ventilatori compaiono con on/off e, al tocco, un
+  pannello con **tutte le funzioni** (velocità, angoli, oscillazioni, blocco bambini…).
+- **Badge finestre aperte** nelle card delle stanze.
+### Corretto
+- **Media**: niente più doppioni (il player in riproduzione non riappare tra gli attivi).
+- **Plex nascosto di default** (creava un media_player per ogni client).
+
 ## [1.28.0] — 2026-07-04
 ### Aggiunto
 - **Card Philips Hue Play (HDMI Sync Box)** nella stanza del dispositivo: accensione, 4 sorgenti

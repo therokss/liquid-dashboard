@@ -35,6 +35,7 @@ async function fetchRegistries(connection: Connection): Promise<Registries> {
         hidden_by: string | null
         disabled_by: string | null
         entity_category: string | null
+        platform: string | null
       }>
     >({ type: 'config/entity_registry/list' }),
     connection.sendMessagePromise<Array<{ id: string; area_id: string | null }>>(
@@ -52,8 +53,9 @@ async function fetchRegistries(connection: Connection): Promise<Registries> {
     const area = e.area_id ?? (e.device_id ? deviceArea[e.device_id] : undefined)
     if (area) areaMap[e.entity_id] = area
     if (e.device_id) devices[e.entity_id] = e.device_id
-    // Auto-nascoste: nascoste/disabilitate in HA, oppure entità di configurazione/diagnostica
-    if (e.hidden_by || e.disabled_by || e.entity_category === 'config' || e.entity_category === 'diagnostic') {
+    // Auto-nascoste: nascoste/disabilitate in HA, entità di configurazione/diagnostica,
+    // oppure l'integrazione Plex (nascosta di default: crea un media_player per ogni client)
+    if (e.hidden_by || e.disabled_by || e.entity_category === 'config' || e.entity_category === 'diagnostic' || e.platform === 'plex') {
       hidden[e.entity_id] = true
     }
   }

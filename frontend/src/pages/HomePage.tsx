@@ -56,7 +56,7 @@ export function HomePage() {
       const domain = getDomain(e.entity_id)
       if (domain === 'light') return e.state === 'on'
       if (domain === 'climate') return e.state !== 'off'
-      if (domain === 'media_player') return e.state === 'playing'
+      // i media in riproduzione sono già mostrati nella sezione "In riproduzione"
       return false
     }).slice(0, 6)
   }, [entities, hiddenEntities, userHidden])
@@ -84,9 +84,10 @@ export function HomePage() {
   // Media player attivo
   const featuredMedia = useMemo(() => {
     return Object.values(entities).find(
-      (e) => getDomain(e.entity_id) === 'media_player' && e.state === 'playing'
+      (e) => getDomain(e.entity_id) === 'media_player' && e.state === 'playing' &&
+        !hiddenEntities[e.entity_id] && !userHidden[e.entity_id]
     )
-  }, [entities])
+  }, [entities, hiddenEntities, userHidden])
 
   const enabledAreasData = useMemo(
     () => areas.filter((a) => enabledAreas.includes(a.area_id)),

@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse } from 'lucide-react'
+import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse, Fan, ChevronRight } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { LightCard } from '../components/cards/LightCard'
 import { ClimateCard } from '../components/cards/ClimateCard'
 import { AppliancesSection } from '../components/cards/ApplianceCard'
 import { HueSyncSection } from '../components/cards/HueSyncCard'
+import { DeviceDetailModal } from '../components/DeviceDetailModal'
 import { getDomain } from '../types/ha'
 import type { HassArea, HassEntity } from '../types/ha'
 
@@ -71,6 +72,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
   const lights = areaEntities.filter((e) => getDomain(e.entity_id) === 'light')
   const climates = areaEntities.filter((e) => getDomain(e.entity_id) === 'climate')
+  const fans = areaEntities.filter((e) => getDomain(e.entity_id) === 'fan')
   const switches = areaEntities.filter((e) => getDomain(e.entity_id) === 'switch')
 
   // Badge di stato in cima alla stanza
@@ -301,6 +303,15 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         <HueSyncSection areaEntities={areaEntities} />
 
+        {fans.length > 0 && (
+          <div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>Ventilatori</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {fans.map((e) => <FanCard key={e.entity_id} entity={e} onToggle={() => callService('homeassistant', e.state === 'on' ? 'turn_off' : 'turn_on', { entity_id: e.entity_id })} />)}
+            </div>
+          </div>
+        )}
+
         {switches.length > 0 && (
           <div>
             <div className="text-caption" style={{ marginBottom: 10 }}>Interruttori</div>
@@ -349,7 +360,34 @@ function SwitchCard({ entity, onToggle }: { entity: { entity_id: string; state: 
   )
 }
 
-interface AreaStat { devices: number; total: number; lightsOn: number }
+function FanCard({ entity, onToggle }: { entity: HassEntity; onToggle: () => void }) {
+  const [detail, setDetail] = useState(false)
+  const isOn = entity.state === 'on'
+  const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
+  const pct = entity.attributes.percentage as number | undefined
+  return (
+    <>
+      <div className="glass-card" style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => setDetail(true)}>
+        <div style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: isOn ? 'var(--accent-glow)' : 'var(--glass-bg-active)', border: '1px solid var(--glass-border)', color: isOn ? 'var(--accent)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Fan size={20} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{isOn ? (typeof pct === 'number' ? `${pct}%` : 'Acceso') : 'Spento'} · tocca per i controlli</div>
+        </div>
+        <label className="glass-toggle" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+          <input type="checkbox" checked={isOn} onChange={onToggle} />
+          <div className="glass-toggle-track" />
+          <div className="glass-toggle-thumb" style={{ transform: isOn ? 'translateX(20px)' : 'translateX(0)' }} />
+        </label>
+        <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+      </div>
+      {detail && <DeviceDetailModal entityId={entity.entity_id} onClose={() => setDetail(false)} />}
+    </>
+  )
+}
+
+interface AreaStat { devices: number; total: number; lightsOn: number; windowsOpen: number }
 
 function RoomCard({ area, gradient, stat, onClick, index }: {
   area: HassArea
@@ -362,6 +400,7 @@ function RoomCard({ area, gradient, stat, onClick, index }: {
   const total = stat?.total ?? 0
   const devices = stat?.devices ?? 0
   const lightsOn = stat?.lightsOn ?? 0
+  const windowsOpen = stat?.windowsOpen ?? 0
   const subtitle = total === 0
     ? 'Vuota'
     : devices > 0
@@ -414,24 +453,20 @@ function RoomCard({ area, gradient, stat, onClick, index }: {
           >
             {getAreaIcon(area.name)}
           </div>
-          {lightsOn > 0 && (
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                background: 'rgba(0,0,0,0.28)',
-                borderRadius: 'var(--radius-pill)',
-                padding: '4px 9px',
-                fontSize: 12,
-                fontWeight: 700,
-                color: 'white',
-              }}
-            >
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ffd400', boxShadow: '0 0 8px #ffd400' }} />
-              {lightsOn}
-            </div>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+            {lightsOn > 0 && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(0,0,0,0.28)', borderRadius: 'var(--radius-pill)', padding: '4px 9px', fontSize: 12, fontWeight: 700, color: 'white' }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ffd400', boxShadow: '0 0 8px #ffd400' }} />
+                {lightsOn}
+              </div>
+            )}
+            {windowsOpen > 0 && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(0,0,0,0.28)', borderRadius: 'var(--radius-pill)', padding: '4px 9px', fontSize: 12, fontWeight: 700, color: 'white' }}>
+                <Blinds size={12} />
+                {windowsOpen}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Bottom: nome + sottotitolo */}
@@ -475,11 +510,12 @@ export function RoomsPage() {
       if (hiddenEntities[entityId] || userHidden[entityId]) continue
       const e = entities[entityId]
       if (!e) continue
-      const s = stats[areaId] ?? (stats[areaId] = { devices: 0, total: 0, lightsOn: 0 })
+      const s = stats[areaId] ?? (stats[areaId] = { devices: 0, total: 0, lightsOn: 0, windowsOpen: 0 })
       s.total++
       const domain = getDomain(entityId)
       if (CONTROLLABLE.has(domain)) s.devices++
       if (domain === 'light' && e.state === 'on') s.lightsOn++
+      if (domain === 'binary_sensor' && (e.attributes as Record<string, unknown>).device_class === 'window' && e.state === 'on') s.windowsOpen++
     }
     return stats
   }, [entities, entityAreas, hiddenEntities, userHidden])
