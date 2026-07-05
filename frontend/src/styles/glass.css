@@ -351,6 +351,23 @@ body {
   background: #fff;
 }
 
+/* ─── Indicatore "LIVE" videocamere ─── */
+.ld-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff5a5f;
+  box-shadow: 0 0 6px #ff5a5f;
+  animation: ld-live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ld-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ld-live-dot { animation: none; }
+}
+
 /* ─── Contrasto controlli nel tema chiaro (altrimenti spariscono su card bianche) ─── */
 [data-theme="light"] .glass-toggle-track {
   background: rgba(0, 0, 0, 0.14);

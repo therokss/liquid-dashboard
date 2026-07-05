@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
-import { Home, LayoutGrid, Play, Settings } from 'lucide-react'
+import { Home, LayoutGrid, ShieldCheck, Play, Settings } from 'lucide-react'
 
-export type Tab = 'home' | 'rooms' | 'media' | 'settings'
+export type Tab = 'home' | 'rooms' | 'security' | 'media' | 'settings'
 
 interface TabBarProps {
   active: Tab
@@ -11,6 +11,7 @@ interface TabBarProps {
 const TABS: Array<{ id: Tab; icon: typeof Home; label: string }> = [
   { id: 'home', icon: Home, label: 'Casa' },
   { id: 'rooms', icon: LayoutGrid, label: 'Stanze' },
+  { id: 'security', icon: ShieldCheck, label: 'Sicurezza' },
   { id: 'media', icon: Play, label: 'Media' },
   { id: 'settings', icon: Settings, label: 'Impostazioni' },
 ]
@@ -55,8 +56,8 @@ export function TabBar({ active, onChange }: TabBarProps) {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '4px 16px',
-                minWidth: 64,
+                padding: '4px 9px',
+                minWidth: 54,
                 borderRadius: 'var(--radius-md)',
               }}
             >
@@ -86,8 +87,9 @@ export function TabBar({ active, onChange }: TabBarProps) {
               </div>
               <span
                 style={{
-                  fontSize: 10,
+                  fontSize: 9.5,
                   fontWeight: isActive ? 700 : 500,
+                  whiteSpace: 'nowrap',
                   color: isActive ? 'var(--accent)' : 'var(--text-tertiary)',
                   letterSpacing: '-0.01em',
                   transition: 'color 0.2s ease',

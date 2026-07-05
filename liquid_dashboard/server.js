@@ -156,17 +156,24 @@ function mediaProxyHandler(req, res) {
   const p = req.query.url;
   if (typeof p !== 'string' || !p.startsWith('/')) { res.status(400).end(); return; }
   if (!SUPERVISOR_TOKEN) { res.status(503).end(); return; }
+  // Gli stream MJPEG delle videocamere (/api/camera_proxy_stream/…) sono risposte
+  // multipart infinite: niente cache e nessun timeout, così l'anteprima è "live".
+  const isStream = p.includes('/camera_proxy_stream/');
   const upstream = http.request(
     'http://supervisor/core' + p,
     { method: 'GET', headers: { Authorization: `Bearer ${SUPERVISOR_TOKEN}` } },
     (up) => {
       res.status(up.statusCode || 502);
       if (up.headers['content-type']) res.setHeader('Content-Type', up.headers['content-type']);
-      res.setHeader('Cache-Control', 'public, max-age=120');
+      res.setHeader('Cache-Control', isStream ? 'no-store' : 'public, max-age=120');
       up.pipe(res);
     }
   );
-  upstream.on('error', () => { if (!res.headersSent) res.status(502).end(); });
+  if (isStream) upstream.setTimeout(0);
+  upstream.on('error', () => { if (!res.headersSent) res.status(502).end(); else res.end(); });
+  // Se il client chiude la connessione (l'utente esce dalla pagina), interrompi
+  // lo stream a monte per non lasciare connessioni aperte verso Home Assistant.
+  res.on('close', () => upstream.destroy());
   upstream.end();
 }
 if (INGRESS_ENTRY) app.get(`${INGRESS_ENTRY}/media-proxy`, mediaProxyHandler);
@@ -394,7 +401,7 @@ function proxyToHA(browserWs) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Liquid Dashboard] v1.31.0 — porta ${PORT}`);
+  console.log(`[Liquid Dashboard] v1.32.0 — porta ${PORT}`);
   console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
   console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
   if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);

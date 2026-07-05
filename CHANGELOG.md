@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.32.0] — 2026-07-05
+### Aggiunto
+- **Sezione Sicurezza** dedicata nella barra di navigazione: **videocamere**, **porte e
+  finestre**, **movimento**, **serrature**, **allarme** e **rilevatori** (fumo/gas/perdite).
+- **Videocamere live**: le anteprime ora sono uno **stream in tempo reale** (MJPEG), non più
+  uno scatto che si aggiorna ogni pochi secondi. Tocca per lo schermo intero.
+### Modificato
+- Aprendo una **videocamera** compaiono anche i suoi **controlli** (privacy, luce IR,
+  rilevamenti…). I loro interruttori non appaiono più tra gli **"Interruttori"** della stanza.
+
 ## [1.31.0] — 2026-07-05
 ### Aggiunto
 - **Luci**: toccando la card si apre un pannello con **luminosità, colori** (preset + colore

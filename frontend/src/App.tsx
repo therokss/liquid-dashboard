@@ -13,6 +13,7 @@ import { TabBar, type Tab } from './components/nav/TabBar'
 import { TopHeader } from './components/nav/TopHeader'
 import { HomePage } from './pages/HomePage'
 import { RoomsPage } from './pages/RoomsPage'
+import { SecurityPage } from './pages/SecurityPage'
 import { MediaPage } from './pages/MediaPage'
 import { SettingsPage } from './pages/SettingsPage'
 
@@ -130,6 +131,7 @@ function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
           >
             {activeTab === 'home' && <HomePage />}
             {activeTab === 'rooms' && <RoomsPage />}
+            {activeTab === 'security' && <SecurityPage />}
             {activeTab === 'media' && <MediaPage />}
             {activeTab === 'settings' && <SettingsPage />}
           </motion.div>

@@ -26,18 +26,18 @@ function commonPrefix(names: string[]): string {
   return p.replace(/[\s\-–—:]+$/, '').trim()
 }
 
-export function DeviceDetailModal({ entityId, onClose }: { entityId: string; onClose: () => void }) {
+// Raggruppa tutte le entità dello stesso device della entità passata, separando
+// controlli e sensori (con etichette ripulite dal prefisso comune del dispositivo).
+export function useDeviceGroup(entityId: string, excludeIds?: Set<string>) {
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
-  const { callService } = useHA()
-
-  const { title, controls, sensors } = useMemo(() => {
+  return useMemo(() => {
     const devId = entityDevices[entityId]
     let ids: string[]
     if (devId) ids = Object.entries(entityDevices).filter(([, d]) => d === devId).map(([e]) => e)
     else ids = [entityId]
     const list = ids.map((id) => entities[id]).filter(Boolean) as HassEntity[]
-    const usable = list.filter((e) => !IGNORE.has(dom(e.entity_id)))
+    const usable = list.filter((e) => !IGNORE.has(dom(e.entity_id)) && !(excludeIds && excludeIds.has(e.entity_id)))
     const nm = (e: HassEntity) => (e.attributes.friendly_name as string) || e.entity_id
     const prefix = commonPrefix(usable.map(nm))
     const strip = (e: HassEntity) => {
@@ -52,7 +52,46 @@ export function DeviceDetailModal({ entityId, onClose }: { entityId: string; onC
       .map((e) => ({ e, label: strip(e) }))
       .sort((a, b) => a.label.localeCompare(b.label))
     return { title: prefix || nm(entities[entityId] ?? ({} as HassEntity)) || 'Dispositivo', controls, sensors }
-  }, [entityId, entities, entityDevices])
+  }, [entityId, entities, entityDevices, excludeIds])
+}
+
+// Pannelli Controlli + Sensori riusabili (usati sia dal bottom-sheet del dispositivo
+// sia dentro la videocamera a schermo intero).
+export function DeviceControls({ entityId, excludeIds }: { entityId: string; excludeIds?: Set<string> }) {
+  const { controls, sensors } = useDeviceGroup(entityId, excludeIds)
+  const { callService } = useHA()
+  if (controls.length === 0 && sensors.length === 0) return null
+  return (
+    <>
+      {controls.length > 0 && (
+        <>
+          <div className="text-caption" style={{ marginBottom: 8 }}>Controlli</div>
+          <div className="glass-panel" style={{ padding: '2px var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
+            {controls.map(({ e, label }, i) => (
+              <ControlRow key={e.entity_id} e={e} label={label} callService={callService} last={i === controls.length - 1} />
+            ))}
+          </div>
+        </>
+      )}
+      {sensors.length > 0 && (
+        <>
+          <div className="text-caption" style={{ marginBottom: 8 }}>Sensori</div>
+          <div className="glass-panel" style={{ padding: '2px var(--space-lg)' }}>
+            {sensors.map(({ e, label }, i) => (
+              <div key={e.entity_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '11px 0', borderBottom: i < sensors.length - 1 ? '1px solid var(--glass-border-dim)' : 'none' }}>
+                <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{label}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{fmtState(e)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+
+export function DeviceDetailModal({ entityId, onClose }: { entityId: string; onClose: () => void }) {
+  const { title } = useDeviceGroup(entityId)
 
   return createPortal(
     <motion.div
@@ -74,29 +113,7 @@ export function DeviceDetailModal({ entityId, onClose }: { entityId: string; onC
         </div>
 
         <div className="glass-scroll" style={{ overflowY: 'auto' }}>
-          {controls.length > 0 && (
-            <>
-              <div className="text-caption" style={{ marginBottom: 8 }}>Controlli</div>
-              <div className="glass-panel" style={{ padding: '2px var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
-                {controls.map(({ e, label }, i) => (
-                  <ControlRow key={e.entity_id} e={e} label={label} callService={callService} last={i === controls.length - 1} />
-                ))}
-              </div>
-            </>
-          )}
-          {sensors.length > 0 && (
-            <>
-              <div className="text-caption" style={{ marginBottom: 8 }}>Sensori</div>
-              <div className="glass-panel" style={{ padding: '2px var(--space-lg)' }}>
-                {sensors.map(({ e, label }, i) => (
-                  <div key={e.entity_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '11px 0', borderBottom: i < sensors.length - 1 ? '1px solid var(--glass-border-dim)' : 'none' }}>
-                    <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{label}</span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{fmtState(e)}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+          <DeviceControls entityId={entityId} />
         </div>
       </motion.div>
     </motion.div>,
