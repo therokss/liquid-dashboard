@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.45.2] — 2026-07-05
+### Corretto
+- **Editor con lo sfondo reale**: l'editor mostra ora il wallpaper della dashboard,
+  così i colori del testo (es. i titoli) si adattano allo sfondo e vedi l'anteprima
+  fedele. Prima il titolo poteva risultare scuro su sfondo scuro.
+
 ## [1.45.1] — 2026-07-05
 ### Aggiunto
 - **Rinomina dashboard dalla lista**: tocca il nome di una dashboard in Impostazioni →
