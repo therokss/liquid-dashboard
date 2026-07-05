@@ -190,6 +190,32 @@ function reconnect() {
   ensureConnection()
 }
 
+// Optimistic UI: per i comandi on/off/toggle su entità con stato on/off, mostra subito
+// il nuovo stato nell'interfaccia. Lo store rimuove l'override quando arriva la conferma
+// reale o fa il rollback se il dispositivo non risponde entro il TTL.
+function applyOptimisticForCall(service: string, data: Record<string, unknown>): void {
+  if (service !== 'turn_on' && service !== 'turn_off' && service !== 'toggle') return
+  const raw = (data || {}).entity_id
+  const ids = Array.isArray(raw)
+    ? raw.filter((x): x is string => typeof x === 'string')
+    : typeof raw === 'string' ? [raw] : []
+  if (ids.length === 0) return
+  const st = useStore.getState()
+  for (const id of ids) {
+    const cur = st.realEntities[id]
+    if (!cur || (cur.state !== 'on' && cur.state !== 'off')) continue // solo entità on/off
+    const target = service === 'turn_on' ? 'on' : service === 'turn_off' ? 'off' : cur.state === 'on' ? 'off' : 'on'
+    const patch: { state: string; attributes?: Record<string, unknown> } = { state: target }
+    if (target === 'on') {
+      const attrs: Record<string, unknown> = {}
+      if (typeof data.brightness_pct === 'number') attrs.brightness = Math.round((data.brightness_pct as number) * 2.55)
+      else if (typeof data.brightness === 'number') attrs.brightness = data.brightness as number
+      if (Object.keys(attrs).length) patch.attributes = attrs
+    }
+    st.applyOptimistic(id, patch)
+  }
+}
+
 export function useHA() {
   // Ogni componente che usa useHA garantisce che la connessione esista, ma
   // ensureConnection() è idempotente: apre un solo socket condiviso.
@@ -201,6 +227,7 @@ export function useHA() {
   const callService = useCallback(
     async (domain: string, service: string, serviceData: Record<string, unknown>) => {
       if (!sharedConnection) return
+      applyOptimisticForCall(service, serviceData) // aggiorna subito l'UI (rollback se non conferma)
       await sharedConnection.sendMessagePromise({
         type: 'call_service',
         domain,

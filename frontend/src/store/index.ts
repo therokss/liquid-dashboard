@@ -50,8 +50,19 @@ export interface DashboardConfig {
   wasteAnchor: Record<string, string>      // tipo rifiuto → data ISO di riferimento (per N>1)
 }
 
+// Override "ottimistico": mostra subito lo stato desiderato mentre il comando viaggia
+// verso Home Assistant. Viene rimosso quando arriva la conferma reale (last_changed
+// cambia) o quando scade (il dispositivo non ha risposto → rollback allo stato reale).
+export interface OptimisticOverride {
+  patch: { state?: string; attributes?: Record<string, unknown> }
+  baseLastChanged?: string
+  expiresAt: number
+}
+
 interface HAState {
-  entities: Record<string, HassEntity>
+  entities: Record<string, HassEntity>       // vista MOSTRATA (reale + override ottimistici)
+  realEntities: Record<string, HassEntity>   // stato reale ricevuto da HA
+  optimistic: Record<string, OptimisticOverride>
   areas: HassArea[]
   entityAreas: Record<string, string>  // entity_id → area_id (da entity/device registry)
   entityDevices: Record<string, string> // entity_id → device_id
@@ -94,6 +105,9 @@ interface AppStore extends DashboardConfig, HAState {
   // HA state actions
   setEntities: (entities: Record<string, HassEntity>) => void
   updateEntity: (entityId: string, entity: HassEntity) => void
+  // Optimistic UI: mostra subito il cambiamento; rollback se il dispositivo non risponde.
+  applyOptimistic: (entityId: string, patch: OptimisticOverride['patch'], ttlMs?: number) => void
+  clearOptimistic: (entityId: string) => void
   setAreas: (areas: HassArea[]) => void
   setEntityAreas: (map: Record<string, string>) => void
   setEntityDevices: (map: Record<string, string>) => void
@@ -135,11 +149,57 @@ const DEFAULT_CONFIG: DashboardConfig = {
   wasteAnchor: {},
 }
 
+// --- Helper per l'optimistic UI --------------------------------------------------
+function mergeEntity(real: HassEntity, patch: OptimisticOverride['patch']): HassEntity {
+  return {
+    ...real,
+    ...(patch.state != null ? { state: patch.state } : {}),
+    attributes: { ...real.attributes, ...(patch.attributes || {}) },
+  }
+}
+
+// Vista mostrata = entità reali con gli override ottimistici applicati sopra.
+function buildEntityView(
+  real: Record<string, HassEntity>,
+  optimistic: Record<string, OptimisticOverride>,
+): Record<string, HassEntity> {
+  const ids = Object.keys(optimistic)
+  if (ids.length === 0) return real
+  const view: Record<string, HassEntity> = { ...real }
+  for (const id of ids) if (view[id]) view[id] = mergeEntity(view[id], optimistic[id].patch)
+  return view
+}
+
+// Rimuove gli override confermati (lo stato reale è cambiato → il dispositivo ha
+// risposto) o scaduti (nessuna risposta entro il TTL → rollback). Ritorna lo stesso
+// oggetto se nulla cambia, così setEntities non forza render inutili.
+function reconcileOptimistic(
+  real: Record<string, HassEntity>,
+  optimistic: Record<string, OptimisticOverride>,
+  now: number,
+): Record<string, OptimisticOverride> {
+  const ids = Object.keys(optimistic)
+  if (ids.length === 0) return optimistic
+  let changed = false
+  const next: Record<string, OptimisticOverride> = {}
+  for (const id of ids) {
+    const o = optimistic[id]
+    const r = real[id]
+    const confirmed = r != null && r.last_changed !== o.baseLastChanged
+    const expired = o.expiresAt <= now
+    if (confirmed || expired) { changed = true; continue }
+    next[id] = o
+  }
+  return changed ? next : optimistic
+}
+
 export const useStore = create<AppStore>()(
   persist(
     (set) => ({
       ...DEFAULT_CONFIG,
       entities: {},
+      realEntities: {},
+      optimistic: {},
       areas: [],
       entityAreas: {},
       entityDevices: {},
@@ -228,9 +288,40 @@ export const useStore = create<AppStore>()(
         set((s) => ({ wasteAnchor: { ...s.wasteAnchor, [typeId]: isoDate } })),
       resetSetup: () => set({ ...DEFAULT_CONFIG }),
 
-      setEntities: (entities) => set({ entities }),
+      setEntities: (real) =>
+        set((s) => {
+          const optimistic = reconcileOptimistic(real, s.optimistic, Date.now())
+          return { realEntities: real, optimistic, entities: buildEntityView(real, optimistic) }
+        }),
       updateEntity: (entityId, entity) =>
-        set((s) => ({ entities: { ...s.entities, [entityId]: entity } })),
+        set((s) => {
+          const real = { ...s.realEntities, [entityId]: entity }
+          const optimistic = reconcileOptimistic(real, s.optimistic, Date.now())
+          return { realEntities: real, optimistic, entities: buildEntityView(real, optimistic) }
+        }),
+      applyOptimistic: (entityId, patch, ttlMs = 4000) => {
+        set((s) => {
+          const base = s.realEntities[entityId]
+          if (!base) return {}
+          const optimistic = {
+            ...s.optimistic,
+            [entityId]: { patch, baseLastChanged: base.last_changed, expiresAt: Date.now() + ttlMs },
+          }
+          return { optimistic, entities: buildEntityView(s.realEntities, optimistic) }
+        })
+        setTimeout(() => {
+          const st = useStore.getState()
+          const o = st.optimistic[entityId]
+          if (o && o.expiresAt <= Date.now()) st.clearOptimistic(entityId)
+        }, ttlMs + 50)
+      },
+      clearOptimistic: (entityId) =>
+        set((s) => {
+          if (!s.optimistic[entityId]) return {}
+          const optimistic = { ...s.optimistic }
+          delete optimistic[entityId]
+          return { optimistic, entities: buildEntityView(s.realEntities, optimistic) }
+        }),
       setAreas: (areas) => set({ areas }),
       setEntityAreas: (entityAreas) => set({ entityAreas }),
       setEntityDevices: (entityDevices) => set({ entityDevices }),
