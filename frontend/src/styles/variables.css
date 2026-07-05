@@ -1,0 +1,94 @@
+:root {
+  /* Accent neon ciano (Liquid Glass) */
+  --accent-hue: 184;
+  --accent-sat: 100%;
+  --accent-lit: 45%;
+  --accent: #00dbe7;
+  --accent-dim: #009fb0;
+  --accent-glow: rgba(0, 219, 231, 0.45);
+  --accent-secondary: #b56eff; /* viola per accenti secondari */
+
+  /* Glass intensità (0-1, configurabile dall'utente) */
+  --glass-intensity: 0.7;
+  --glass-blur: calc(12px + var(--glass-intensity) * 18px);
+  --glass-saturation: 1.8;
+
+  /* Light mode glass — card chiare abbastanza opache per testo scuro leggibile */
+  --glass-bg: rgba(255, 255, 255, 0.62);
+  --glass-bg-hover: rgba(255, 255, 255, 0.74);
+  --glass-bg-active: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-border-dim: rgba(0, 0, 0, 0.05);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  --glass-specular: linear-gradient(135deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 55%);
+  --glass-inner-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+
+  /* Testo — scuro sul tema chiaro (slate-900) */
+  --text-primary: rgba(17, 24, 39, 0.95);
+  --text-secondary: rgba(17, 24, 39, 0.62);
+  --text-tertiary: rgba(17, 24, 39, 0.42);
+  --text-on-card: rgba(20, 20, 30, 0.9);
+  --text-on-card-secondary: rgba(20, 20, 30, 0.55);
+
+  /* Scrim per overlay a tutta pagina (dettaglio stanza) */
+  --overlay-scrim: rgba(248, 249, 252, 0.72);
+
+  /* Bordi radius */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-xl: 36px;
+  --radius-pill: 999px;
+
+  /* Spaziatura */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Tab bar */
+  --tabbar-height: 84px;
+  --tabbar-blur: 40px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Font */
+  --font-display: "Inter", -apple-system, system-ui, sans-serif;
+  --font-text: "Inter", -apple-system, system-ui, sans-serif;
+
+  /* Animazioni */
+  --spring-stiff: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Wallpaper */
+  --wallpaper-url: none;
+  --wallpaper-overlay: linear-gradient(
+    160deg,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(0, 0, 0, 0.05) 40%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+}
+
+/* Dark mode — Liquid Glass oceanico neon */
+[data-theme="dark"] {
+  --glass-bg: rgba(255, 255, 255, 0.045);
+  --glass-bg-hover: rgba(255, 255, 255, 0.09);
+  --glass-bg-active: rgba(255, 255, 255, 0.14);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-border-dim: rgba(255, 255, 255, 0.07);
+  --glass-shadow: 0 20px 40px rgba(0, 123, 255, 0.15), 0 8px 24px rgba(0, 0, 0, 0.45);
+  --glass-specular: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 55%);
+  --glass-inner-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  --text-primary: #d5e4fa;
+  --text-secondary: #c1c6d7;
+  --text-tertiary: #8b90a0;
+  --overlay-scrim: rgba(5, 20, 36, 0.82);
+  --wallpaper-overlay: linear-gradient(
+    160deg,
+    rgba(5, 20, 36, 0.78) 0%,
+    rgba(5, 20, 36, 0.88) 100%
+  );
+}
