@@ -417,15 +417,43 @@ body {
   background: rgba(0, 0, 0, 0.12);
 }
 
-/* ─── Desktop / tablet: centra e limita la larghezza del contenuto ─── */
+/* ─── Desktop / tablet: centra e allarga il contenuto, sfruttando lo spazio ─── */
 @media (min-width: 768px) {
   .page {
     padding-left: var(--space-xl);
     padding-right: var(--space-xl);
   }
   .page > * {
-    max-width: 760px;
+    max-width: 820px;
     margin-left: auto;
     margin-right: auto;
+  }
+}
+
+/* iPad landscape / desktop: le sezioni della home si dispongono su 2 colonne
+   (masonry via column-count: il wrapper .page-grid non ha scroll proprio, quindi
+   le colonne si bilanciano in altezza senza scroll orizzontale). Le griglie interne
+   (dispositivi, stanze) usano già auto-fill e si espandono da sole col contenitore. */
+@media (min-width: 1080px) {
+  .page > * {
+    max-width: 1100px;
+  }
+  .page-grid {
+    column-count: 2;
+    column-gap: var(--space-xl);
+  }
+  .page-grid > * {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+  }
+}
+
+/* Schermi molto ampi: 3 colonne */
+@media (min-width: 1600px) {
+  .page > * {
+    max-width: 1500px;
+  }
+  .page-grid {
+    column-count: 3;
   }
 }
