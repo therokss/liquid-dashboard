@@ -6,11 +6,21 @@ import { Children, useEffect, useState, type ReactNode } from 'react'
 // nostro "vetro") dentro un contenitore `column-count` — le card in cima alle colonne
 // spariscono. Qui creiamo colonne flex reali e distribuiamo le sezioni round-robin:
 // nessun glitch, e su mobile (1 colonna) il flusso resta identico a prima.
-export function MasonryColumns({ children, gap = 'var(--space-xl)' }: { children: ReactNode; gap?: string }) {
+export function MasonryColumns({
+  children,
+  gap = 'var(--space-xl)',
+  rowGap = '0px',
+}: {
+  children: ReactNode
+  gap?: string       // spazio tra le colonne
+  rowGap?: string    // spazio verticale tra le card (usa '0px' se le sezioni hanno già un margine)
+}) {
   const cols = useColumnCount()
   const items = Children.toArray(children).filter(Boolean)
 
-  if (cols <= 1) return <>{items}</>
+  if (cols <= 1) {
+    return <div style={{ display: 'flex', flexDirection: 'column', gap: rowGap }}>{items}</div>
+  }
 
   const columns: ReactNode[][] = Array.from({ length: cols }, () => [])
   items.forEach((child, i) => columns[i % cols].push(child))
@@ -18,7 +28,7 @@ export function MasonryColumns({ children, gap = 'var(--space-xl)' }: { children
   return (
     <div style={{ display: 'flex', gap, alignItems: 'flex-start' }}>
       {columns.map((col, i) => (
-        <div key={i} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div key={i} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: rowGap }}>
           {col}
         </div>
       ))}
