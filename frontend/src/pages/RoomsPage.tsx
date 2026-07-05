@@ -75,13 +75,15 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   const climates = areaEntities.filter((e) => getDomain(e.entity_id) === 'climate')
   const fans = areaEntities.filter((e) => getDomain(e.entity_id) === 'fan')
 
-  // Device già gestiti da card dedicate (ventilatore, Hue Sync Box): i loro interruttori
-  // non vanno ripetuti nella sezione generica "Interruttori"
+  // Device già gestiti da card/schermate dedicate (ventilatore, Hue Sync Box,
+  // videocamera): i loro interruttori non vanno ripetuti nella sezione generica
+  // "Interruttori" — quelli della videocamera stanno dentro alla videocamera (Sicurezza).
   const managedDevices = new Set<string>()
   for (const e of areaEntities) {
     const d = entityDevices[e.entity_id]
     if (!d) continue
     if (getDomain(e.entity_id) === 'fan') managedDevices.add(d)
+    if (e.entity_id.startsWith('camera.')) managedDevices.add(d)
     if (e.entity_id.startsWith('select.') && e.entity_id.endsWith('_hdmi_input')) managedDevices.add(d)
   }
   const switches = areaEntities.filter((e) => getDomain(e.entity_id) === 'switch' && !managedDevices.has(entityDevices[e.entity_id]))
