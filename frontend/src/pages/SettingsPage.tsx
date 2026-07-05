@@ -9,6 +9,7 @@ import { VisibilityStepper } from '../components/VisibilityStepper'
 import { ServerPage } from './ServerPage'
 import { UpdatesPage } from './UpdatesPage'
 import { CAPABILITIES, canModify, savePermissions } from '../lib/permissions'
+import { MasonryColumns } from '../components/MasonryColumns'
 import { WASTE_TYPES, WEEKDAY_ORDER, WEEKDAY_INITIALS, INTERVAL_OPTIONS } from '../lib/waste'
 import { fileToWallpaperDataUrl } from '../lib/image'
 import type { WallpaperSlot } from '../store'
@@ -81,7 +82,7 @@ export function SettingsPage() {
         </h1>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+      <MasonryColumns rowGap="var(--space-lg)">
 
         {/* Connessione */}
         <Section title="Connessione">
@@ -417,7 +418,7 @@ export function SettingsPage() {
           )}
         </Section>
         )}
-      </div>
+      </MasonryColumns>
 
       <AnimatePresence>
         {showServer && <ServerPage onBack={() => setShowServer(false)} />}

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
+import { MasonryColumns } from '../components/MasonryColumns'
 import type { HassEntity } from '../types/ha'
 
 interface EntReg { entity_id: string; platform: string; disabled_by: string | null }
@@ -133,7 +134,7 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
           'radial-gradient(circle at 12% 6%, rgba(0,219,231,0.12), transparent 42%), radial-gradient(circle at 88% 96%, rgba(74,142,255,0.12), transparent 46%)',
       }}
     >
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: 'calc(env(safe-area-inset-top, 0px) + 20px) var(--space-lg) calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: 'calc(env(safe-area-inset-top, 0px) + 20px) var(--space-lg) calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'var(--space-lg)' }}>
           <button
@@ -157,7 +158,7 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
         {loading ? (
           <div style={{ color: 'var(--text-tertiary)', fontSize: 14, padding: '24px 0' }}>Lettura sensori…</div>
         ) : (
-          <>
+          <MasonryColumns rowGap="0px">
             {/* Riepilogo */}
             {hasSysmon && (
               <div className="grid-fluid" style={{ marginBottom: 'var(--space-xl)' }}>
@@ -241,7 +242,7 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
                 </div>
               )}
             </div>
-          </>
+          </MasonryColumns>
         )}
       </div>
 

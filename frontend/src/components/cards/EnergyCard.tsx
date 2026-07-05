@@ -429,7 +429,7 @@ function EnergyDetail({ ids, sendMessage, onBack }: { ids: EnergyStatIds; sendMe
       </div>
 
       {/* Su schermi larghi: flusso e consumo per dispositivo affiancati in colonne */}
-      <MasonryColumns rowGap="var(--space-xl)">
+      <MasonryColumns rowGap="0px">
       {/* Flusso di energia (Rete → Casa → dispositivi) */}
       {homeTotal > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
