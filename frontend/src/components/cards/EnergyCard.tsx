@@ -6,6 +6,7 @@ import {
   Sun, BatteryCharging, Euro,
 } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
+import { MasonryColumns } from '../MasonryColumns'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
 import {
@@ -427,6 +428,8 @@ function EnergyDetail({ ids, sendMessage, onBack }: { ids: EnergyStatIds; sendMe
         )}
       </div>
 
+      {/* Su schermi larghi: flusso e consumo per dispositivo affiancati in colonne */}
+      <MasonryColumns rowGap="var(--space-xl)">
       {/* Flusso di energia (Rete → Casa → dispositivi) */}
       {homeTotal > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
@@ -472,6 +475,7 @@ function EnergyDetail({ ids, sendMessage, onBack }: { ids: EnergyStatIds; sendMe
           </div>
         </div>
       )}
+      </MasonryColumns>
     </motion.div>
   )
 }

@@ -3,6 +3,18 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.43.0] — 2026-07-05
+### Aggiunto
+- **Colonne dentro le viste (Stanze ed Elettricità)**: su schermi larghi le sezioni si
+  dispongono su più colonne invece di allargarsi a tutta pagina, così si vede più
+  contenuto senza scrollare.
+### Corretto
+- **Grafico Elettricità tagliato su Mac**: il diagramma del flusso di energia diventava
+  enorme a tutta larghezza e non si vedeva per intero; ora sta in una colonna e si vede
+  completo.
+- **Nomi luci tagliati anche su telefono**: le card delle luci ora restano larghe a
+  sufficienza (1 colonna piena su telefono) e i nomi si leggono per intero.
+
 ## [1.42.1] — 2026-07-05
 ### Corretto
 - **Card che sparivano su desktop**: su schermi larghi alcune card (Calendario, Rifiuti,

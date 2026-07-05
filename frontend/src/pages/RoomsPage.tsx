@@ -4,6 +4,7 @@ import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, Pack
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { LightCard } from '../components/cards/LightCard'
+import { MasonryColumns } from '../components/MasonryColumns'
 import { ClimateCard } from '../components/cards/ClimateCard'
 import { AppliancesSection } from '../components/cards/ApplianceCard'
 import { HueSyncSection } from '../components/cards/HueSyncCard'
@@ -288,15 +289,15 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
         </div>
       )}
 
-      {/* Contenuto */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xl)' }}>
+      {/* Contenuto: su schermi larghi le sezioni si dispongono in colonne */}
+      <MasonryColumns rowGap="var(--space-xl)">
         {lights.length > 0 && (
           <div>
             <div className="text-caption" style={{ marginBottom: 10 }}>Luci</div>
             {lights.length === 1 ? (
               <LightCard entity={lights[0]} />
             ) : (
-              <div className="grid-fluid">
+              <div className="grid-cards">
                 {lights.map((e) => <LightCard key={e.entity_id} entity={e} compact />)}
               </div>
             )}
@@ -349,7 +350,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
             <div>Nessun dispositivo assegnato a questa stanza</div>
           </div>
         )}
-      </div>
+      </MasonryColumns>
     </motion.div>
   )
 }
