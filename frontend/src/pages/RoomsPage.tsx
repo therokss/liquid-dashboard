@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse, Fan, ChevronRight, Play, Bell, Sparkles } from 'lucide-react'
+import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse, Fan, ChevronRight, Play, Bell, Sparkles, MoreHorizontal } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { LightCard } from '../components/cards/LightCard'
@@ -60,6 +60,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   const powerSel = useStore((s) => s.energyPowerEntity)
   const { callService } = useHA()
   const [openBadge, setOpenBadge] = useState<string | null>(null)
+  const [detailEntity, setDetailEntity] = useState<string | null>(null)
 
   const areaEntities = useMemo(
     () =>
@@ -87,15 +88,39 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
     if (e.entity_id.startsWith('camera.')) managedDevices.add(d)
     if (e.entity_id.startsWith('select.') && e.entity_id.endsWith('_hdmi_input')) managedDevices.add(d)
   }
-  const switches = areaEntities.filter((e) => getDomain(e.entity_id) === 'switch' && !managedDevices.has(entityDevices[e.entity_id]))
+  // Raggruppamento per dispositivo: se un device ha PIÙ controlli (es. deumidificatore =
+  // ventola + interruttori + umidità target; citofono = apri-porta + volumi; lavatrice =
+  // interruttore + selettore), si mostra UNA sola card "primaria" che apre il dettaglio con
+  // tutto, e gli altri controlli NON compaiono sparsi. Card primaria per priorità (cioè che
+  // apre il dettaglio del dispositivo): ventola → interruttore → pulsante.
+  const GROUP_CTRL = new Set(['light', 'switch', 'fan', 'cover', 'lock', 'climate', 'media_player', 'vacuum', 'humidifier', 'number', 'input_number', 'select', 'input_select', 'button', 'input_button', 'siren', 'input_boolean'])
+  const devCtrls: Record<string, HassEntity[]> = {}
+  for (const e of areaEntities) {
+    const d = entityDevices[e.entity_id]
+    if (d && GROUP_CTRL.has(getDomain(e.entity_id))) (devCtrls[d] ||= []).push(e)
+  }
+  const primaryOfDevice: Record<string, string> = {}
+  for (const d in devCtrls) {
+    if (devCtrls[d].length < 2) continue // un solo controllo: niente da raggruppare
+    for (const dom of ['fan', 'switch', 'button', 'input_button']) {
+      const p = devCtrls[d].find((e) => getDomain(e.entity_id) === dom)
+      if (p) { primaryOfDevice[d] = p.entity_id; break }
+    }
+  }
+  // e appartiene a un device raccolto ma NON è la card primaria → va nascosto (sta nel dettaglio)
+  const groupedExtra = (e: HassEntity) => {
+    const d = entityDevices[e.entity_id]
+    return Boolean(d) && primaryOfDevice[d] !== undefined && primaryOfDevice[d] !== e.entity_id
+  }
+  // e è la card primaria di un device raccolto → la sua card apre il dettaglio con tutto
+  const isGroupPrimary = (e: HassEntity) => primaryOfDevice[entityDevices[e.entity_id] ?? ''] === e.entity_id
 
-  // Nuove sezioni. Le entità di sistema (entity_category config/diagnostic) sono già
-  // escluse da areaEntities (finiscono in hiddenEntities), quindi restano solo i button
-  // "veri" (es. apri porta / citofono Ring), non i Restart/Identifica.
-  const actions = areaEntities.filter((e) => ['button', 'input_button', 'scene', 'script'].includes(getDomain(e.entity_id)))
+  const switches = areaEntities.filter((e) => getDomain(e.entity_id) === 'switch' && !managedDevices.has(entityDevices[e.entity_id]) && !groupedExtra(e))
+
+  const actions = areaEntities.filter((e) => ['button', 'input_button', 'scene', 'script'].includes(getDomain(e.entity_id)) && !groupedExtra(e))
   const automations = areaEntities.filter((e) => getDomain(e.entity_id) === 'automation')
-  const selects = areaEntities.filter((e) => ['select', 'input_select'].includes(getDomain(e.entity_id)) && !e.entity_id.endsWith('_hdmi_input') && !managedDevices.has(entityDevices[e.entity_id]))
-  const numbers = areaEntities.filter((e) => ['number', 'input_number'].includes(getDomain(e.entity_id)))
+  const selects = areaEntities.filter((e) => ['select', 'input_select'].includes(getDomain(e.entity_id)) && !e.entity_id.endsWith('_hdmi_input') && !managedDevices.has(entityDevices[e.entity_id]) && !groupedExtra(e))
+  const numbers = areaEntities.filter((e) => ['number', 'input_number'].includes(getDomain(e.entity_id)) && !groupedExtra(e))
   const pressAction = (e: HassEntity) => {
     const d = getDomain(e.entity_id)
     if (d === 'scene') return callService('scene', 'turn_on', { entity_id: e.entity_id })
@@ -349,6 +374,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
                   key={e.entity_id}
                   entity={e}
                   onToggle={() => callService('switch', e.state === 'on' ? 'turn_off' : 'turn_on', { entity_id: e.entity_id })}
+                  onDetail={isGroupPrimary(e) ? () => setDetailEntity(e.entity_id) : undefined}
                 />
               ))}
             </div>
@@ -359,7 +385,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
           <div>
             <div className="text-caption" style={{ marginBottom: 10 }}>Azioni</div>
             <div className="grid-cards">
-              {actions.map((e) => <PressCard key={e.entity_id} entity={e} onPress={() => pressAction(e)} />)}
+              {actions.map((e) => <PressCard key={e.entity_id} entity={e} onPress={() => pressAction(e)} hasMore={isGroupPrimary(e)} onLongPress={isGroupPrimary(e) ? () => setDetailEntity(e.entity_id) : undefined} />)}
             </div>
           </div>
         )}
@@ -420,26 +446,30 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
           </div>
         )}
       </MasonryColumns>
+
+      {detailEntity && <DeviceDetailModal entityId={detailEntity} onClose={() => setDetailEntity(null)} />}
     </motion.div>
   )
 }
 
-function SwitchCard({ entity, onToggle, labels }: { entity: { entity_id: string; state: string; attributes: Record<string, unknown> }; onToggle: () => void; labels?: [string, string] }) {
+function SwitchCard({ entity, onToggle, labels, onDetail }: { entity: { entity_id: string; state: string; attributes: Record<string, unknown> }; onToggle: () => void; labels?: [string, string]; onDetail?: () => void }) {
   const isOn = entity.state === 'on'
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
   const [onLabel, offLabel] = labels ?? ['Acceso', 'Spento']
+  const sub = onDetail ? `${isOn ? onLabel : offLabel} · tocca per i controlli` : (isOn ? onLabel : offLabel)
 
   return (
-    <div className="glass-card" style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div className="glass-card" onClick={onDetail} style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12, cursor: onDetail ? 'pointer' : 'default' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{isOn ? onLabel : offLabel}</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{sub}</div>
       </div>
-      <label className="glass-toggle">
+      <label className="glass-toggle" onClick={(e) => e.stopPropagation()}>
         <input type="checkbox" checked={isOn} onChange={onToggle} />
         <div className="glass-toggle-track" />
         <div className="glass-toggle-thumb" style={{ transform: isOn ? 'translateX(20px)' : 'translateX(0)' }} />
       </label>
+      {onDetail && <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />}
     </div>
   )
 }
@@ -477,15 +507,29 @@ function pressIcon(domain: string) {
   return <Bell size={20} /> // button, input_button
 }
 
-// Card "premi": button/input_button/scene/script → un tocco esegue l'azione.
-function PressCard({ entity, onPress }: { entity: HassEntity; onPress: () => void }) {
+// Card "premi": button/input_button/scene/script → un tocco esegue l'azione. Se il
+// dispositivo ha altri controlli (hasMore), un long-press apre il dettaglio con tutto.
+function PressCard({ entity, onPress, onLongPress, hasMore }: { entity: HassEntity; onPress: () => void; onLongPress?: () => void; hasMore?: boolean }) {
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
   const d = getDomain(entity.entity_id)
-  const label = d === 'scene' ? 'Attiva' : d === 'script' ? 'Esegui' : 'Premi'
+  const base = d === 'scene' ? 'Attiva' : d === 'script' ? 'Esegui' : 'Premi'
+  const label = hasMore ? `${base} · tieni premuto per i controlli` : base
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longFired = useRef(false)
+  const startPress = () => {
+    longFired.current = false
+    if (onLongPress) timer.current = setTimeout(() => { longFired.current = true; onLongPress() }, 500)
+  }
+  const cancelPress = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null } }
+  const handleClick = () => { if (longFired.current) { longFired.current = false; return } onPress() }
   return (
     <motion.button
       whileTap={{ scale: 0.96 }}
-      onClick={onPress}
+      onClick={handleClick}
+      onPointerDown={startPress}
+      onPointerUp={cancelPress}
+      onPointerLeave={cancelPress}
+      onContextMenu={(ev) => ev.preventDefault()}
       className="glass-card"
       style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer' }}
     >
@@ -496,6 +540,7 @@ function PressCard({ entity, onPress }: { entity: HassEntity; onPress: () => voi
         <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
         <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{label}</div>
       </div>
+      {hasMore && <MoreHorizontal size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />}
     </motion.button>
   )
 }
