@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.2] — 2026-07-06
+### Migliorato
+- **Elettrodomestici raccolti in una sola card** (per qualsiasi integrazione — SmartThings,
+  Bosch, ecc.): lavastoviglie, forno, lavatrice, deumidificatore… non hanno più i comandi
+  sparsi tra le sezioni (Start/Pause/programma, umidità target, angoli della ventola…). Ora
+  c'è **una sola card** che tocchi per aprire il dettaglio con TUTTI i controlli. Anche la
+  card elettrodomestico (stato/tempo/progresso) è diventata toccabile.
+
 ## [1.46.1] — 2026-07-06
 ### Migliorato
 - **Controlli raggruppati per dispositivo**: se un dispositivo ha più controlli (es.
