@@ -3,6 +3,23 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.5] — 2026-07-06
+### Aggiunto
+- **Telecomandi TV** a schermo intero, con layout diverso in base al modello (rilevato
+  automaticamente dall'integrazione):
+  - **LG webOS**: croce direzionale + OK, Indietro/Home/Menu, volume, canali, sorgenti
+    (Netflix/YouTube/HDMI…) e **accensione con Wake-on-LAN** (il MAC è letto dal registro
+    dispositivi di HA e inviato come magic packet).
+  - **Apple TV**: croce direzionale, Menu/Home, play/pausa, volume e app, tramite il
+    telecomando `remote.*` abbinato.
+  - **Android TV / TV generiche**: navigazione e trasporto quando c'è un telecomando abbinato.
+- **Media player nelle stanze**: la vista stanza mostra ora **TV** (con telecomando) e
+  **altoparlanti** (Alexa, Google Nest, HomePod…). I telecomandi sono raggiungibili anche
+  dalla pagina **Media**.
+### Migliorato
+- Le card che raccolgono i controlli prima sparsi "fuori" (dispositivo generico,
+  elettrodomestici) ora aprono il dettaglio **tenendo premuto** sulla card.
+
 ## [1.46.4] — 2026-07-06
 ### Corretto
 - **Philips Hue Play** torna ad aprire i controlli **al tocco** (com'era prima della 1.46.3):
