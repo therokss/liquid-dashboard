@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { WashingMachine, Microwave, Utensils, Clock, type LucideIcon } from 'lucide-react'
+import { WashingMachine, Microwave, Utensils, Clock, ChevronRight, type LucideIcon } from 'lucide-react'
 import { useStore } from '../../store'
 import type { HassEntity } from '../../types/ha'
 
@@ -11,6 +11,7 @@ type ApplianceKind = 'washer' | 'dryer' | 'dishwasher' | 'oven'
 
 interface Appliance {
   key: string
+  entityId: string
   name: string
   kind: ApplianceKind
   machineState: string
@@ -94,6 +95,7 @@ function buildAppliance(e: HassEntity, entities: Record<string, HassEntity>): Ap
 
   return {
     key: base,
+    entityId: id,
     name,
     kind: kindOf(name, hasOven),
     machineState: e.state,
@@ -118,7 +120,7 @@ function progressPct(startIso: string, endIso: string): number | null {
   return Math.max(0, Math.min(1, (Date.now() - s) / (e - s)))
 }
 
-export function AppliancesSection({ areaEntities }: { areaEntities: HassEntity[] }) {
+export function AppliancesSection({ areaEntities, onOpen }: { areaEntities: HassEntity[]; onOpen?: (entityId: string) => void }) {
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const [, setTick] = useState(0)
@@ -153,7 +155,7 @@ export function AppliancesSection({ areaEntities }: { areaEntities: HassEntity[]
     <div>
       <div className="text-caption" style={{ marginBottom: 10 }}>Elettrodomestici</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {appliances.map((a) => <ApplianceCard key={a.key} a={a} />)}
+        {appliances.map((a) => <ApplianceCard key={a.key} a={a} onOpen={onOpen} />)}
       </div>
     </div>
   )
@@ -172,7 +174,7 @@ function remaining(iso: string): { label: string; end: string } | null {
   return { label, end }
 }
 
-function ApplianceCard({ a }: { a: Appliance }) {
+function ApplianceCard({ a, onOpen }: { a: Appliance; onOpen?: (entityId: string) => void }) {
   const Icon = KIND_ICON[a.kind]
   const active = a.machineState === 'run' || a.machineState === 'running'
   const color = machineColor(a.machineState)
@@ -194,7 +196,7 @@ function ApplianceCard({ a }: { a: Appliance }) {
   if (a.doorOpen) details.push('Sportello aperto')
 
   return (
-    <div className="glass-card" style={{ padding: 'var(--space-md)', opacity: active || a.machineState === 'pause' ? 1 : 0.82 }}>
+    <div className="glass-card" onClick={onOpen ? () => onOpen(a.entityId) : undefined} style={{ padding: 'var(--space-md)', cursor: onOpen ? 'pointer' : 'default', opacity: active || a.machineState === 'pause' ? 1 : 0.82 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{
           width: 42, height: 42, borderRadius: 12, flexShrink: 0,
@@ -222,6 +224,7 @@ function ApplianceCard({ a }: { a: Appliance }) {
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', boxShadow: active ? '0 0 6px currentColor' : 'none' }} />
           {stateLabel}
         </span>
+        {onOpen && <ChevronRight size={17} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />}
       </div>
 
       {rem && (

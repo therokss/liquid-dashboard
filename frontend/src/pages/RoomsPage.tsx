@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse, Fan, ChevronRight, Play, Bell, Sparkles, MoreHorizontal } from 'lucide-react'
+import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse, Fan, ChevronRight, Play, Bell, Sparkles, MoreHorizontal, WashingMachine, Microwave, Refrigerator, AirVent, Boxes } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { LightCard } from '../components/cards/LightCard'
@@ -8,7 +8,7 @@ import { MasonryColumns } from '../components/MasonryColumns'
 import { ClimateCard } from '../components/cards/ClimateCard'
 import { AppliancesSection } from '../components/cards/ApplianceCard'
 import { HueSyncSection } from '../components/cards/HueSyncCard'
-import { DeviceDetailModal } from '../components/DeviceDetailModal'
+import { DeviceDetailModal, useDeviceGroup } from '../components/DeviceDetailModal'
 import { getDomain } from '../types/ha'
 import type { HassArea, HassEntity } from '../types/ha'
 
@@ -73,54 +73,75 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
     [entities, entityAreas, hiddenEntities, userHidden, area.area_id]
   )
 
-  const lights = areaEntities.filter((e) => getDomain(e.entity_id) === 'light')
-  const climates = areaEntities.filter((e) => getDomain(e.entity_id) === 'climate')
-  const fans = areaEntities.filter((e) => getDomain(e.entity_id) === 'fan')
-
-  // Device già gestiti da card/schermate dedicate (ventilatore, Hue Sync Box,
-  // videocamera): i loro interruttori non vanno ripetuti nella sezione generica
-  // "Interruttori" — quelli della videocamera stanno dentro alla videocamera (Sicurezza).
+  // Device gestiti da schermate dedicate (videocamera → Sicurezza; ingresso HDMI dei media).
   const managedDevices = new Set<string>()
   for (const e of areaEntities) {
     const d = entityDevices[e.entity_id]
     if (!d) continue
-    if (getDomain(e.entity_id) === 'fan') managedDevices.add(d)
     if (e.entity_id.startsWith('camera.')) managedDevices.add(d)
     if (e.entity_id.startsWith('select.') && e.entity_id.endsWith('_hdmi_input')) managedDevices.add(d)
   }
-  // Raggruppamento per dispositivo: se un device ha PIÙ controlli (es. deumidificatore =
-  // ventola + interruttori + umidità target; citofono = apri-porta + volumi; lavatrice =
-  // interruttore + selettore), si mostra UNA sola card "primaria" che apre il dettaglio con
-  // tutto, e gli altri controlli NON compaiono sparsi. Card primaria per priorità (cioè che
-  // apre il dettaglio del dispositivo): ventola → interruttore → pulsante.
+
+  // Elettrodomestici SmartThings/Samsung (con sensor._machine_state): li mostra già
+  // AppliancesSection con la sua card (stato/tempo/progresso). Tutte le altre entità del
+  // device (Start/Pause/Cancel, programma…) vanno quindi ESCLUSE dalle sezioni generiche;
+  // sono raggiungibili toccando la card, che apre il dettaglio.
+  const applianceDevices = new Set<string>()
+  for (const e of areaEntities) {
+    if (e.entity_id.startsWith('sensor.') && e.entity_id.endsWith('_machine_state')) {
+      const d = entityDevices[e.entity_id]
+      if (d) applianceDevices.add(d)
+    }
+  }
+
+  // Raggruppamento per dispositivo — generale, per QUALSIASI elettrodomestico/integrazione
+  // (usa il device del registro HA). Un device con più controlli è rappresentato da UNA sola
+  // card che apre il dettaglio con tutto; gli altri controlli non compaiono sparsi.
+  // Rappresentazione: ventola/luce/clima → la loro card ricca; un solo pulsante (es. apri-
+  // porta) → pulsante con long-press; altrimenti → card "dispositivo" generica (lavatrice…).
   const GROUP_CTRL = new Set(['light', 'switch', 'fan', 'cover', 'lock', 'climate', 'media_player', 'vacuum', 'humidifier', 'number', 'input_number', 'select', 'input_select', 'button', 'input_button', 'siren', 'input_boolean'])
   const devCtrls: Record<string, HassEntity[]> = {}
   for (const e of areaEntities) {
     const d = entityDevices[e.entity_id]
-    if (d && GROUP_CTRL.has(getDomain(e.entity_id))) (devCtrls[d] ||= []).push(e)
+    if (d && !applianceDevices.has(d) && GROUP_CTRL.has(getDomain(e.entity_id))) (devCtrls[d] ||= []).push(e)
   }
-  const primaryOfDevice: Record<string, string> = {}
+  const deviceRepr: Record<string, { kind: 'fan' | 'light' | 'climate' | 'button' | 'device'; id: string }> = {}
   for (const d in devCtrls) {
-    if (devCtrls[d].length < 2) continue // un solo controllo: niente da raggruppare
-    for (const dom of ['fan', 'switch', 'button', 'input_button']) {
-      const p = devCtrls[d].find((e) => getDomain(e.entity_id) === dom)
-      if (p) { primaryOfDevice[d] = p.entity_id; break }
-    }
+    const list = devCtrls[d]
+    if (list.length < 2) continue // un solo controllo: niente da raggruppare
+    const byDom = (dom: string) => list.find((e) => getDomain(e.entity_id) === dom)
+    const buttons = list.filter((e) => ['button', 'input_button'].includes(getDomain(e.entity_id)))
+    const fan = byDom('fan'), light = byDom('light'), climate = byDom('climate'), sw = byDom('switch')
+    if (fan) deviceRepr[d] = { kind: 'fan', id: fan.entity_id }
+    else if (light) deviceRepr[d] = { kind: 'light', id: light.entity_id }
+    else if (climate) deviceRepr[d] = { kind: 'climate', id: climate.entity_id }
+    else if (buttons.length === 1 && !sw) deviceRepr[d] = { kind: 'button', id: buttons[0].entity_id }
+    else deviceRepr[d] = { kind: 'device', id: list[0].entity_id } // card dispositivo generica
   }
-  // e appartiene a un device raccolto ma NON è la card primaria → va nascosto (sta nel dettaglio)
-  const groupedExtra = (e: HassEntity) => {
+  // Nascondi dalle sezioni generiche: entità di un elettrodomestico, oppure entità raccolte
+  // in un device (tranne il suo rappresentante; per i device generici, TUTTE → nella card).
+  const hidden = (e: HassEntity) => {
     const d = entityDevices[e.entity_id]
-    return Boolean(d) && primaryOfDevice[d] !== undefined && primaryOfDevice[d] !== e.entity_id
+    if (!d) return false
+    if (applianceDevices.has(d)) return true
+    const r = deviceRepr[d]
+    if (!r) return false
+    return r.kind === 'device' ? true : r.id !== e.entity_id
   }
-  // e è la card primaria di un device raccolto → la sua card apre il dettaglio con tutto
-  const isGroupPrimary = (e: HassEntity) => primaryOfDevice[entityDevices[e.entity_id] ?? ''] === e.entity_id
+  const isReprButton = (e: HassEntity) => {
+    const r = deviceRepr[entityDevices[e.entity_id] ?? '']
+    return r?.kind === 'button' && r.id === e.entity_id
+  }
 
-  const switches = areaEntities.filter((e) => getDomain(e.entity_id) === 'switch' && !managedDevices.has(entityDevices[e.entity_id]) && !groupedExtra(e))
-
-  const actions = areaEntities.filter((e) => ['button', 'input_button', 'scene', 'script'].includes(getDomain(e.entity_id)) && !groupedExtra(e))
+  const lights = areaEntities.filter((e) => getDomain(e.entity_id) === 'light' && !hidden(e))
+  const climates = areaEntities.filter((e) => getDomain(e.entity_id) === 'climate' && !hidden(e))
+  const fans = areaEntities.filter((e) => getDomain(e.entity_id) === 'fan' && !hidden(e))
+  const switches = areaEntities.filter((e) => getDomain(e.entity_id) === 'switch' && !managedDevices.has(entityDevices[e.entity_id]) && !hidden(e))
+  const actions = areaEntities.filter((e) => ['button', 'input_button', 'scene', 'script'].includes(getDomain(e.entity_id)) && !hidden(e))
   const automations = areaEntities.filter((e) => getDomain(e.entity_id) === 'automation')
-  const selects = areaEntities.filter((e) => ['select', 'input_select'].includes(getDomain(e.entity_id)) && !e.entity_id.endsWith('_hdmi_input') && !managedDevices.has(entityDevices[e.entity_id]) && !groupedExtra(e))
-  const numbers = areaEntities.filter((e) => ['number', 'input_number'].includes(getDomain(e.entity_id)) && !groupedExtra(e))
+  const selects = areaEntities.filter((e) => ['select', 'input_select'].includes(getDomain(e.entity_id)) && !e.entity_id.endsWith('_hdmi_input') && !managedDevices.has(entityDevices[e.entity_id]) && !hidden(e))
+  const numbers = areaEntities.filter((e) => ['number', 'input_number'].includes(getDomain(e.entity_id)) && !hidden(e))
+  const deviceCards = Object.values(deviceRepr).filter((r) => r.kind === 'device')
   const pressAction = (e: HassEntity) => {
     const d = getDomain(e.entity_id)
     if (d === 'scene') return callService('scene', 'turn_on', { entity_id: e.entity_id })
@@ -352,7 +373,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
           </div>
         )}
 
-        <AppliancesSection areaEntities={areaEntities} />
+        <AppliancesSection areaEntities={areaEntities} onOpen={setDetailEntity} />
 
         <HueSyncSection areaEntities={areaEntities} />
 
@@ -374,9 +395,17 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
                   key={e.entity_id}
                   entity={e}
                   onToggle={() => callService('switch', e.state === 'on' ? 'turn_off' : 'turn_on', { entity_id: e.entity_id })}
-                  onDetail={isGroupPrimary(e) ? () => setDetailEntity(e.entity_id) : undefined}
                 />
               ))}
+            </div>
+          </div>
+        )}
+
+        {deviceCards.length > 0 && (
+          <div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>Dispositivi</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {deviceCards.map((r) => <DeviceCard key={r.id} entityId={r.id} onOpen={() => setDetailEntity(r.id)} />)}
             </div>
           </div>
         )}
@@ -385,7 +414,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
           <div>
             <div className="text-caption" style={{ marginBottom: 10 }}>Azioni</div>
             <div className="grid-cards">
-              {actions.map((e) => <PressCard key={e.entity_id} entity={e} onPress={() => pressAction(e)} hasMore={isGroupPrimary(e)} onLongPress={isGroupPrimary(e) ? () => setDetailEntity(e.entity_id) : undefined} />)}
+              {actions.map((e) => <PressCard key={e.entity_id} entity={e} onPress={() => pressAction(e)} hasMore={isReprButton(e)} onLongPress={isReprButton(e) ? () => setDetailEntity(e.entity_id) : undefined} />)}
             </div>
           </div>
         )}
@@ -498,6 +527,34 @@ function FanCard({ entity, onToggle }: { entity: HassEntity; onToggle: () => voi
       </div>
       {detail && <DeviceDetailModal entityId={entity.entity_id} onClose={() => setDetail(false)} />}
     </>
+  )
+}
+
+// Icona per la card dispositivo, dedotta dal nome (elettrodomestico).
+function applianceIcon(title: string) {
+  const t = title.toLowerCase()
+  if (/lavatric|asciugatric|lavastovigl|washer|dryer|dishwash/.test(t)) return <WashingMachine size={20} />
+  if (/forno|oven|microond|microwave/.test(t)) return <Microwave size={20} />
+  if (/frigo|freezer|fridge|refriger/.test(t)) return <Refrigerator size={20} />
+  if (/circolat|ventil|condizion|climatizz|purific/.test(t)) return <AirVent size={20} />
+  return <Boxes size={20} />
+}
+
+// Card "dispositivo" generica: rappresenta un device con più controlli (lavatrice, forno
+// smart, ecc.) col nome pulito del dispositivo; tocca per aprire il dettaglio con tutto.
+function DeviceCard({ entityId, onOpen }: { entityId: string; onOpen: () => void }) {
+  const { title } = useDeviceGroup(entityId)
+  return (
+    <div className="glass-card" onClick={onOpen} style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+      <div style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: 'var(--glass-bg-active)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {applianceIcon(title)}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>Tocca per i controlli</div>
+      </div>
+      <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+    </div>
   )
 }
 
