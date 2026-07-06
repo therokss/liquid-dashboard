@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.4] — 2026-07-06
+### Corretto
+- **Philips Hue Play** torna ad aprire i controlli **al tocco** (com'era prima della 1.46.3):
+  il "tieni premuto" è stato rimosso su richiesta.
+### Migliorato
+- **Card aspirapolvere**: icona dedicata da robot aspirapolvere (vista dall'alto) al posto
+  dell'icona generica del robot.
+
 ## [1.46.3] — 2026-07-06
 ### Aggiunto
 - **Card aspirapolvere/robot** (SwitchBot e robot aspirapolvere in genere): card dedicata
