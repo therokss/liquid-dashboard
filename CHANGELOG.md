@@ -3,6 +3,18 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.3] — 2026-07-06
+### Aggiunto
+- **Card aspirapolvere/robot** (SwitchBot e robot aspirapolvere in genere): card dedicata
+  con stato (In pulizia, Alla base, Rientro…), livello batteria e i comandi rapidi
+  **Avvia/Pausa** e **Rientra alla base**. Tocca la card per il dettaglio completo
+  (modalità, potenza di aspirazione, ecc.).
+### Migliorato
+- **Philips Hue Play (HDMI Sync Box)** non compare più come card "Dispositivo" generica
+  duplicata: è gestita dalla sua card dedicata (accensione, sorgente HDMI, sincronizzazione
+  luci, luminosità). Il dettaglio completo ora si apre **tenendo premuto**, così i tocchi e
+  i trascinamenti sui controlli inline non lo aprono per sbaglio.
+
 ## [1.46.2] — 2026-07-06
 ### Migliorato
 - **Elettrodomestici raccolti in una sola card** (per qualsiasi integrazione — SmartThings,
