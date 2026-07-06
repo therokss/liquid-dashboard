@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.1] — 2026-07-06
+### Migliorato
+- **Controlli raggruppati per dispositivo**: se un dispositivo ha più controlli (es.
+  deumidificatore = ventola + interruttori + umidità target; citofono = apri-porta +
+  volumi; lavatrice = interruttore + selettore), ora compare **una sola card** che apre
+  il dettaglio con tutto, invece di sparpagliarli tra Interruttori/Selettori/Regolazioni.
+  Tocca la card (o tieni premuto il pulsante) per aprire i controlli del dispositivo.
+
 ## [1.46.0] — 2026-07-06
 ### Aggiunto
 - **Più cose nelle stanze**: oltre a luci/clima/interruttori/sensori, le stanze mostrano
