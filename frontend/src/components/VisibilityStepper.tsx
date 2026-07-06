@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Eye, EyeOff, ChevronLeft, Check, Lightbulb, Power, Gauge, Radio,
-  Thermometer, Speaker, Blinds, Fan, Lock, HelpCircle, RotateCcw, type LucideIcon,
+  Eye, EyeOff, ChevronLeft, ChevronRight, Check, Lightbulb, Power, Gauge, Radio,
+  Thermometer, Speaker, Blinds, Fan, Lock, HelpCircle, RotateCcw, List, LayoutGrid, type LucideIcon,
 } from 'lucide-react'
 import { useStore } from '../store'
 import { getDomain } from '../types/ha'
@@ -62,6 +62,7 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
   const [index, setIndex] = useState(0)
   const [dir, setDir] = useState(1)
   const [reviewAll, setReviewAll] = useState(false)
+  const [viewMode, setViewMode] = useState<'stepper' | 'list'>('stepper')
 
   const areaName = useMemo(() => {
     const m: Record<string, string> = {}
@@ -159,11 +160,52 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-      {/* Selettore stanza */}
+      {/* Selettore stanza + toggle vista (scheda una-alla-volta ↔ lista) */}
       <div>
         <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 600 }}>Scegli la stanza da configurare</div>
-        {areaSelect}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>{areaSelect}</div>
+          <button
+            onClick={() => setViewMode((v) => (v === 'list' ? 'stepper' : 'list'))}
+            aria-label={viewMode === 'list' ? 'Vista scheda' : 'Vista lista'}
+            className="glass-btn"
+            style={{ flexShrink: 0, padding: '0 14px' }}
+          >
+            {viewMode === 'list' ? <LayoutGrid size={17} /> : <List size={17} />}
+          </button>
+        </div>
       </div>
+
+      {viewMode === 'list' ? (
+        <div className="glass-scroll" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+          <div className="glass-panel" style={{ padding: '2px var(--space-lg)' }}>
+            {listFor(areaFilter).map((it) => {
+              const vis = !userHidden[it.entity_id]
+              const RowIcon = DOMAIN_ICON[getDomain(it.entity_id)] ?? HelpCircle
+              return (
+                <div key={it.entity_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 0', borderBottom: '1px solid var(--glass-border-dim)' }}>
+                  <RowIcon size={18} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14.5, color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entityName(it)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{areaName[entityAreas[it.entity_id]] ?? 'Senza stanza'}</div>
+                  </div>
+                  <button
+                    onClick={() => decide(it.entity_id, vis)}
+                    aria-label={vis ? 'Nascondi' : 'Mostra'}
+                    style={{ flexShrink: 0, width: 46, height: 30, borderRadius: 9, cursor: 'pointer', border: vis ? 'none' : '1px solid var(--glass-border)', background: vis ? 'var(--accent)' : 'var(--glass-bg)', color: vis ? '#04121e' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    {vis ? <Eye size={16} /> : <EyeOff size={16} />}
+                  </button>
+                </div>
+              )
+            })}
+            {listFor(areaFilter).length === 0 && (
+              <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>Nessun dispositivo</div>
+            )}
+          </div>
+        </div>
+      ) : (
+      <>
 
       {/* Progresso */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -193,6 +235,19 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
             />
           </div>
         </div>
+        <button
+          aria-label="Successivo"
+          onClick={() => { if (!done && index < total - 1) { setDir(1); setIndex((i) => i + 1) } }}
+          disabled={done || index >= total - 1}
+          style={{
+            width: 38, height: 38, flexShrink: 0, borderRadius: 12, cursor: done || index >= total - 1 ? 'default' : 'pointer',
+            background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-secondary)', opacity: done || index >= total - 1 ? 0.35 : 1,
+          }}
+        >
+          <ChevronRight size={18} />
+        </button>
         {onDone && (
           <button
             onClick={onDone}
@@ -278,6 +333,8 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
             {visible ? <Check size={18} /> : <Eye size={18} />} Mostra
           </button>
         </div>
+      )}
+      </>
       )}
     </div>
   )

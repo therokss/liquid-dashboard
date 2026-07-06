@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChevronLeft, Cpu, MemoryStick, HardDrive, Network, Clock, Activity,
-  Plus, X, Search, Server, Thermometer, type LucideIcon,
+  Plus, X, Search, Server, Thermometer, Wrench, type LucideIcon,
 } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { MasonryColumns } from '../components/MasonryColumns'
+import { getDomain } from '../types/ha'
 import type { HassEntity } from '../types/ha'
 
 interface EntReg { entity_id: string; platform: string; disabled_by: string | null }
@@ -68,6 +69,16 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
   const entityAreas = useStore((s) => s.entityAreas)
   const extra = useStore((s) => s.serverExtraEntities)
   const toggleServerEntity = useStore((s) => s.toggleServerEntity)
+  const systemEntities = useStore((s) => s.systemEntities)
+  const { callService } = useHA()
+  // Button di sistema (entity_category config/diagnostic): esposti qui invece che nelle
+  // stanze, così restano a portata di mano senza intasare i dispositivi di ogni giorno.
+  const systemButtons = useMemo(
+    () => Object.values(entities)
+      .filter((e) => ['button', 'input_button'].includes(getDomain(e.entity_id)) && systemEntities[e.entity_id])
+      .sort((a, b) => cleanName(a).localeCompare(cleanName(b))),
+    [entities, systemEntities]
+  )
 
   const [sysmonIds, setSysmonIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -242,6 +253,30 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
                 </div>
               )}
             </div>
+
+            {systemButtons.length > 0 && (
+              <div style={{ marginBottom: 'var(--space-lg)' }}>
+                <div className="text-caption" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Wrench size={14} /> Pulsanti di sistema
+                </div>
+                <div className="glass-panel" style={{ padding: '2px var(--space-lg)' }}>
+                  {systemButtons.map((e) => (
+                    <div key={e.entity_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--glass-border-dim)' }}>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 14.5, color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {cleanName(e)}
+                      </div>
+                      <button
+                        onClick={() => callService(getDomain(e.entity_id), 'press', { entity_id: e.entity_id })}
+                        className="glass-btn"
+                        style={{ flexShrink: 0, fontSize: 12.5, padding: '7px 16px' }}
+                      >
+                        Premi
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </MasonryColumns>
         )}
       </div>

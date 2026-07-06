@@ -67,6 +67,7 @@ interface HAState {
   entityAreas: Record<string, string>  // entity_id → area_id (da entity/device registry)
   entityDevices: Record<string, string> // entity_id → device_id
   hiddenEntities: Record<string, true> // entità nascoste/disabilitate in HA
+  systemEntities: Record<string, true> // entità di configurazione/diagnostica (button di sistema, ecc.)
   connected: boolean
   loading: boolean
   isAdmin: boolean                     // l'utente che sta guardando è amministratore HA
@@ -112,6 +113,7 @@ interface AppStore extends DashboardConfig, HAState {
   setEntityAreas: (map: Record<string, string>) => void
   setEntityDevices: (map: Record<string, string>) => void
   setHiddenEntities: (map: Record<string, true>) => void
+  setSystemEntities: (map: Record<string, true>) => void
   setIsAdmin: (isAdmin: boolean) => void
   setCurrentUserId: (id: string | null) => void
   setUserPermissions: (perms: Record<string, boolean>) => void
@@ -204,6 +206,7 @@ export const useStore = create<AppStore>()(
       entityAreas: {},
       entityDevices: {},
       hiddenEntities: {},
+      systemEntities: {},
       connected: false,
       loading: true,
       isAdmin: false,
@@ -326,6 +329,7 @@ export const useStore = create<AppStore>()(
       setEntityAreas: (entityAreas) => set({ entityAreas }),
       setEntityDevices: (entityDevices) => set({ entityDevices }),
       setHiddenEntities: (hiddenEntities) => set({ hiddenEntities }),
+      setSystemEntities: (systemEntities) => set({ systemEntities }),
       setIsAdmin: (isAdmin) => set({ isAdmin }),
       setCurrentUserId: (currentUserId) => set({ currentUserId }),
       setUserPermissions: (userPermissions) => set({ userPermissions }),

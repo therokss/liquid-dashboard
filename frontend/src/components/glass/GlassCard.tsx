@@ -34,7 +34,7 @@ export function GlassCard({
         ...style,
       }}
       whileTap={{ scale: 0.94 }}
-      transition={{ type: 'spring', stiffness: 500, damping: 24, mass: 0.7 }}
+      transition={{ type: 'spring', stiffness: 450, damping: 20, mass: 0.75 }}
       {...props}
     >
       {children}

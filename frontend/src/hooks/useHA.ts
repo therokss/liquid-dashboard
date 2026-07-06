@@ -23,6 +23,7 @@ interface Registries {
   areaMap: Record<string, string>
   devices: Record<string, string>
   hidden: Record<string, true>
+  system: Record<string, true>
 }
 
 async function fetchRegistries(connection: Connection): Promise<Registries> {
@@ -49,17 +50,19 @@ async function fetchRegistries(connection: Connection): Promise<Registries> {
   const areaMap: Record<string, string> = {}
   const devices: Record<string, string> = {}
   const hidden: Record<string, true> = {}
+  const system: Record<string, true> = {} // config/diagnostic: button "di sistema", ecc.
   for (const e of entReg) {
     const area = e.area_id ?? (e.device_id ? deviceArea[e.device_id] : undefined)
     if (area) areaMap[e.entity_id] = area
     if (e.device_id) devices[e.entity_id] = e.device_id
+    if (e.entity_category === 'config' || e.entity_category === 'diagnostic') system[e.entity_id] = true
     // Auto-nascoste: nascoste/disabilitate in HA, entità di configurazione/diagnostica,
     // oppure l'integrazione Plex (nascosta di default: crea un media_player per ogni client)
     if (e.hidden_by || e.disabled_by || e.entity_category === 'config' || e.entity_category === 'diagnostic' || e.platform === 'plex') {
       hidden[e.entity_id] = true
     }
   }
-  return { areaMap, devices, hidden }
+  return { areaMap, devices, hidden, system }
 }
 
 interface ConnOpts {
@@ -134,6 +137,7 @@ async function ensureConnection(): Promise<void> {
           st.setEntityAreas(reg.areaMap)
           st.setEntityDevices(reg.devices)
           st.setHiddenEntities(reg.hidden)
+          st.setSystemEntities(reg.system)
         })
         .catch(() => {})
     })
@@ -157,6 +161,7 @@ async function ensureConnection(): Promise<void> {
       st.setEntityAreas(reg.areaMap)
       st.setEntityDevices(reg.devices)
       st.setHiddenEntities(reg.hidden)
+      st.setSystemEntities(reg.system)
     } catch {
       console.warn('[LD] fetch registri fallito, riproverò al reconnect')
     }

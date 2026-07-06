@@ -64,7 +64,7 @@ body {
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.3s ease;
 }
 
-/* Specular highlight (riflesso superiore) */
+/* Specular highlight (bloom in alto a sinistra + riflesso superiore) */
 .glass-card::before {
   content: '';
   position: absolute;
@@ -75,6 +75,27 @@ body {
   border-radius: inherit;
 }
 
+/* Bordo rifrattivo (edge lensing): anello di luce che simula lo spessore del
+   vetro iOS — brillante in alto a sinistra, con un secondo riflesso in basso a
+   destra. Gradient-border via mask, supportato da Safari/WKWebView. */
+.glass-card::after,
+.glass-btn::after,
+.glass-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--glass-edge-width);
+  background: var(--glass-edge);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .glass-card > * {
   position: relative;
   z-index: 1;
@@ -83,11 +104,13 @@ body {
 .glass-card:active {
   background: var(--glass-bg-active);
   transform: scale(0.97);
-  transition: transform 0.1s ease, background 0.1s ease;
+  filter: brightness(1.03);
+  transition: transform 0.1s ease, background 0.1s ease, filter 0.1s ease;
 }
 
 /* ─── Glass panel (contenitore più grande) ─── */
 .glass-panel {
+  position: relative;
   background: var(--glass-bg);
   backdrop-filter: blur(calc(var(--glass-blur) * 0.8)) saturate(var(--glass-saturation));
   -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.8)) saturate(var(--glass-saturation));

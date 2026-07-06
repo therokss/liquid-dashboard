@@ -3,6 +3,21 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.0] — 2026-07-06
+### Aggiunto
+- **Più cose nelle stanze**: oltre a luci/clima/interruttori/sensori, le stanze mostrano
+  ora anche pulsanti (button), scene, script, automazioni, selettori (select) e
+  regolazioni (number). Es. il pulsante «apri porta»/citofono compare tra le Azioni.
+- **Pulsanti di sistema nella pagina Server**: i button di diagnostica/configurazione
+  (Restart, Identifica, aggiornamenti…) sono raccolti lì con un tasto «Premi», invece di
+  intasare le stanze.
+- **Visibilità dispositivi**: aggiunta la freccia «avanti» e una **vista a lista** per
+  mostrare/nascondere al volo tutte le entità di una stanza.
+### Migliorato
+- **Effetto Liquid Glass più fedele a iOS**: bordo rifrattivo (lente) su card, pulsanti,
+  pannelli e tab bar, riflesso speculare in alto a sinistra, animazioni dei tasti più
+  elastiche.
+
 ## [1.45.3] — 2026-07-05
 ### Corretto
 - **"I miei dispositivi" unisce i doppioni**: se lo stesso telefono è registrato più

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse, Fan, ChevronRight } from 'lucide-react'
+import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse, Fan, ChevronRight, Play, Bell, Sparkles } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { LightCard } from '../components/cards/LightCard'
@@ -88,6 +88,20 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
     if (e.entity_id.startsWith('select.') && e.entity_id.endsWith('_hdmi_input')) managedDevices.add(d)
   }
   const switches = areaEntities.filter((e) => getDomain(e.entity_id) === 'switch' && !managedDevices.has(entityDevices[e.entity_id]))
+
+  // Nuove sezioni. Le entità di sistema (entity_category config/diagnostic) sono già
+  // escluse da areaEntities (finiscono in hiddenEntities), quindi restano solo i button
+  // "veri" (es. apri porta / citofono Ring), non i Restart/Identifica.
+  const actions = areaEntities.filter((e) => ['button', 'input_button', 'scene', 'script'].includes(getDomain(e.entity_id)))
+  const automations = areaEntities.filter((e) => getDomain(e.entity_id) === 'automation')
+  const selects = areaEntities.filter((e) => ['select', 'input_select'].includes(getDomain(e.entity_id)) && !e.entity_id.endsWith('_hdmi_input') && !managedDevices.has(entityDevices[e.entity_id]))
+  const numbers = areaEntities.filter((e) => ['number', 'input_number'].includes(getDomain(e.entity_id)))
+  const pressAction = (e: HassEntity) => {
+    const d = getDomain(e.entity_id)
+    if (d === 'scene') return callService('scene', 'turn_on', { entity_id: e.entity_id })
+    if (d === 'script') return callService('script', 'turn_on', { entity_id: e.entity_id })
+    return callService(d, 'press', { entity_id: e.entity_id }) // button, input_button
+  }
 
   // Badge di stato in cima alla stanza
   const dc = (e: HassEntity) => (e.attributes as Record<string, unknown>).device_class as string | undefined
@@ -341,6 +355,61 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
           </div>
         )}
 
+        {actions.length > 0 && (
+          <div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>Azioni</div>
+            <div className="grid-cards">
+              {actions.map((e) => <PressCard key={e.entity_id} entity={e} onPress={() => pressAction(e)} />)}
+            </div>
+          </div>
+        )}
+
+        {automations.length > 0 && (
+          <div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>Automazioni</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {automations.map((e) => (
+                <SwitchCard
+                  key={e.entity_id}
+                  entity={e}
+                  labels={['Attiva', 'Disattivata']}
+                  onToggle={() => callService('automation', e.state === 'on' ? 'turn_off' : 'turn_on', { entity_id: e.entity_id })}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {selects.length > 0 && (
+          <div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>Selettori</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {selects.map((e) => (
+                <SelectCard
+                  key={e.entity_id}
+                  entity={e}
+                  onChange={(opt) => callService(getDomain(e.entity_id), 'select_option', { entity_id: e.entity_id, option: opt })}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {numbers.length > 0 && (
+          <div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>Regolazioni</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {numbers.map((e) => (
+                <NumberCard
+                  key={e.entity_id}
+                  entity={e}
+                  onChange={(v) => callService(getDomain(e.entity_id), 'set_value', { entity_id: e.entity_id, value: v })}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
 
         {areaEntities.length === 0 && (
           <div style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-tertiary)' }}>
@@ -355,15 +424,16 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   )
 }
 
-function SwitchCard({ entity, onToggle }: { entity: { entity_id: string; state: string; attributes: Record<string, unknown> }; onToggle: () => void }) {
+function SwitchCard({ entity, onToggle, labels }: { entity: { entity_id: string; state: string; attributes: Record<string, unknown> }; onToggle: () => void; labels?: [string, string] }) {
   const isOn = entity.state === 'on'
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
+  const [onLabel, offLabel] = labels ?? ['Acceso', 'Spento']
 
   return (
     <div className="glass-card" style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{isOn ? 'Acceso' : 'Spento'}</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{isOn ? onLabel : offLabel}</div>
       </div>
       <label className="glass-toggle">
         <input type="checkbox" checked={isOn} onChange={onToggle} />
@@ -398,6 +468,82 @@ function FanCard({ entity, onToggle }: { entity: HassEntity; onToggle: () => voi
       </div>
       {detail && <DeviceDetailModal entityId={entity.entity_id} onClose={() => setDetail(false)} />}
     </>
+  )
+}
+
+function pressIcon(domain: string) {
+  if (domain === 'scene') return <Sparkles size={20} />
+  if (domain === 'script') return <Play size={20} />
+  return <Bell size={20} /> // button, input_button
+}
+
+// Card "premi": button/input_button/scene/script → un tocco esegue l'azione.
+function PressCard({ entity, onPress }: { entity: HassEntity; onPress: () => void }) {
+  const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
+  const d = getDomain(entity.entity_id)
+  const label = d === 'scene' ? 'Attiva' : d === 'script' ? 'Esegui' : 'Premi'
+  return (
+    <motion.button
+      whileTap={{ scale: 0.96 }}
+      onClick={onPress}
+      className="glass-card"
+      style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer' }}
+    >
+      <div style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: 'var(--accent-glow)', border: '1px solid var(--glass-border)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {pressIcon(d)}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{label}</div>
+      </div>
+    </motion.button>
+  )
+}
+
+// Card selettore: select/input_select → menu a tendina con le opzioni.
+function SelectCard({ entity, onChange }: { entity: HassEntity; onChange: (opt: string) => void }) {
+  const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
+  const options = (entity.attributes.options as string[]) ?? []
+  return (
+    <div className="glass-card" style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ flex: 1, minWidth: 0, color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+      <select className="ld-select" value={entity.state} onChange={(ev) => onChange(ev.target.value)}>
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  )
+}
+
+// Card regolazione: number/input_number → slider. Invia il valore al rilascio (non a
+// ogni pixel), col valore mostrato in tempo reale mentre trascini.
+function NumberCard({ entity, onChange }: { entity: HassEntity; onChange: (v: number) => void }) {
+  const [drag, setDrag] = useState<number | null>(null)
+  const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
+  const min = Number(entity.attributes.min ?? 0)
+  const max = Number(entity.attributes.max ?? 100)
+  const step = Number(entity.attributes.step ?? 1)
+  const unit = (entity.attributes.unit_of_measurement as string) ?? ''
+  const stateVal = parseFloat(entity.state)
+  const value = drag ?? (isNaN(stateVal) ? min : stateVal)
+  const commit = () => { if (drag !== null) { onChange(drag); setDrag(null) } }
+  return (
+    <div className="glass-card" style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+        <div style={{ color: 'var(--accent)', fontSize: 14, fontWeight: 600, flexShrink: 0 }}>{value}{unit ? ` ${unit}` : ''}</div>
+      </div>
+      <input
+        className="glass-slider"
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(ev) => setDrag(parseFloat(ev.target.value))}
+        onPointerUp={commit}
+        onTouchEnd={commit}
+      />
+    </div>
   )
 }
 
