@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.6] — 2026-07-06
+### Corretto
+- **Wake-on-LAN TV LG**: molte TV LG non espongono il MAC a Home Assistant (registro
+  vuoto), quindi l'accensione col magic packet non partiva. Ora nel telecomando LG c'è
+  un campo per **inserire il MAC a mano** (salvato per quella TV): il WoL usa quello.
+- **HomePod non più scambiati per Apple TV**: l'integrazione `apple_tv` li espone con un
+  telecomando, ma sono altoparlanti — ora finiscono tra gli **altoparlanti**, non tra le TV.
+
 ## [1.46.5] — 2026-07-06
 ### Aggiunto
 - **Telecomandi TV** a schermo intero, con layout diverso in base al modello (rilevato
