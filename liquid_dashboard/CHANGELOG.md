@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.9] — 2026-07-07
+### Aggiunto
+- **Lista canali italiani** nel telecomando LG (tasto **Canali**): i principali canali DTT
+  con la loro numerazione (Rai 1-3, Rete 4, Canale 5, Italia 1, LA7, TV8, NOVE, 20 Mediaset,
+  Rai 4/5/Movie/Premium, Iris, Cielo, Focus, La5, DMAX…). Tocchi il canale e la TV ci si
+  sintonizza (invia le cifre come sul telecomando fisico).
+
 ## [1.46.8] — 2026-07-07
 ### Aggiunto
 - **Telecomando LG più completo**, come quello fisico: **tastierino numerico** (123),
