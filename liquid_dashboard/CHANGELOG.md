@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.16] — 2026-07-08
+### Aggiunto
+- **Riquadro "Consumo istantaneo" (W)** nel dettaglio Energia, accanto a "Prelievo rete":
+  mostra il consumo attuale della casa in tempo reale, con la **stessa sorgente della card in
+  Home** (sensore di potenza configurato nelle impostazioni / energia di Home Assistant).
+
 ## [1.46.15] — 2026-07-08
 ### Migliorato
 - **Energia**: se un periodo non ha ancora statistiche (es. "Oggi" appena dopo mezzanotte),
