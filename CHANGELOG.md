@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.10] — 2026-07-07
+### Aggiunto
+- **Lista canali personalizzabile**: nel telecomando LG, tasto **Canali → Modifica** per
+  aggiungere / rimuovere / rinominare i canali e cambiarne il numero (così va anche per
+  altri paesi). Parte dalla lista italiana; **Ripristina IT** la riporta ai canali italiani
+  di default. La lista personalizzata viene salvata.
+
 ## [1.46.9] — 2026-07-07
 ### Aggiunto
 - **Lista canali italiani** nel telecomando LG (tasto **Canali**): i principali canali DTT
