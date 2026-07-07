@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.13] — 2026-07-08
+### Aggiunto
+- **Consumo istantaneo per dispositivo** nella scheda Energia (dettaglio): lista in tempo
+  reale con la potenza attuale in **W** di ogni dispositivo (sensori `device_class: power`),
+  oltre ai totali in kWh giornalieri/settimanali/mensili.
+
 ## [1.46.12] — 2026-07-08
 ### Corretto
 - **Sportelli elettrodomestici fuori dalla Sicurezza**: la porta del forno (e di lavatrice,
