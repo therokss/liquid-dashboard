@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.12] — 2026-07-08
+### Corretto
+- **Sportelli elettrodomestici fuori dalla Sicurezza**: la porta del forno (e di lavatrice,
+  lavastoviglie, frigo…) non compare più tra "Porte e finestre" — usa device_class
+  'door'/'opening' ma non è una porta di casa. Riconosciuta per nome e per device (sensore
+  `._machine_state`).
+
 ## [1.46.11] — 2026-07-07
 ### Aggiunto
 - **Scansione QR del token**: al setup (Connetti Home Assistant) c'è **Scansiona QR** —
