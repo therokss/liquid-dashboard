@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.15] — 2026-07-08
+### Migliorato
+- **Energia**: se un periodo non ha ancora statistiche (es. "Oggi" appena dopo mezzanotte),
+  al posto del flusso e del consumo per dispositivo (kWh) vuoti compare un messaggio che
+  invita a scegliere un altro periodo. Il consumo istantaneo in W resta sempre visibile.
+
 ## [1.46.14] — 2026-07-08
 ### Migliorato
 - **Consumo istantaneo** più pulito: la lista esclude ora l'infrastruttura (UPS, contatore,
