@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.8] — 2026-07-07
+### Aggiunto
+- **Telecomando LG più completo**, come quello fisico: **tastierino numerico** (123),
+  **tasti colorati** (rosso/verde/giallo/blu), **uscita audio** (TV, HDMI ARC, ottico,
+  Bluetooth, cuffie), **Exit** e i **controlli di riproduzione** estesi (precedente /
+  stop / successivo).
+
 ## [1.46.7] — 2026-07-07
 ### Corretto
 - **La card TV non sparisce più da spenta**: le TV LG diventano `unavailable` quando sono
