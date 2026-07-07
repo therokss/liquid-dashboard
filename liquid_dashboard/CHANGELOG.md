@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.11] — 2026-07-07
+### Aggiunto
+- **Scansione QR del token**: al setup (Connetti Home Assistant) c'è **Scansiona QR** —
+  inquadri il QR che Home Assistant mostra quando crei il token di lunga durata e il campo
+  si compila da solo.
+- **Mostra QR** (Impostazioni → Connessione): genera un QR con le credenziali di questo
+  dispositivo per configurarne un altro (iPhone ↔ Android) senza riscrivere il token.
+
 ## [1.46.10] — 2026-07-07
 ### Aggiunto
 - **Lista canali personalizzabile**: nel telecomando LG, tasto **Canali → Modifica** per
