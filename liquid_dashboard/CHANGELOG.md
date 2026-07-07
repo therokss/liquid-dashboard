@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.7] — 2026-07-07
+### Corretto
+- **La card TV non sparisce più da spenta**: le TV LG diventano `unavailable` quando sono
+  spente, e prima la loro card spariva — proprio quando serve per riaccenderle. Ora le TV
+  restano **sempre visibili** (anche spente), così apri il telecomando e le accendi col
+  Wake-on-LAN. Gli altoparlanti invece continuano a nascondersi se non disponibili.
+
 ## [1.46.6] — 2026-07-06
 ### Corretto
 - **Wake-on-LAN TV LG**: molte TV LG non espongono il MAC a Home Assistant (registro
