@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.14] — 2026-07-08
+### Migliorato
+- **Consumo istantaneo** più pulito: la lista esclude ora l'infrastruttura (UPS, contatore,
+  UDR/PoE, sensori di fase, batterie) e i sensori dal nome grezzo, e ripulisce i nomi da
+  "Power/Potenza". Il flusso di energia e il consumo per dispositivo in kWh restano invariati
+  sotto la lista.
+
 ## [1.46.13] — 2026-07-08
 ### Aggiunto
 - **Consumo istantaneo per dispositivo** nella scheda Energia (dettaglio): lista in tempo
