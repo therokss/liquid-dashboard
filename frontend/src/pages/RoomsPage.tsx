@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse, Fan, ChevronRight, Play, Bell, Sparkles, MoreHorizontal, WashingMachine, Microwave, Refrigerator, AirVent, Boxes } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
+import { useLongPress } from '../lib/useLongPress'
 import { LightCard } from '../components/cards/LightCard'
 import { MasonryColumns } from '../components/MasonryColumns'
 import { ClimateCard } from '../components/cards/ClimateCard'
 import { AppliancesSection } from '../components/cards/ApplianceCard'
 import { HueSyncSection } from '../components/cards/HueSyncCard'
+import { MediaDevicesSection } from '../components/cards/TVCard'
 import { DeviceDetailModal, useDeviceGroup } from '../components/DeviceDetailModal'
 import { getDomain } from '../types/ha'
 import type { HassArea, HassEntity } from '../types/ha'
@@ -94,6 +96,16 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
     }
   }
 
+  // Device con un media_player (TV, box, altoparlante): gestiti da MediaDevicesSection
+  // (TV → telecomando; altoparlanti → card media). Esclusi dal raggruppamento generico.
+  const mediaDevices = new Set<string>()
+  for (const e of areaEntities) {
+    if (getDomain(e.entity_id) === 'media_player') {
+      const d = entityDevices[e.entity_id]
+      if (d) mediaDevices.add(d)
+    }
+  }
+
   // Raggruppamento per dispositivo — generale, per QUALSIASI elettrodomestico/integrazione
   // (usa il device del registro HA). Un device con più controlli è rappresentato da UNA sola
   // card che apre il dettaglio con tutto; gli altri controlli non compaiono sparsi.
@@ -103,18 +115,19 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   const devCtrls: Record<string, HassEntity[]> = {}
   for (const e of areaEntities) {
     const d = entityDevices[e.entity_id]
-    if (d && !applianceDevices.has(d) && GROUP_CTRL.has(getDomain(e.entity_id))) (devCtrls[d] ||= []).push(e)
+    if (d && !applianceDevices.has(d) && !managedDevices.has(d) && !mediaDevices.has(d) && GROUP_CTRL.has(getDomain(e.entity_id))) (devCtrls[d] ||= []).push(e)
   }
-  const deviceRepr: Record<string, { kind: 'fan' | 'light' | 'climate' | 'button' | 'device'; id: string }> = {}
+  const deviceRepr: Record<string, { kind: 'fan' | 'light' | 'climate' | 'vacuum' | 'button' | 'device'; id: string }> = {}
   for (const d in devCtrls) {
     const list = devCtrls[d]
     if (list.length < 2) continue // un solo controllo: niente da raggruppare
     const byDom = (dom: string) => list.find((e) => getDomain(e.entity_id) === dom)
     const buttons = list.filter((e) => ['button', 'input_button'].includes(getDomain(e.entity_id)))
-    const fan = byDom('fan'), light = byDom('light'), climate = byDom('climate'), sw = byDom('switch')
+    const fan = byDom('fan'), light = byDom('light'), climate = byDom('climate'), vacuum = byDom('vacuum'), sw = byDom('switch')
     if (fan) deviceRepr[d] = { kind: 'fan', id: fan.entity_id }
     else if (light) deviceRepr[d] = { kind: 'light', id: light.entity_id }
     else if (climate) deviceRepr[d] = { kind: 'climate', id: climate.entity_id }
+    else if (vacuum) deviceRepr[d] = { kind: 'vacuum', id: vacuum.entity_id }
     else if (buttons.length === 1 && !sw) deviceRepr[d] = { kind: 'button', id: buttons[0].entity_id }
     else deviceRepr[d] = { kind: 'device', id: list[0].entity_id } // card dispositivo generica
   }
@@ -124,6 +137,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
     const d = entityDevices[e.entity_id]
     if (!d) return false
     if (applianceDevices.has(d)) return true
+    if (managedDevices.has(d)) return true
     const r = deviceRepr[d]
     if (!r) return false
     return r.kind === 'device' ? true : r.id !== e.entity_id
@@ -136,6 +150,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   const lights = areaEntities.filter((e) => getDomain(e.entity_id) === 'light' && !hidden(e))
   const climates = areaEntities.filter((e) => getDomain(e.entity_id) === 'climate' && !hidden(e))
   const fans = areaEntities.filter((e) => getDomain(e.entity_id) === 'fan' && !hidden(e))
+  const vacuums = areaEntities.filter((e) => getDomain(e.entity_id) === 'vacuum' && !hidden(e))
   const switches = areaEntities.filter((e) => getDomain(e.entity_id) === 'switch' && !managedDevices.has(entityDevices[e.entity_id]) && !hidden(e))
   const actions = areaEntities.filter((e) => ['button', 'input_button', 'scene', 'script'].includes(getDomain(e.entity_id)) && !hidden(e))
   const automations = areaEntities.filter((e) => getDomain(e.entity_id) === 'automation')
@@ -377,11 +392,29 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         <HueSyncSection areaEntities={areaEntities} />
 
+        <MediaDevicesSection areaEntities={areaEntities} />
+
         {fans.length > 0 && (
           <div>
             <div className="text-caption" style={{ marginBottom: 10 }}>Ventilatori</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {fans.map((e) => <FanCard key={e.entity_id} entity={e} onToggle={() => callService('homeassistant', e.state === 'on' ? 'turn_off' : 'turn_on', { entity_id: e.entity_id })} />)}
+            </div>
+          </div>
+        )}
+
+        {vacuums.length > 0 && (
+          <div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>Aspirapolvere</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {vacuums.map((e) => (
+                <VacuumCard
+                  key={e.entity_id}
+                  entity={e}
+                  onOpen={() => setDetailEntity(e.entity_id)}
+                  onCommand={(svc) => callService('vacuum', svc, { entity_id: e.entity_id })}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -544,16 +577,70 @@ function applianceIcon(title: string) {
 // smart, ecc.) col nome pulito del dispositivo; tocca per aprire il dettaglio con tutto.
 function DeviceCard({ entityId, onOpen }: { entityId: string; onOpen: () => void }) {
   const { title } = useDeviceGroup(entityId)
+  const lp = useLongPress(onOpen)
   return (
-    <div className="glass-card" onClick={onOpen} style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+    <motion.div whileTap={{ scale: 0.97 }} className="glass-card" {...lp} style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
       <div style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: 'var(--glass-bg-active)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {applianceIcon(title)}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>Tocca per i controlli</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>Tieni premuto per i controlli</div>
       </div>
       <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+    </motion.div>
+  )
+}
+
+// Icona robot aspirapolvere (vista dall'alto): corpo circolare, torretta LIDAR centrale e
+// paraurti frontale. lucide non ne ha una dedicata, quindi la disegniamo in stile lucide.
+function RobotVacuumIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="2.6" />
+      <path d="M4.8 8.2a9 9 0 0 1 14.4 0" />
+    </svg>
+  )
+}
+
+const VACUUM_STATE: Record<string, string> = {
+  cleaning: 'In pulizia',
+  docked: 'Alla base',
+  returning: 'Rientro alla base',
+  paused: 'In pausa',
+  idle: 'Fermo',
+  error: 'Errore',
+}
+
+// Card aspirapolvere/robot: stato + batteria, con Avvia/Pausa e Rientra alla base.
+// Tocca per il dettaglio completo (modalità, potenza di aspirazione, ecc.).
+function VacuumCard({ entity, onOpen, onCommand }: { entity: HassEntity; onOpen: () => void; onCommand: (svc: string) => void }) {
+  const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
+  const state = entity.state
+  const label = VACUUM_STATE[state] ?? state
+  const battery = entity.attributes.battery_level as number | undefined
+  const active = state === 'cleaning' || state === 'returning'
+  return (
+    <div className="glass-card" onClick={onOpen} style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 12, cursor: 'pointer' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 11, flexShrink: 0, background: active ? 'var(--accent-glow)' : 'var(--glass-bg-active)', border: '1px solid var(--glass-border)', color: active ? 'var(--accent)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <RobotVacuumIcon size={22} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{label}{typeof battery === 'number' ? ` · ${Math.round(battery)}%` : ''}</div>
+        </div>
+        <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 8 }} onClick={(ev) => ev.stopPropagation()}>
+        {active ? (
+          <button className="glass-btn" style={{ flex: 1, padding: '9px 12px', fontSize: 13 }} onClick={() => onCommand('pause')}>Pausa</button>
+        ) : (
+          <button className="glass-btn glass-btn-accent" style={{ flex: 1, padding: '9px 12px', fontSize: 13 }} onClick={() => onCommand('start')}>Avvia</button>
+        )}
+        <button className="glass-btn" style={{ flex: 1, padding: '9px 12px', fontSize: 13, opacity: state === 'docked' ? 0.5 : 1 }} disabled={state === 'docked'} onClick={() => onCommand('return_to_base')}>Rientra</button>
+      </div>
     </div>
   )
 }

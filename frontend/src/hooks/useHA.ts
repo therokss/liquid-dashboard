@@ -6,8 +6,8 @@ import {
   ERR_INVALID_AUTH,
   ERR_HASS_HOST_REQUIRED,
 } from 'home-assistant-js-websocket'
-import type { Connection, Auth, ConnectionOptions } from 'home-assistant-js-websocket'
-import type { HassArea } from '../types/ha'
+import type { Connection } from 'home-assistant-js-websocket'
+import type { HassArea, DeviceInfo } from '../types/ha'
 import { useStore } from '../store'
 
 async function fetchAreas(connection: Connection): Promise<HassArea[]> {
@@ -24,6 +24,8 @@ interface Registries {
   devices: Record<string, string>
   hidden: Record<string, true>
   system: Record<string, true>
+  platform: Record<string, string> // entity_id → integrazione (webostv, apple_tv, cast, …)
+  deviceInfo: Record<string, DeviceInfo> // device_id → produttore/modello/MAC
 }
 
 async function fetchRegistries(connection: Connection): Promise<Registries> {
@@ -39,22 +41,41 @@ async function fetchRegistries(connection: Connection): Promise<Registries> {
         platform: string | null
       }>
     >({ type: 'config/entity_registry/list' }),
-    connection.sendMessagePromise<Array<{ id: string; area_id: string | null }>>(
-      { type: 'config/device_registry/list' }
-    ),
+    connection.sendMessagePromise<
+      Array<{
+        id: string
+        area_id: string | null
+        manufacturer: string | null
+        model: string | null
+        connections: Array<[string, string]> | null
+      }>
+    >({ type: 'config/device_registry/list' }),
   ])
 
   const deviceArea: Record<string, string> = {}
-  for (const d of devReg) if (d.area_id) deviceArea[d.id] = d.area_id
+  const deviceInfo: Record<string, DeviceInfo> = {}
+  for (const d of devReg) {
+    if (d.area_id) deviceArea[d.id] = d.area_id
+    const mac = (d.connections ?? []).find((c) => c[0] === 'mac')?.[1]
+    if (d.manufacturer || d.model || mac) {
+      deviceInfo[d.id] = {
+        manufacturer: d.manufacturer ?? undefined,
+        model: d.model ?? undefined,
+        mac: mac ? mac.toUpperCase() : undefined,
+      }
+    }
+  }
 
   const areaMap: Record<string, string> = {}
   const devices: Record<string, string> = {}
   const hidden: Record<string, true> = {}
   const system: Record<string, true> = {} // config/diagnostic: button "di sistema", ecc.
+  const platform: Record<string, string> = {} // entity_id → integrazione
   for (const e of entReg) {
     const area = e.area_id ?? (e.device_id ? deviceArea[e.device_id] : undefined)
     if (area) areaMap[e.entity_id] = area
     if (e.device_id) devices[e.entity_id] = e.device_id
+    if (e.platform) platform[e.entity_id] = e.platform
     if (e.entity_category === 'config' || e.entity_category === 'diagnostic') system[e.entity_id] = true
     // Auto-nascoste: nascoste/disabilitate in HA, entità di configurazione/diagnostica,
     // oppure l'integrazione Plex (nascosta di default: crea un media_player per ogni client)
@@ -62,42 +83,70 @@ async function fetchRegistries(connection: Connection): Promise<Registries> {
       hidden[e.entity_id] = true
     }
   }
-  return { areaMap, devices, hidden, system }
+  return { areaMap, devices, hidden, system, platform, deviceInfo }
 }
 
-interface ConnOpts {
-  auth: Auth
-  createSocket?: (opts: ConnectionOptions) => Promise<WebSocket>
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('LD_TIMEOUT')), ms)),
+  ])
 }
 
-async function buildConnectionOptions(): Promise<ConnOpts> {
-  // Modalità proxy: il server autentica con SUPERVISOR_TOKEN.
-  // Usiamo l'handshake standard della libreria: si connette a <base>/api/websocket
-  // (intercettato dal proxy). Il browser invia `auth` con un token dummy che il
-  // proxy sostituisce con il SUPERVISOR_TOKEN reale prima di inoltrarlo a HA.
+// URL candidati in ordine di preferenza: prima l'interno (LAN, veloce a casa),
+// poi l'esterno (remoto/Nabu Casa, per quando si è fuori). Duplicati/vuoti rimossi.
+function candidateUrls(): string[] {
+  const s = useStore.getState()
+  let internal = s.hassUrl || 'http://homeassistant.local:8123'
+  // Migrazione: se per errore era salvato l'origin dell'app stessa (vecchio codice
+  // ingress), ripulisci. Un URL Nabu Casa come esterno è invece valido (remoto).
+  if (internal === window.location.origin) {
+    internal = 'http://homeassistant.local:8123'
+    s.setHassUrl(internal)
+  }
+  const external = (s.hassUrlExternal || '').trim()
+  return Array.from(new Set([internal.trim(), external].filter(Boolean)))
+}
+
+// Stabilisce la connessione. In add-on: auth via proxy. In app: prova l'interno e,
+// se non risponde entro pochi secondi, ripiega sull'esterno. Salva l'URL vincente
+// (activeHassUrl) così la porta 8098 del backend condiviso punta all'indirizzo giusto.
+async function establishConnection(): Promise<Connection> {
+  const store = useStore.getState()
+
+  // Modalità proxy: il server autentica con SUPERVISOR_TOKEN. Handshake standard verso
+  // <base>/api/websocket (intercettato dal proxy); il browser invia un token dummy che
+  // il proxy sostituisce col SUPERVISOR_TOKEN reale prima di inoltrarlo a HA.
   if (localStorage.getItem('ha-ll-use-proxy') === '1') {
     const { origin, pathname } = window.location
     const base = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname.replace(/\/[^/]*$/, '')
-    return {
-      auth: createLongLivedTokenAuth(origin + base, 'supervisor-proxy'),
+    store.setActiveHassUrl(null)
+    const auth = createLongLivedTokenAuth(origin + base, 'supervisor-proxy')
+    return await withTimeout(createConnection({ auth }), 15000)
+  }
+
+  // Modalità long-lived token (app standalone)
+  const token = localStorage.getItem('ha-ll-token')
+  if (!token) throw Object.assign(new Error('NO_TOKEN'), { isNoToken: true })
+
+  const urls = candidateUrls()
+  let lastErr: unknown = new Error('LD_NO_URL')
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i]
+    const isLast = i === urls.length - 1
+    try {
+      const auth = createLongLivedTokenAuth(url, token)
+      // Timeout più corto sui candidati non finali: se l'interno non risponde
+      // (sei fuori casa) si passa in fretta all'esterno senza attese lunghe.
+      const conn = await withTimeout(createConnection({ auth }), isLast ? 12000 : 6000)
+      store.setActiveHassUrl(url)
+      return conn
+    } catch (e) {
+      lastErr = e
+      if (e === ERR_INVALID_AUTH) throw e // token errato: inutile provare altri URL
     }
   }
-
-  // Modalità long-lived token
-  let hassUrl = useStore.getState().hassUrl || 'http://homeassistant.local:8123'
-
-  // Migrazione: se l'URL era window.location.origin (vecchio codice) o Nabu Casa
-  if (hassUrl === window.location.origin || hassUrl.includes('nabu.casa')) {
-    hassUrl = 'http://homeassistant.local:8123'
-    useStore.getState().setHassUrl(hassUrl)
-  }
-
-  const storedToken = localStorage.getItem('ha-ll-token')
-  if (!storedToken) {
-    throw Object.assign(new Error('NO_TOKEN'), { isNoToken: true })
-  }
-
-  return { auth: createLongLivedTokenAuth(hassUrl, storedToken) }
+  throw lastErr
 }
 
 // --- Connessione singleton (una sola per tutta l'app) --------------------
@@ -115,13 +164,7 @@ async function ensureConnection(): Promise<void> {
   store.setLoading(true)
 
   try {
-    const opts = await buildConnectionOptions()
-    const connection = await Promise.race([
-      createConnection(opts as ConnectionOptions),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('LD_TIMEOUT')), 15000)
-      ),
-    ])
+    const connection = await establishConnection()
 
     sharedConnection = connection
 
@@ -138,6 +181,8 @@ async function ensureConnection(): Promise<void> {
           st.setEntityDevices(reg.devices)
           st.setHiddenEntities(reg.hidden)
           st.setSystemEntities(reg.system)
+          st.setEntityPlatform(reg.platform)
+          st.setDeviceInfo(reg.deviceInfo)
         })
         .catch(() => {})
     })
@@ -162,6 +207,8 @@ async function ensureConnection(): Promise<void> {
       st.setEntityDevices(reg.devices)
       st.setHiddenEntities(reg.hidden)
       st.setSystemEntities(reg.system)
+      st.setEntityPlatform(reg.platform)
+      st.setDeviceInfo(reg.deviceInfo)
     } catch {
       console.warn('[LD] fetch registri fallito, riproverò al reconnect')
     }
@@ -348,4 +395,41 @@ export function getToken(): string | null {
 }
 export function clearToken() {
   localStorage.removeItem('ha-ll-token')
+}
+
+// ─── Comandi WS diretti (usati in modalità app standalone, senza add-on) ───────
+
+// Firma un percorso /api/… di HA: restituisce lo stesso path con ?authSig=<JWT>,
+// caricabile in <img> senza header di autenticazione. expires in secondi.
+export async function signPath(path: string, expires = 86400): Promise<string | null> {
+  if (!sharedConnection || !path.startsWith('/')) return null
+  try {
+    const res = await sharedConnection.sendMessagePromise<{ path: string }>({ type: 'auth/sign_path', path, expires })
+    return res?.path ?? null
+  } catch { return null }
+}
+
+// Storage per-utente dentro Home Assistant: le stesse impostazioni seguono l'utente
+// su tutti i client (app, dashboard ingress, frontend ufficiale).
+export async function getUserData<T = unknown>(key: string): Promise<T | null> {
+  if (!sharedConnection) return null
+  try {
+    const res = await sharedConnection.sendMessagePromise<{ value: T | null }>({ type: 'frontend/get_user_data', key })
+    return res?.value ?? null
+  } catch { return null }
+}
+export async function setUserData(key: string, value: unknown): Promise<boolean> {
+  if (!sharedConnection) return false
+  try {
+    await sharedConnection.sendMessagePromise({ type: 'frontend/set_user_data', key, value })
+    return true
+  } catch { return false }
+}
+
+// Utente corrente (per sapere se è amministratore in modalità app).
+export async function getCurrentUser(): Promise<{ id: string; name?: string; is_admin?: boolean } | null> {
+  if (!sharedConnection) return null
+  try {
+    return await sharedConnection.sendMessagePromise({ type: 'auth/current_user' })
+  } catch { return null }
 }

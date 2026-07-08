@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sun, Moon, Sparkles, Upload, Trash2, RefreshCw, Server, ChevronRight, LayoutGrid } from 'lucide-react'
+import { Sun, Moon, Sparkles, Upload, Trash2, RefreshCw, Server, ChevronRight, LayoutGrid, QrCode } from 'lucide-react'
+import { CredsQRModal } from '../components/CredsQRModal'
 import { DashboardsPage } from '../lib/dashboards/DashboardsPage'
 import { useStore } from '../store'
 import { clearToken } from '../hooks/useHA'
@@ -33,6 +34,8 @@ export function SettingsPage() {
   const wallpapers = useStore((s) => s.wallpapers)
   const setWallpaper = useStore((s) => s.setWallpaper)
   const hassUrl = useStore((s) => s.hassUrl)
+  const hassUrlExternal = useStore((s) => s.hassUrlExternal)
+  const [showQR, setShowQR] = useState(false)
   const isAdmin = useStore((s) => s.isAdmin)
   const permissions = useStore((s) => s.userPermissions)
   const resetSetup = useStore((s) => s.resetSetup)
@@ -93,6 +96,13 @@ export function SettingsPage() {
               {hassUrl || 'Non configurato'}
             </span>
           </SettingRow>
+          <button
+            onClick={() => setShowQR(true)}
+            className="glass-btn"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 12, fontSize: 14 }}
+          >
+            <QrCode size={18} /> Mostra QR per un altro dispositivo
+          </button>
         </Section>
 
         {/* Sistema — solo amministratori */}
@@ -442,6 +452,7 @@ export function SettingsPage() {
         {showDashboards && <DashboardsPage onBack={() => setShowDashboards(false)} />}
         {showServer && <ServerPage onBack={() => setShowServer(false)} />}
         {showUpdates && <UpdatesPage onBack={() => setShowUpdates(false)} />}
+        {showQR && <CredsQRModal url={hassUrl} externalUrl={hassUrlExternal} onClose={() => setShowQR(false)} />}
       </AnimatePresence>
     </div>
   )
@@ -682,16 +693,7 @@ function WeatherCalendarSettings() {
                     <button
                       key={c.entity_id}
                       onClick={() => toggleCalendarEntity(c.entity_id)}
-                      style={{
-                        padding: '6px 14px',
-                        borderRadius: 'var(--radius-pill)',
-                        border: active ? '1px solid var(--accent)' : '1px solid var(--glass-border)',
-                        background: active ? 'var(--accent-glow)' : 'rgba(0,0,0,0.04)',
-                        color: active ? 'var(--accent)' : 'var(--text-secondary)',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                      className={active ? 'ld-chip ld-chip-on' : 'ld-chip'}
                     >
                       {entityName(c)}
                     </button>

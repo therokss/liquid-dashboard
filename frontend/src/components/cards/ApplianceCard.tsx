@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import { WashingMachine, Microwave, Utensils, Clock, ChevronRight, type LucideIcon } from 'lucide-react'
 import { useStore } from '../../store'
+import { useLongPress } from '../../lib/useLongPress'
 import type { HassEntity } from '../../types/ha'
 
 // Elettrodomestici SmartThings (Samsung): riconosciuti da sensor.<x>_machine_state
@@ -195,8 +197,10 @@ function ApplianceCard({ a, onOpen }: { a: Appliance; onOpen?: (entityId: string
   }
   if (a.doorOpen) details.push('Sportello aperto')
 
+  const lp = useLongPress(() => onOpen?.(a.entityId))
+
   return (
-    <div className="glass-card" onClick={onOpen ? () => onOpen(a.entityId) : undefined} style={{ padding: 'var(--space-md)', cursor: onOpen ? 'pointer' : 'default', opacity: active || a.machineState === 'pause' ? 1 : 0.82 }}>
+    <motion.div whileTap={onOpen ? { scale: 0.97 } : undefined} className="glass-card" {...(onOpen ? lp : {})} style={{ padding: 'var(--space-md)', cursor: onOpen ? 'pointer' : 'default', opacity: active || a.machineState === 'pause' ? 1 : 0.82 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{
           width: 42, height: 42, borderRadius: 12, flexShrink: 0,
@@ -244,6 +248,6 @@ function ApplianceCard({ a, onOpen }: { a: Appliance; onOpen?: (entityId: string
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

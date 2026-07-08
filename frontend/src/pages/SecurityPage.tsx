@@ -16,6 +16,9 @@ const nameOf = (e: HassEntity) => ((e.attributes as Record<string, unknown>).fri
 
 const OPEN_DC = new Set(['door', 'window', 'garage_door', 'opening'])
 const MOTION_DC = new Set(['motion', 'occupancy', 'presence', 'moving'])
+// Sportelli di elettrodomestici (forno, lavatrice, lavastoviglie, frigo…): usano
+// device_class 'door'/'opening' ma NON sono porte di casa → esclusi dalla Sicurezza.
+const APPLIANCE_RE = /forno|oven|lavatric|asciugatric|lavastovigl|washer|dryer|dishwash|frigo|fridge|freezer|congelat|microond|microwave|dispenser/i
 // Nota: niente 'problem' — è troppo generico e catturerebbe sensori di "salute"
 // (es. VM/dischi di Proxmox) che non c'entrano con la sicurezza.
 const DETECT_DC = new Set(['smoke', 'gas', 'carbon_monoxide', 'moisture', 'safety', 'tamper'])
@@ -109,6 +112,7 @@ function LockRow({ e, last }: { e: HassEntity; last: boolean }) {
 
 export function SecurityPage() {
   const entities = useStore((s) => s.entities)
+  const entityDevices = useStore((s) => s.entityDevices)
   const areas = useStore((s) => s.areas)
   const entityAreas = useStore((s) => s.entityAreas)
   const hidden = useStore((s) => s.hiddenEntities)
@@ -134,11 +138,22 @@ export function SecurityPage() {
       if (klass === 'garage_door') return <Warehouse size={19} />
       return on ? <DoorOpen size={19} /> : <DoorClosed size={19} />
     }
+    // Device elettrodomestici (hanno un sensore ._machine_state): i loro sportelli
+    // non sono porte di casa e non devono comparire in Sicurezza.
+    const applianceDevices = new Set<string>()
+    for (const e of Object.values(entities)) {
+      if (e.entity_id.startsWith('sensor.') && e.entity_id.endsWith('_machine_state')) {
+        const d = entityDevices[e.entity_id]
+        if (d) applianceDevices.add(d)
+      }
+    }
+    const isAppliance = (e: HassEntity) =>
+      APPLIANCE_RE.test(`${nameOf(e)} ${e.entity_id}`) || applianceDevices.has(entityDevices[e.entity_id] ?? '')
     return visible
-      .filter((e) => dom(e.entity_id) === 'binary_sensor' && OPEN_DC.has(dc(e) || ''))
+      .filter((e) => dom(e.entity_id) === 'binary_sensor' && OPEN_DC.has(dc(e) || '') && !isAppliance(e))
       .map((e): StatusItem => ({ id: e.entity_id, name: nameOf(e), room: roomName(e.entity_id), alert: e.state === 'on', state: e.state === 'on' ? 'Aperto' : 'Chiuso', icon: openIcon(dc(e), e.state === 'on') }))
       .sort((a, b) => Number(b.alert) - Number(a.alert) || a.name.localeCompare(b.name))
-  }, [visible, roomName])
+  }, [visible, roomName, entities, entityDevices])
 
   const motionSensors = useMemo(() =>
     visible
