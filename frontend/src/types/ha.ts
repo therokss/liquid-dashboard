@@ -26,6 +26,14 @@ export interface HassDevice {
   manufacturer: string | null
 }
 
+// Info sintetiche sul device (dal registry), usate per auto-rilevare il modello
+// (es. TV LG) e per il Wake-on-LAN (MAC dalle connections).
+export interface DeviceInfo {
+  manufacturer?: string
+  model?: string
+  mac?: string
+}
+
 export interface HassEntityRegistry {
   entity_id: string
   unique_id: string

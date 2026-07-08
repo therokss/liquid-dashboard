@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { HassEntity, HassArea } from '../types/ha'
+import type { HassEntity, HassArea, DeviceInfo } from '../types/ha'
 
 export type Theme = 'dark' | 'light' | 'auto'
 export type WallpaperSlot = 'morning' | 'day' | 'evening' | 'night'
@@ -20,13 +20,16 @@ export interface ThemeConfig {
 }
 
 export interface DashboardConfig {
-  hassUrl: string
+  hassUrl: string            // URL interno (LAN) — primario
+  hassUrlExternal: string    // URL esterno (remoto/Nabu Casa) — usato in failover fuori casa
   setupComplete: boolean
   enabledAreas: string[]
   wallpapers: WallpaperConfig
   theme: ThemeConfig
   pinnedEntities: string[]
   userHiddenEntities: Record<string, true> // entità nascoste manualmente dall'utente
+  tvMacs: Record<string, string>           // entity_id TV → MAC per Wake-on-LAN (inserito a mano)
+  tvChannels: Array<{ n: number; name: string }> // lista canali personalizzata (vuota = default IT)
   visibilityReviewed: Record<string, true> // entità per cui è già stata presa una decisione (stepper)
   kioskMode: boolean                       // nasconde la barra di HA (schermo intero)
   onboardingDone: boolean                  // wizard di primo avvio completato
@@ -66,6 +69,8 @@ interface HAState {
   areas: HassArea[]
   entityAreas: Record<string, string>  // entity_id → area_id (da entity/device registry)
   entityDevices: Record<string, string> // entity_id → device_id
+  entityPlatform: Record<string, string> // entity_id → integrazione (webostv, apple_tv, cast, …)
+  deviceInfo: Record<string, DeviceInfo> // device_id → produttore/modello/MAC (per WoL)
   hiddenEntities: Record<string, true> // entità nascoste/disabilitate in HA
   systemEntities: Record<string, true> // entità di configurazione/diagnostica (button di sistema, ecc.)
   connected: boolean
@@ -76,13 +81,25 @@ interface HAState {
 }
 
 interface AppStore extends DashboardConfig, HAState {
+  // URL a cui si è effettivamente connessi (runtime, non persistito): interno o
+  // esterno a seconda di quale ha risposto. La porta 8098 (backend condiviso) viene
+  // derivata da qui, così fuori casa non tenta un indirizzo LAN irraggiungibile.
+  activeHassUrl: string | null
+  setActiveHassUrl: (url: string | null) => void
+  // Guard di sync (runtime, non persistiti): la config personale è già stata caricata
+  // dal backend? le credenziali sono arrivate da iCloud (⇒ device già configurato)?
+  userConfigLoaded: boolean
+  credsFromICloud: boolean
   // Config actions
   setHassUrl: (url: string) => void
+  setHassUrlExternal: (url: string) => void
   completeSetup: () => void
   setEnabledAreas: (areas: string[]) => void
   setWallpaper: (slot: WallpaperSlot, url: string | null) => void
   setTheme: (theme: Partial<ThemeConfig>) => void
   togglePinnedEntity: (entityId: string) => void
+  setTvMac: (entityId: string, mac: string) => void
+  setTvChannels: (list: Array<{ n: number; name: string }>) => void
   toggleEntityHidden: (entityId: string) => void
   setEntityHidden: (entityId: string, hidden: boolean) => void
   decideVisibility: (entityId: string, hidden: boolean) => void
@@ -112,6 +129,8 @@ interface AppStore extends DashboardConfig, HAState {
   setAreas: (areas: HassArea[]) => void
   setEntityAreas: (map: Record<string, string>) => void
   setEntityDevices: (map: Record<string, string>) => void
+  setEntityPlatform: (map: Record<string, string>) => void
+  setDeviceInfo: (map: Record<string, DeviceInfo>) => void
   setHiddenEntities: (map: Record<string, true>) => void
   setSystemEntities: (map: Record<string, true>) => void
   setIsAdmin: (isAdmin: boolean) => void
@@ -123,6 +142,7 @@ interface AppStore extends DashboardConfig, HAState {
 
 const DEFAULT_CONFIG: DashboardConfig = {
   hassUrl: 'http://homeassistant.local:8123',
+  hassUrlExternal: '',
   setupComplete: false,
   enabledAreas: [],
   wallpapers: { morning: null, day: null, evening: null, night: null },
@@ -134,6 +154,8 @@ const DEFAULT_CONFIG: DashboardConfig = {
   },
   pinnedEntities: [],
   userHiddenEntities: {},
+  tvMacs: {},
+  tvChannels: [],
   visibilityReviewed: {},
   kioskMode: true,
   onboardingDone: false,
@@ -205,6 +227,8 @@ export const useStore = create<AppStore>()(
       areas: [],
       entityAreas: {},
       entityDevices: {},
+      entityPlatform: {},
+      deviceInfo: {},
       hiddenEntities: {},
       systemEntities: {},
       connected: false,
@@ -212,8 +236,13 @@ export const useStore = create<AppStore>()(
       isAdmin: false,
       currentUserId: null,
       userPermissions: {},
+      activeHassUrl: null,
+      userConfigLoaded: false,
+      credsFromICloud: false,
 
+      setActiveHassUrl: (url) => set({ activeHassUrl: url }),
       setHassUrl: (url) => set({ hassUrl: url }),
+      setHassUrlExternal: (url) => set({ hassUrlExternal: url }),
       completeSetup: () => set({ setupComplete: true }),
       setEnabledAreas: (areas) => set({ enabledAreas: areas }),
       setWallpaper: (slot, url) =>
@@ -226,6 +255,9 @@ export const useStore = create<AppStore>()(
             ? s.pinnedEntities.filter((id) => id !== entityId)
             : [...s.pinnedEntities, entityId],
         })),
+      setTvMac: (entityId, mac) =>
+        set((s) => ({ tvMacs: { ...s.tvMacs, [entityId]: mac.trim() } })),
+      setTvChannels: (tvChannels) => set({ tvChannels }),
       toggleEntityHidden: (entityId) =>
         set((s) => {
           const next = { ...s.userHiddenEntities }
@@ -305,13 +337,14 @@ export const useStore = create<AppStore>()(
       applyOptimistic: (entityId, patch, ttlMs = 4000) => {
         set((s) => {
           const base = s.realEntities[entityId]
-          if (!base) return {}
+          if (!base) return {} // nessuno stato reale su cui basarsi
           const optimistic = {
             ...s.optimistic,
             [entityId]: { patch, baseLastChanged: base.last_changed, expiresAt: Date.now() + ttlMs },
           }
           return { optimistic, entities: buildEntityView(s.realEntities, optimistic) }
         })
+        // Rollback automatico se alla scadenza il dispositivo non ha ancora risposto.
         setTimeout(() => {
           const st = useStore.getState()
           const o = st.optimistic[entityId]
@@ -328,6 +361,8 @@ export const useStore = create<AppStore>()(
       setAreas: (areas) => set({ areas }),
       setEntityAreas: (entityAreas) => set({ entityAreas }),
       setEntityDevices: (entityDevices) => set({ entityDevices }),
+      setEntityPlatform: (entityPlatform) => set({ entityPlatform }),
+      setDeviceInfo: (deviceInfo) => set({ deviceInfo }),
       setHiddenEntities: (hiddenEntities) => set({ hiddenEntities }),
       setSystemEntities: (systemEntities) => set({ systemEntities }),
       setIsAdmin: (isAdmin) => set({ isAdmin }),
@@ -340,12 +375,15 @@ export const useStore = create<AppStore>()(
       name: 'liquid-dashboard-config',
       partialize: (state) => ({
         hassUrl: state.hassUrl,
+        hassUrlExternal: state.hassUrlExternal,
         setupComplete: state.setupComplete,
         enabledAreas: state.enabledAreas,
         wallpapers: state.wallpapers,
         theme: state.theme,
         pinnedEntities: state.pinnedEntities,
         userHiddenEntities: state.userHiddenEntities,
+        tvMacs: state.tvMacs,
+        tvChannels: state.tvChannels,
         visibilityReviewed: state.visibilityReviewed,
         kioskMode: state.kioskMode,
         onboardingDone: state.onboardingDone,

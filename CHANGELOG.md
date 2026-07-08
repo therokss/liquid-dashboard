@@ -3,6 +3,15 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.17] — 2026-07-08
+### Migliorato
+- **Chip calendari leggibili**: i chip selezionati (Impostazioni → Calendari) usavano testo
+  ciano su sfondo ciano ed erano illeggibili. Ora da selezionati hanno riempimento accent
+  pieno con testo scuro ad alto contrasto, con animazione di pressione "liquid".
+- **Effetto Liquid Glass più evidente**: bordo rifrattivo e riflesso speculare più marcati e
+  saturazione del vetro aumentata — più vicino al vetro di iOS 26.
+- **Animazione dei tasti** del telecomando TV più elastica (molla) alla pressione.
+
 ## [1.46.16] — 2026-07-08
 ### Aggiunto
 - **Riquadro "Consumo istantaneo" (W)** nel dettaglio Energia, accanto a "Prelievo rete":

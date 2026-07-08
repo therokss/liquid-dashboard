@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Wifi, Check, AlertCircle, ChevronDown } from 'lucide-react'
+import { Wifi, Check, AlertCircle, ChevronDown, QrCode } from 'lucide-react'
 import { createLongLivedTokenAuth, createConnection } from 'home-assistant-js-websocket'
 import { useStore } from '../../store'
 import { saveToken } from '../../hooks/useHA'
+import { QRScanner } from '../../components/QRScanner'
+import { parseCredsQR } from '../../lib/credsQR'
 
 interface ConnectStepProps {
   onNext: () => void
@@ -20,8 +22,17 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
   const [status, setStatus] = useState<Status>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
 
   const autoUrl = hassUrl || 'http://homeassistant.local:8123'
+
+  function handleScan(text: string) {
+    setShowScanner(false)
+    const c = parseCredsQR(text)
+    if (c.token) setToken(c.token)
+    if (c.url) { setCustomUrl(c.url); setShowAdvanced(true) }
+    setStatus('idle')
+  }
 
   async function testAndConnect() {
     if (!token.trim()) {
@@ -141,6 +152,13 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
           autoComplete="off"
           spellCheck={false}
         />
+        <button
+          onClick={() => setShowScanner(true)}
+          className="glass-btn"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 10, fontSize: 14 }}
+        >
+          <QrCode size={18} /> Scansiona QR
+        </button>
       </div>
 
       {/* Advanced toggle */}
@@ -210,6 +228,8 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
       >
         {status === 'testing' ? 'Connessione in corso…' : status === 'success' ? 'Connesso!' : 'Connetti'}
       </motion.button>
+
+      {showScanner && <QRScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
     </motion.div>
   )
 }

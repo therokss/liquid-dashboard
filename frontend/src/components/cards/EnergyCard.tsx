@@ -169,7 +169,7 @@ export function EnergyCard() {
 
       {createPortal(
         <AnimatePresence>
-          {showDetail && ids && <EnergyDetail ids={ids} sendMessage={sendMessage} onBack={() => setShowDetail(false)} />}
+          {showDetail && ids && <EnergyDetail ids={ids} sendMessage={sendMessage} livePowerW={livePowerW} onBack={() => setShowDetail(false)} />}
         </AnimatePresence>,
         document.body
       )}
@@ -266,7 +266,7 @@ function StatTile({ label, value, unit, color, icon }: {
   )
 }
 
-function EnergyDetail({ ids, sendMessage, onBack }: { ids: EnergyStatIds; sendMessage: Send; onBack: () => void }) {
+function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergyStatIds; sendMessage: Send; livePowerW: number | null; onBack: () => void }) {
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('today')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
@@ -274,6 +274,37 @@ function EnergyDetail({ ids, sendMessage, onBack }: { ids: EnergyStatIds; sendMe
   const [devices, setDevices] = useState<Array<{ id: string; name?: string; value: number }>>([])
   const entityAreas = useStore((s) => s.entityAreas)
   const areasList = useStore((s) => s.areas)
+  const liveEntities = useStore((s) => s.entities)
+  const powerSel = useStore((s) => s.energyPowerEntity)
+
+  // Consumo istantaneo (W) per dispositivo: sensori device_class 'power' in tempo reale.
+  // Esclude il sensore "casa" configurato e l'infrastruttura (UPS, contatore, UDR/PoE,
+  // fasi, batterie) e i sensori senza nome leggibile (shelly grezzi). Nome ripulito da
+  // "Power/Potenza".
+  const livePower = useMemo(() => {
+    const toW = (e: HassEntity) => {
+      const v = parseFloat(e.state)
+      if (isNaN(v)) return NaN
+      const u = ((e.attributes as Record<string, unknown>).unit_of_measurement as string) || 'W'
+      return u === 'kW' ? v * 1000 : v
+    }
+    const skip = (name: string, id: string) => {
+      if (/myups|\bups\b|contator|\bmeter\b|\budr\d*\b|\bpoe\b|phase|\bfase\b|nominale|batter/i.test(`${name} ${id}`)) return true
+      if (/shelly[a-z0-9]*-[0-9a-f]{6,}/i.test(name)) return true // nome grezzo senza friendly_name
+      return false
+    }
+    const clean = (name: string) => name.replace(/\s+(potenza|power)(\s+reale)?(\s+nominale)?$/i, '').trim() || name
+    return Object.values(liveEntities)
+      .filter((e) => e.entity_id.startsWith('sensor.') && (e.attributes as Record<string, unknown>).device_class === 'power' && e.entity_id !== powerSel && !isNaN(toW(e)))
+      .map((e) => {
+        const areaId = entityAreas[e.entity_id]
+        const room = (areaId && areasList.find((a) => a.area_id === areaId)?.name) || ''
+        const raw = ((e.attributes as Record<string, unknown>).friendly_name as string) || e.entity_id
+        return { id: e.entity_id, name: clean(raw), raw, room, w: toW(e) }
+      })
+      .filter((d) => !skip(d.raw, d.id))
+      .sort((a, b) => b.w - a.w)
+  }, [liveEntities, entityAreas, areasList, powerSel])
 
   useEffect(() => {
     let cancelled = false
@@ -352,6 +383,7 @@ function EnergyDetail({ ids, sendMessage, onBack }: { ids: EnergyStatIds; sendMe
         position: 'fixed', inset: 0, zIndex: 2000, overflowY: 'auto',
         background: 'var(--overlay-scrim)',
         backdropFilter: 'blur(32px) saturate(1.4)', WebkitBackdropFilter: 'blur(32px) saturate(1.4)',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + var(--space-lg))',
       }}
       className="page"
     >
@@ -410,6 +442,9 @@ function EnergyDetail({ ids, sendMessage, onBack }: { ids: EnergyStatIds; sendMe
 
       {/* Tiles */}
       <div className="grid-fluid" style={{ marginBottom: 'var(--space-xl)' }}>
+        {livePowerW !== null && (
+          <StatTile label="Consumo istantaneo" value={fmtPower(livePowerW, 'W').value} unit={fmtPower(livePowerW, 'W').unit} color="#ffb300" icon={<Zap size={16} />} />
+        )}
         <StatTile label="Prelievo rete" value={kwh(gridShown)} unit="kWh" color="#ff7043" icon={<ArrowDownToLine size={16} />} />
         {ids.gridTo.length > 0 && (
           <StatTile label="Immesso in rete" value={kwh(returned)} unit="kWh" color="#42a5f5" icon={<ArrowUpFromLine size={16} />} />
@@ -430,6 +465,32 @@ function EnergyDetail({ ids, sendMessage, onBack }: { ids: EnergyStatIds; sendMe
 
       {/* Su schermi larghi: flusso e consumo per dispositivo affiancati in colonne */}
       <MasonryColumns rowGap="0px">
+      {/* Consumo istantaneo (W) per dispositivo — tempo reale */}
+      {livePower.length > 0 && (
+        <div style={{ marginBottom: 'var(--space-xl)' }}>
+          <div className="text-caption" style={{ marginBottom: 12 }}>Consumo istantaneo</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {livePower.map((d) => {
+              const p = fmtPower(d.w, 'W')
+              return (
+                <GlassCard key={d.id} size="sm">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,179,0,0.14)', border: '1px solid rgba(255,179,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffb300', flexShrink: 0 }}>
+                      <Zap size={17} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
+                      {d.room && <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{d.room}</div>}
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', flexShrink: 0 }}>{p.value} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>{p.unit}</span></div>
+                  </div>
+                </GlassCard>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Flusso di energia (Rete → Casa → dispositivi) */}
       {homeTotal > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
@@ -473,6 +534,15 @@ function EnergyDetail({ ids, sendMessage, onBack }: { ids: EnergyStatIds; sendMe
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Nessuna statistica per il periodo (es. "Oggi" appena dopo mezzanotte): flusso e
+          kWh sono vuoti. Spieghiamo invece di lasciare la sezione vuota. */}
+      {homeTotal <= 0 && devices.length === 0 && (
+        <div style={{ padding: 'var(--space-lg)', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13, lineHeight: 1.5 }}>
+          Nessuna statistica di consumo per questo periodo.<br />
+          Prova <b style={{ color: 'var(--text-secondary)' }}>7 giorni</b> o <b style={{ color: 'var(--text-secondary)' }}>30 giorni</b> — le statistiche di oggi compaiono dopo la prima ora.
         </div>
       )}
       </MasonryColumns>
