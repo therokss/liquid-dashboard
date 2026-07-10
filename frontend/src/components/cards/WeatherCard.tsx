@@ -6,6 +6,7 @@ import {
 import { GlassCard } from '../glass/GlassCard'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
+import { useT } from '../../i18n'
 import type { WeatherAttributes, WeatherForecast } from '../../types/ha'
 
 type IconType = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
@@ -34,6 +35,7 @@ function toNum(v: unknown): number | undefined {
 }
 
 export function WeatherCard() {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const weatherSel = useStore((s) => s.weatherEntity)
   const tempSource = useStore((s) => s.externalTempSource)
@@ -89,7 +91,7 @@ export function WeatherCard() {
             </span>
             <span style={{ fontSize: 20, fontWeight: 400, color: 'var(--text-secondary)', marginTop: 4 }}>{unit}</span>
           </div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginTop: 6 }}>{meta.label}</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginTop: 6 }}>{t(meta.label)}</div>
           <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
             {hi !== undefined && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 13, color: 'var(--text-secondary)' }}>
@@ -122,7 +124,7 @@ export function WeatherCard() {
           )}
           {usingSensor && (
             <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-tertiary)' }}>
-              sensore locale
+              {t('sensore locale')}
             </span>
           )}
         </div>

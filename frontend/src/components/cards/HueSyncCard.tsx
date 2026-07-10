@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Tv, Sparkles, Sun } from 'lucide-react'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
+import { useT } from '../../i18n'
 import { DeviceDetailModal } from '../DeviceDetailModal'
 import type { HassEntity } from '../../types/ha'
 
@@ -15,6 +16,7 @@ function num(e?: HassEntity): number | null {
 }
 
 export function HueSyncSection({ areaEntities }: { areaEntities: HassEntity[] }) {
+  const t = useT()
   const entities = useStore((s) => s.entities)
 
   const box = useMemo(() => {
@@ -34,7 +36,7 @@ export function HueSyncSection({ areaEntities }: { areaEntities: HassEntity[] })
 
   return (
     <div>
-      <div className="text-caption" style={{ marginBottom: 10 }}>Sincronizzazione luci</div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>{t('Sincronizzazione luci')}</div>
       <HueSyncCard box={box} />
     </div>
   )
@@ -49,6 +51,7 @@ interface Box {
 }
 
 function HueSyncCard({ box }: { box: Box }) {
+  const t = useT()
   const { callService } = useHA()
   const [detail, setDetail] = useState(false)
   const powerOn = box.power?.state === 'on'
@@ -93,7 +96,7 @@ function HueSyncCard({ box }: { box: Box }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Hue Play</div>
-          <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2 }}>{powerOn ? (syncOn ? 'Sincronizzazione attiva' : 'Acceso') : 'Spento'} · tocca per i controlli</div>
+          <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 2 }}>{powerOn ? (syncOn ? t('Sincronizzazione attiva') : t('Acceso')) : t('Spento')} {t('· tocca per i controlli')}</div>
         </div>
         {box.power && (
           <label className="glass-toggle" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
@@ -109,7 +112,7 @@ function HueSyncCard({ box }: { box: Box }) {
           {/* Sorgenti HDMI */}
           {options.length > 0 && (
             <div style={{ marginTop: 14 }}>
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: 8 }}>Sorgente</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: 8 }}>{t('Sorgente')}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {options.map((opt) => {
                   const active = opt === activeInput
@@ -137,7 +140,7 @@ function HueSyncCard({ box }: { box: Box }) {
           {box.lightSync && (
             <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '1px solid var(--glass-border-dim)' }}>
               <Sparkles size={16} color={syncOn ? 'var(--accent)' : 'var(--text-tertiary)'} style={{ flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 14, color: 'var(--text-primary)' }}>Sincronizzazione luci</span>
+              <span style={{ flex: 1, fontSize: 14, color: 'var(--text-primary)' }}>{t('Sincronizzazione luci')}</span>
               <label className="glass-toggle" style={{ flexShrink: 0 }}>
                 <input type="checkbox" checked={syncOn} onChange={toggleSync} />
                 <div className="glass-toggle-track" />

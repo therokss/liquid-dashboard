@@ -12,7 +12,7 @@ import { useStore } from '../store'
 // (rifiuti, meteo, energia, aree) è condivisa e gestita via /api/prefs (permissions.ts).
 const SYNC_KEYS = [
   'wallpapers', 'theme', 'pinnedEntities', 'userHiddenEntities', 'visibilityReviewed',
-  'onboardingDone', 'serverExtraEntities',
+  'onboardingDone', 'serverExtraEntities', 'language',
 ] as const
 
 function apiBase(): string {

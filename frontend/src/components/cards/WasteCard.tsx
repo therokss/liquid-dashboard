@@ -1,12 +1,14 @@
 import { AlertCircle, Trash2 } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
 import { useStore } from '../../store'
+import { useT } from '../../i18n'
 import { WASTE_TYPES, WEEKDAYS, isCollectionDay } from '../../lib/waste'
 import type { WasteType } from '../../lib/waste'
 
 interface Upcoming { type: WasteType; diff: number }
 
 export function WasteCard() {
+  const t = useT()
   const schedule = useStore((s) => s.wasteSchedule)
   const intervals = useStore((s) => s.wasteInterval)
   const anchors = useStore((s) => s.wasteAnchor)
@@ -51,11 +53,11 @@ export function WasteCard() {
   const highlight = mode === 'expose'
   const accent = highlight ? '#ffb300' : 'var(--accent)'
 
-  const title = mode === 'expose' ? 'Esponi stasera' : mode === 'today' ? 'Raccolta oggi' : 'Prossima raccolta'
+  const title = mode === 'expose' ? t('Esponi stasera') : mode === 'today' ? t('Raccolta oggi') : t('Prossima raccolta')
   const subtitle = mode === 'expose'
-    ? 'Domani passa la raccolta'
+    ? t('Domani passa la raccolta')
     : mode === 'today'
-      ? 'Oggi passa la raccolta'
+      ? t('Oggi passa la raccolta')
       : items[0].diff <= 7
         ? WEEKDAYS[nextDate.getDay()]
         : nextDate.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'short' })

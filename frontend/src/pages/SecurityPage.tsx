@@ -8,6 +8,7 @@ import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { CamerasSection } from '../components/cards/CamerasSection'
 import { MasonryColumns } from '../components/MasonryColumns'
+import { useT } from '../i18n'
 import type { HassEntity } from '../types/ha'
 
 const dom = (id: string) => id.split('.')[0]
@@ -24,9 +25,10 @@ const APPLIANCE_RE = /forno|oven|lavatric|asciugatric|lavastovigl|washer|dryer|d
 const DETECT_DC = new Set(['smoke', 'gas', 'carbon_monoxide', 'moisture', 'safety', 'tamper'])
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const t = useT()
   return (
     <div style={{ marginBottom: 'var(--space-xl)' }}>
-      <div className="text-caption" style={{ marginBottom: 10 }}>{title}</div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>{t(title)}</div>
       {children}
     </div>
   )
@@ -45,13 +47,14 @@ const ALARM: Record<string, { label: string; color: string; icon: React.ReactNod
 }
 
 function AlarmCard({ e }: { e: HassEntity }) {
+  const t = useT()
   const { callService } = useHA()
   const info = ALARM[e.state] ?? { label: e.state, color: 'var(--text-secondary)', icon: <ShieldQuestion size={22} /> }
   const call = (service: string) => callService('alarm_control_panel', service, { entity_id: e.entity_id })
   const isArmed = e.state.startsWith('armed') || e.state === 'triggered'
   const btn = (label: string, service: string, accent?: boolean) => (
     <button className={accent ? 'glass-btn glass-btn-accent' : 'glass-btn'} style={{ flex: 1, padding: '9px 8px', fontSize: 13 }} onClick={() => call(service)}>
-      {label}
+      {t(label)}
     </button>
   )
   return (
@@ -60,7 +63,7 @@ function AlarmCard({ e }: { e: HassEntity }) {
         <div style={{ color: info.color, flexShrink: 0 }}>{info.icon}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(e)}</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: info.color }}>{info.label}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: info.color }}>{t(info.label)}</div>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
@@ -76,6 +79,7 @@ function AlarmCard({ e }: { e: HassEntity }) {
 interface StatusItem { id: string; name: string; room?: string; state: string; alert: boolean; icon: React.ReactNode }
 
 function StatusList({ items }: { items: StatusItem[] }) {
+  const t = useT()
   return (
     <div className="glass-panel" style={{ padding: '2px var(--space-lg)' }}>
       {items.map((it, i) => (
@@ -85,7 +89,7 @@ function StatusList({ items }: { items: StatusItem[] }) {
             <div style={{ fontSize: 14.5, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</div>
             {it.room && <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{it.room}</div>}
           </div>
-          <span style={{ fontSize: 12.5, fontWeight: 700, flexShrink: 0, color: it.alert ? '#ff5a5f' : 'var(--text-secondary)', background: it.alert ? 'rgba(255,90,95,0.14)' : 'var(--glass-bg)', border: `1px solid ${it.alert ? 'rgba(255,90,95,0.3)' : 'var(--glass-border)'}`, borderRadius: 'var(--radius-pill)', padding: '3px 10px' }}>{it.state}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 700, flexShrink: 0, color: it.alert ? '#ff5a5f' : 'var(--text-secondary)', background: it.alert ? 'rgba(255,90,95,0.14)' : 'var(--glass-bg)', border: `1px solid ${it.alert ? 'rgba(255,90,95,0.3)' : 'var(--glass-border)'}`, borderRadius: 'var(--radius-pill)', padding: '3px 10px' }}>{t(it.state)}</span>
         </div>
       ))}
     </div>
@@ -93,6 +97,7 @@ function StatusList({ items }: { items: StatusItem[] }) {
 }
 
 function LockRow({ e, last }: { e: HassEntity; last: boolean }) {
+  const t = useT()
   const { callService } = useHA()
   const locked = e.state === 'locked'
   return (
@@ -100,17 +105,18 @@ function LockRow({ e, last }: { e: HassEntity; last: boolean }) {
       <div style={{ color: locked ? '#34d399' : '#ff5a5f', flexShrink: 0, display: 'flex' }}>{locked ? <Lock size={19} /> : <Unlock size={19} />}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14.5, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameOf(e)}</div>
-        <div style={{ fontSize: 12, color: locked ? '#34d399' : '#ff5a5f' }}>{locked ? 'Bloccata' : 'Sbloccata'}</div>
+        <div style={{ fontSize: 12, color: locked ? '#34d399' : '#ff5a5f' }}>{locked ? t('Bloccata') : t('Sbloccata')}</div>
       </div>
       <button className={locked ? 'glass-btn' : 'glass-btn glass-btn-accent'} style={{ padding: '8px 16px', fontSize: 13, flexShrink: 0 }}
         onClick={() => callService('lock', locked ? 'unlock' : 'lock', { entity_id: e.entity_id })}>
-        {locked ? 'Sblocca' : 'Blocca'}
+        {locked ? t('Sblocca') : t('Blocca')}
       </button>
     </div>
   )
 }
 
 export function SecurityPage() {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const areas = useStore((s) => s.areas)
@@ -191,11 +197,11 @@ export function SecurityPage() {
     <div className="page">
       <div style={{ marginBottom: 'var(--space-xl)' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 800, color: 'var(--on-wallpaper)', letterSpacing: '-0.04em' }}>
-          Sicurezza
+          {t('Sicurezza')}
         </h1>
         {openables.length > 0 && (
           <p style={{ color: openCount > 0 ? '#ff5a5f' : 'var(--text-secondary)', fontSize: 14, marginTop: 2, fontWeight: openCount > 0 ? 600 : 400 }}>
-            {openCount === 0 ? 'Tutto chiuso' : `${openCount} ${openCount === 1 ? 'apertura' : 'aperture'} da controllare`}
+            {openCount === 0 ? t('Tutto chiuso') : t('{{n}} {{word}} da controllare', { n: openCount, word: openCount === 1 ? t('apertura') : t('aperture') })}
           </p>
         )}
       </div>
@@ -231,8 +237,8 @@ export function SecurityPage() {
           <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
             <Shield size={40} strokeWidth={1.5} />
           </div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Nessun dispositivo di sicurezza</div>
-          <div style={{ fontSize: 14 }}>Videocamere, sensori porte/finestre e allarmi compariranno qui.</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>{t('Nessun dispositivo di sicurezza')}</div>
+          <div style={{ fontSize: 14 }}>{t('Videocamere, sensori porte/finestre e allarmi compariranno qui.')}</div>
         </motion.div>
       )}
       </MasonryColumns>

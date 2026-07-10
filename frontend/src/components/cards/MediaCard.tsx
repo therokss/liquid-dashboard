@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Music } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
 import { useHA } from '../../hooks/useHA'
+import { useT } from '../../i18n'
 import { artworkUrl } from '../../lib/media'
 import type { HassEntity, MediaPlayerAttributes } from '../../types/ha'
 
@@ -41,6 +42,7 @@ function hasFeature(features: number | undefined, feature: number): boolean {
 }
 
 export function MediaCard({ entity, featured }: MediaCardProps) {
+  const t = useT()
   const { callService } = useHA()
   const attrs = entity.attributes as MediaPlayerAttributes
   const isPlaying = entity.state === 'playing'
@@ -48,7 +50,7 @@ export function MediaCard({ entity, featured }: MediaCardProps) {
   const isOn = entity.state !== 'off' && entity.state !== 'unavailable'
 
   const name = attrs.friendly_name ?? entity.entity_id
-  const title = attrs.media_title ?? (isOn ? 'Nessuna riproduzione' : 'Spento')
+  const title = attrs.media_title ?? (isOn ? t('Nessuna riproduzione') : t('Spento'))
   const artist = attrs.media_artist
   const artwork = artworkUrl(attrs.entity_picture)
   const volume = Math.round((attrs.volume_level ?? 0) * 100)

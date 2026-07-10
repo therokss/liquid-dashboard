@@ -8,6 +8,7 @@ import {
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { MasonryColumns } from '../components/MasonryColumns'
+import { useT } from '../i18n'
 import { getDomain } from '../types/ha'
 import type { HassEntity } from '../types/ha'
 
@@ -63,6 +64,7 @@ function uptimeFrom(iso: string): string | null {
 }
 
 export function ServerPage({ onBack }: { onBack: () => void }) {
+  const t = useT()
   const { sendMessage } = useHA()
   const entities = useStore((s) => s.entities)
   const areas = useStore((s) => s.areas)
@@ -156,27 +158,27 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
               gap: 4, cursor: 'pointer', fontSize: 13, fontWeight: 600,
             }}
           >
-            <ChevronLeft size={16} /> Indietro
+            <ChevronLeft size={16} /> {t('Indietro')}
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Server size={24} color="var(--accent)" />
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
-              Server
+              {t('Server')}
             </h2>
           </div>
         </div>
 
         {loading ? (
-          <div style={{ color: 'var(--text-tertiary)', fontSize: 14, padding: '24px 0' }}>Lettura sensori…</div>
+          <div style={{ color: 'var(--text-tertiary)', fontSize: 14, padding: '24px 0' }}>{t('Lettura sensori…')}</div>
         ) : (
           <MasonryColumns rowGap="0px">
             {/* Riepilogo */}
             {hasSysmon && (
               <div className="grid-fluid" style={{ marginBottom: 'var(--space-xl)' }}>
                 {stats.cpu && <StatBig Icon={Cpu} label="CPU" e={stats.cpu} />}
-                {stats.mem && <StatBig Icon={MemoryStick} label="Memoria" e={stats.mem} />}
-                {stats.disk && <StatBig Icon={HardDrive} label="Disco" e={stats.disk} />}
-                {stats.temp && <StatBig Icon={Thermometer} label="Temp. CPU" e={stats.temp} />}
+                {stats.mem && <StatBig Icon={MemoryStick} label={t('Memoria')} e={stats.mem} />}
+                {stats.disk && <StatBig Icon={HardDrive} label={t('Disco')} e={stats.disk} />}
+                {stats.temp && <StatBig Icon={Thermometer} label={t('Temp. CPU')} e={stats.temp} />}
               </div>
             )}
 
@@ -186,7 +188,7 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
                 groups[key].length > 0 ? (
                   <div key={key} style={{ marginBottom: 'var(--space-lg)' }}>
                     <div className="text-caption" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Icon size={14} /> {label}
+                      <Icon size={14} /> {t(label)}
                     </div>
                     <div className="glass-panel" style={{ padding: '2px var(--space-lg)' }}>
                       {groups[key].map((e) => <SensorRow key={e.entity_id} e={e} />)}
@@ -198,9 +200,7 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
               <div className="glass-panel" style={{ padding: 'var(--space-lg)', marginBottom: 'var(--space-lg)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 <Server size={20} color="var(--text-tertiary)" style={{ flexShrink: 0, marginTop: 2 }} />
                 <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                  Integrazione <b style={{ color: 'var(--text-primary)' }}>System Monitor</b> non rilevata.
-                  Aggiungila da Home Assistant (Impostazioni → Dispositivi e servizi) per vedere CPU, memoria, disco e rete.
-                  Nel frattempo puoi aggiungere manualmente qualsiasi sensore qui sotto.
+                  {t('Integrazione')} <b style={{ color: 'var(--text-primary)' }}>System Monitor</b> {t('non rilevata. Aggiungila da Home Assistant (Impostazioni → Dispositivi e servizi) per vedere CPU, memoria, disco e rete. Nel frattempo puoi aggiungere manualmente qualsiasi sensore qui sotto.')}
                 </div>
               </div>
             )}
@@ -209,19 +209,19 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
             <div style={{ marginBottom: 'var(--space-lg)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <div className="text-caption" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-                  <Plus size={14} /> Altri sensori
+                  <Plus size={14} /> {t('Altri sensori')}
                 </div>
                 <button
                   onClick={() => setPickerOpen(true)}
                   className="glass-btn glass-btn-accent"
                   style={{ padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
                 >
-                  <Plus size={15} /> Aggiungi
+                  <Plus size={15} /> {t('Aggiungi')}
                 </button>
               </div>
               {extra.length === 0 ? (
                 <div className="glass-panel" style={{ padding: 'var(--space-lg)', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13.5 }}>
-                  Aggiungi sensori UniFi, NAS, temperature o qualsiasi altra entità da tenere d'occhio.
+                  {t("Aggiungi sensori UniFi, NAS, temperature o qualsiasi altra entità da tenere d'occhio.")}
                 </div>
               ) : (
                 <div className="glass-panel" style={{ padding: '2px var(--space-lg)' }}>
@@ -242,7 +242,7 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
                         </span>
                         <button
                           onClick={() => toggleServerEntity(id)}
-                          aria-label="Rimuovi"
+                          aria-label={t('Rimuovi')}
                           style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 9, cursor: 'pointer', background: 'rgba(255,107,107,0.12)', border: '1px solid rgba(255,107,107,0.28)', color: '#ff8f8f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                           <X size={15} />
@@ -257,7 +257,7 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
             {systemButtons.length > 0 && (
               <div style={{ marginBottom: 'var(--space-lg)' }}>
                 <div className="text-caption" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Wrench size={14} /> Pulsanti di sistema
+                  <Wrench size={14} /> {t('Pulsanti di sistema')}
                 </div>
                 <div className="glass-panel" style={{ padding: '2px var(--space-lg)' }}>
                   {systemButtons.map((e) => (
@@ -270,7 +270,7 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
                         className="glass-btn"
                         style={{ flexShrink: 0, fontSize: 12.5, padding: '7px 16px' }}
                       >
-                        Premi
+                        {t('Premi')}
                       </button>
                     </div>
                   ))}
@@ -339,6 +339,7 @@ function SensorRow({ e }: { e: HassEntity }) {
 }
 
 function EntityPicker({ onClose }: { onClose: () => void }) {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const extra = useStore((s) => s.serverExtraEntities)
   const toggleServerEntity = useStore((s) => s.toggleServerEntity)
@@ -377,8 +378,8 @@ function EntityPicker({ onClose }: { onClose: () => void }) {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 800, color: 'var(--text-primary)' }}>Aggiungi sensore</h3>
-          <button onClick={onClose} aria-label="Chiudi" style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 800, color: 'var(--text-primary)' }}>{t('Aggiungi sensore')}</h3>
+          <button onClick={onClose} aria-label={t('Chiudi')} style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={17} />
           </button>
         </div>
@@ -388,7 +389,7 @@ function EntityPicker({ onClose }: { onClose: () => void }) {
           <input
             className="glass-input"
             autoFocus
-            placeholder="Cerca (es. unifi, temperatura, disco)…"
+            placeholder={t('Cerca (es. unifi, temperatura, disco)…')}
             value={q}
             onChange={(ev) => setQ(ev.target.value)}
             style={{ width: '100%', paddingLeft: 36 }}
@@ -431,7 +432,7 @@ function EntityPicker({ onClose }: { onClose: () => void }) {
             )
           })}
           {list.length === 0 && (
-            <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 14, padding: '24px 0' }}>Nessun risultato</div>
+            <div style={{ textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 14, padding: '24px 0' }}>{t('Nessun risultato')}</div>
           )}
         </div>
       </motion.div>

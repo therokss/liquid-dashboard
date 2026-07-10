@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { WashingMachine, Microwave, Utensils, Clock, ChevronRight, type LucideIcon } from 'lucide-react'
 import { useStore } from '../../store'
 import { useLongPress } from '../../lib/useLongPress'
+import { useT } from '../../i18n'
 import type { HassEntity } from '../../types/ha'
 
 // Elettrodomestici SmartThings (Samsung): riconosciuti da sensor.<x>_machine_state
@@ -123,6 +124,7 @@ function progressPct(startIso: string, endIso: string): number | null {
 }
 
 export function AppliancesSection({ areaEntities, onOpen }: { areaEntities: HassEntity[]; onOpen?: (entityId: string) => void }) {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const [, setTick] = useState(0)
@@ -155,7 +157,7 @@ export function AppliancesSection({ areaEntities, onOpen }: { areaEntities: Hass
 
   return (
     <div>
-      <div className="text-caption" style={{ marginBottom: 10 }}>Elettrodomestici</div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>{t('Elettrodomestici')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {appliances.map((a) => <ApplianceCard key={a.key} a={a} onOpen={onOpen} />)}
       </div>
@@ -177,10 +179,11 @@ function remaining(iso: string): { label: string; end: string } | null {
 }
 
 function ApplianceCard({ a, onOpen }: { a: Appliance; onOpen?: (entityId: string) => void }) {
+  const t = useT()
   const Icon = KIND_ICON[a.kind]
   const active = a.machineState === 'run' || a.machineState === 'running'
   const color = machineColor(a.machineState)
-  const stateLabel = MACHINE_LABEL[a.machineState] || (a.machineState.charAt(0).toUpperCase() + a.machineState.slice(1))
+  const stateLabel = MACHINE_LABEL[a.machineState] ? t(MACHINE_LABEL[a.machineState]) : (a.machineState.charAt(0).toUpperCase() + a.machineState.slice(1))
   const rem = active && a.completion ? remaining(a.completion) : null
   const prog = active && a.completion && a.startTs ? progressPct(a.startTs, a.completion) : null
 
@@ -193,9 +196,9 @@ function ApplianceCard({ a, onOpen }: { a: Appliance; onOpen?: (entityId: string
     }
   } else {
     if (a.program) details.push(a.program)
-    if (a.jobState) details.push(JOB_LABEL[a.jobState.toLowerCase()] || a.jobState)
+    if (a.jobState) details.push(JOB_LABEL[a.jobState.toLowerCase()] ? t(JOB_LABEL[a.jobState.toLowerCase()]) : a.jobState)
   }
-  if (a.doorOpen) details.push('Sportello aperto')
+  if (a.doorOpen) details.push(t('Sportello aperto'))
 
   const lp = useLongPress(() => onOpen?.(a.entityId))
 
@@ -235,8 +238,8 @@ function ApplianceCard({ a, onOpen }: { a: Appliance; onOpen?: (entityId: string
         <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 10, background: 'var(--accent-glow)', border: '1px solid var(--glass-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: prog !== null ? 9 : 0 }}>
             <Clock size={15} color="var(--accent)" style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Tra {rem.label}</span>
-            <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>· finisce alle {rem.end}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{t('Tra {{label}}', { label: rem.label })}</span>
+            <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{t('· finisce alle {{end}}', { end: rem.end })}</span>
             {prog !== null && (
               <span style={{ marginLeft: 'auto', fontSize: 12.5, fontWeight: 700, color: 'var(--accent)' }}>{Math.round(prog * 100)}%</span>
             )}

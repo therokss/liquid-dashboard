@@ -5,9 +5,11 @@ import { ClimateCard } from '../components/cards/ClimateCard'
 import { AreaTempCard } from '../components/cards/AreaTempCard'
 import { GlassCard } from '../components/glass/GlassCard'
 import { MasonryColumns } from '../components/MasonryColumns'
+import { useT } from '../i18n'
 import { getDomain } from '../types/ha'
 
 export function ClimatePage({ onBack }: { onBack: () => void }) {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const entityAreas = useStore((s) => s.entityAreas)
   const areas = useStore((s) => s.areas)
@@ -65,10 +67,10 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
             gap: 4, cursor: 'pointer', fontSize: 13, fontWeight: 600,
           }}
         >
-          <ChevronLeft size={16} /> Indietro
+          <ChevronLeft size={16} /> {t('Indietro')}
         </button>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
-          Clima
+          {t('Clima')}
         </h2>
       </div>
 
@@ -81,7 +83,7 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
               <Home size={26} />
             </div>
             <div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Media casa</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t('Media casa')}</div>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 44, fontWeight: 300, lineHeight: 1, color: 'var(--text-primary)', letterSpacing: '-0.04em' }}>
                 {r1(houseAvg)}<span style={{ fontSize: 20, fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 4 }}>°C</span>
               </div>
@@ -93,7 +95,7 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
       {/* Media per ambiente */}
       {areaTemps.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>Media per ambiente</div>
+          <div className="text-caption" style={{ marginBottom: 10 }}>{t('Media per ambiente')}</div>
           <div className="grid-fluid">
             {areaTemps.map((a) => (
               <AreaTempCard key={a.id} name={a.name} avg={a.avg} sensorId={a.sensorId} />
@@ -105,7 +107,7 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
       {/* Termostati / Climatizzatori */}
       {climates.length > 0 ? (
         <div>
-          <div className="text-caption" style={{ marginBottom: 10 }}>Termostati e climatizzatori</div>
+          <div className="text-caption" style={{ marginBottom: 10 }}>{t('Termostati e climatizzatori')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {climates.map((e) => <ClimateCard key={e.entity_id} entity={e} />)}
           </div>
@@ -113,7 +115,7 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
       ) : (
         <div style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-tertiary)' }}>
           <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><Thermometer size={32} strokeWidth={1.5} /></div>
-          <div>Nessun termostato o climatizzatore</div>
+          <div>{t('Nessun termostato o climatizzatore')}</div>
         </div>
       )}
       </MasonryColumns>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Fan, Plus, X } from 'lucide-react'
 import type { HassEntity } from '../types/ha'
 import { loadFanPresets, saveFanPresets, type FanPreset } from '../lib/fanPresets'
+import { useT } from '../i18n'
 
 type CS = (domain: string, service: string, data: Record<string, unknown>) => Promise<void>
 
@@ -20,6 +21,7 @@ function numRange(e: HassEntity, fallbackMin: number, fallbackMax: number): { mi
 // trascinabile che orienta una ventola in prospettiva 3D (CSS rotateX/rotateY,
 // nessuna libreria) più punti predefiniti salvabili/richiamabili con un tap.
 export function FanDirectionControl({ hEntity, vEntity, callService }: Props) {
+  const t = useT()
   const hRange = numRange(hEntity, -60, 60)
   const vRange = numRange(vEntity, 0, 90)
   const [h, setH] = useState(Number(hEntity.state) || 0)
@@ -112,7 +114,7 @@ export function FanDirectionControl({ hEntity, vEntity, callService }: Props) {
   return (
     <div className="glass-panel" style={{ padding: 'var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <span className="text-caption">Direzione</span>
+        <span className="text-caption">{t('Direzione')}</span>
         <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{h}° / {v}°</span>
       </div>
 
@@ -184,24 +186,24 @@ export function FanDirectionControl({ hEntity, vEntity, callService }: Props) {
                 if (ev.key === 'Enter') void savePreset()
                 if (ev.key === 'Escape') { setAdding(false); setName('') }
               }}
-              placeholder="Nome posizione"
+              placeholder={t('Nome posizione')}
               style={{
                 fontSize: 13, padding: '6px 12px', width: 130, borderRadius: 'var(--radius-pill)',
                 border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-primary)',
                 outline: 'none', fontFamily: 'var(--font-text)',
               }}
             />
-            <button className="ld-chip" onClick={() => void savePreset()}>OK</button>
+            <button className="ld-chip" onClick={() => void savePreset()}>{t('OK')}</button>
           </div>
         ) : (
           <button className="ld-chip" style={{ display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => setAdding(true)}>
-            <Plus size={12} /> Salva
+            <Plus size={12} /> {t('Salva')}
           </button>
         )}
 
         {presets.length > 0 && (
           <button className="ld-chip" style={{ opacity: 0.75 }} onClick={() => setEditing((e) => !e)}>
-            {editing ? 'Fatto' : 'Modifica'}
+            {editing ? t('Fatto') : t('Modifica')}
           </button>
         )}
       </div>

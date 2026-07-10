@@ -3,11 +3,13 @@ import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X, CameraOff } from 'lucide-react'
 import jsQR from 'jsqr'
+import { useT } from '../i18n'
 
 // Scanner QR: apre la fotocamera (posteriore), analizza i frame con jsQR e richiama
 // onScan col testo decodificato. Funziona nella webview delle app (contesto sicuro) e
 // nel browser via HTTPS.
 export function QRScanner({ onScan, onClose }: { onScan: (text: string) => void; onClose: () => void }) {
+  const t = useT()
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const rafRef = useRef<number | null>(null)
@@ -44,7 +46,7 @@ export function QRScanner({ onScan, onClose }: { onScan: (text: string) => void;
 
     const start = async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setError('Fotocamera non disponibile in questo contesto (serve HTTPS o l’app).')
+        setError(t('Fotocamera non disponibile in questo contesto (serve HTTPS o l’app).'))
         return
       }
       try {
@@ -56,13 +58,13 @@ export function QRScanner({ onScan, onClose }: { onScan: (text: string) => void;
         await video.play()
         scan()
       } catch {
-        setError('Impossibile accedere alla fotocamera. Consenti l’accesso nelle impostazioni e riprova.')
+        setError(t('Impossibile accedere alla fotocamera. Consenti l’accesso nelle impostazioni e riprova.'))
       }
     }
 
     start()
     return () => { cancelled = true; stopStream() }
-  }, [onScan])
+  }, [onScan, t])
 
   return createPortal(
     <motion.div
@@ -82,9 +84,9 @@ export function QRScanner({ onScan, onClose }: { onScan: (text: string) => void;
         </div>
       )}
       <div style={{ position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 32px)', left: 0, right: 0, textAlign: 'center', color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: 600, textShadow: '0 1px 3px rgba(0,0,0,0.6)' }}>
-        Inquadra il QR del token
+        {t('Inquadra il QR del token')}
       </div>
-      <button onClick={onClose} aria-label="Chiudi" style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', right: 16, width: 44, height: 44, borderRadius: '50%', cursor: 'pointer', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <button onClick={onClose} aria-label={t('Chiudi')} style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', right: 16, width: 44, height: 44, borderRadius: '50%', cursor: 'pointer', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <X size={22} />
       </button>
     </motion.div>,

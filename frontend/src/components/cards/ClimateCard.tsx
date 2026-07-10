@@ -5,6 +5,7 @@ import { GlassCard } from '../glass/GlassCard'
 import { MiniChart } from '../charts/MiniChart'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
+import { useT } from '../../i18n'
 import { getDomain } from '../../types/ha'
 import type { HassEntity, ClimateAttributes } from '../../types/ha'
 
@@ -43,6 +44,7 @@ const MODE_LABELS: Record<string, string> = {
 }
 
 export function ClimateCard({ entity }: ClimateCardProps) {
+  const t = useT()
   const { callService, getEntityHistory } = useHA()
   const entities = useStore((s) => s.entities)
   const entityAreas = useStore((s) => s.entityAreas)
@@ -148,8 +150,8 @@ export function ClimateCard({ entity }: ClimateCardProps) {
             {name}
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>
-            {isOff ? 'Spento' : (attrs.hvac_action ?? entity.state)}
-            {roomAvg !== null ? ` · Media stanza ${r1(roomAvg)}°` : ''}
+            {isOff ? t('Spento') : (attrs.hvac_action ?? entity.state)}
+            {roomAvg !== null ? t(' · Media stanza {{v}}°', { v: r1(roomAvg) }) : ''}
           </div>
         </div>
 
@@ -168,7 +170,7 @@ export function ClimateCard({ entity }: ClimateCardProps) {
             {currentTemp !== undefined ? `${currentTemp}` : '--'}
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: 13, textAlign: 'right' }}>
-            {unit} attuale
+            {unit} {t('attuale')}
           </div>
         </div>
       </div>
@@ -186,7 +188,7 @@ export function ClimateCard({ entity }: ClimateCardProps) {
             marginBottom: 'var(--space-md)',
           }}
         >
-          <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Target</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{t('Target')}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <motion.button
               whileTap={{ scale: 0.85 }}
@@ -244,7 +246,7 @@ export function ClimateCard({ entity }: ClimateCardProps) {
                 }}
               >
                 {MODE_ICONS[mode] ?? null}
-                <span>{MODE_LABELS[mode] ?? mode}</span>
+                <span>{MODE_LABELS[mode] ? t(MODE_LABELS[mode]) : mode}</span>
               </motion.button>
             )
           })}
@@ -262,10 +264,10 @@ export function ClimateCard({ entity }: ClimateCardProps) {
           </div>
           <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 12, borderTop: '2px dashed #00dbe7', display: 'inline-block' }} /> Impostata
+              <span style={{ width: 12, borderTop: '2px dashed #00dbe7', display: 'inline-block' }} /> {t('Impostata')}
             </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 12, height: 2, background: '#ff6b6b', display: 'inline-block', borderRadius: 1 }} /> Stanza
+              <span style={{ width: 12, height: 2, background: '#ff6b6b', display: 'inline-block', borderRadius: 1 }} /> {t('Stanza')}
             </span>
           </div>
         </div>

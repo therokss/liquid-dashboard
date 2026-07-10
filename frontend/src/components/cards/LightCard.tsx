@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sun, Minus, Plus } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
 import { useHA } from '../../hooks/useHA'
+import { useT } from '../../i18n'
 import { LightDetailModal } from '../LightDetailModal'
 import type { HassEntity, LightAttributes } from '../../types/ha'
 
@@ -38,6 +39,7 @@ function percentToBrightness(p: number): number {
 }
 
 export function LightCard({ entity, compact }: LightCardProps) {
+  const t = useT()
   const { callService } = useHA()
   const attrs = entity.attributes as LightAttributes
   const isOn = entity.state === 'on'
@@ -110,7 +112,7 @@ export function LightCard({ entity, compact }: LightCardProps) {
             {name}
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-            {isOn ? `${brightness}%` : 'Spenta'}
+            {isOn ? `${brightness}%` : t('Spenta')}
           </div>
         </div>
         <ToggleSwitch isOn={isOn} onToggle={toggle} color={colorCss} />
@@ -146,7 +148,7 @@ export function LightCard({ entity, compact }: LightCardProps) {
             {name}
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>
-            {isOn ? `Accesa · ${brightness}%` : 'Spenta'}
+            {isOn ? t('Accesa · {{brightness}}%', { brightness }) : t('Spenta')}
           </div>
         </div>
         <ToggleSwitch isOn={isOn} onToggle={toggle} color={colorCss} />
@@ -202,7 +204,7 @@ export function LightCard({ entity, compact }: LightCardProps) {
                   }}
                 >
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: colorCss ?? '#fff' }} />
-                  Colore
+                  {t('Colore')}
                 </button>
 
                 <AnimatePresence>

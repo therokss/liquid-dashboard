@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
+import { useT } from '../i18n'
 import type { HassArea } from '../types/ha'
 
 interface DeviceRow {
@@ -16,6 +17,7 @@ interface AreaRegItem { area_id: string; name: string }
 
 // Assegna i dispositivi alle stanze (aggiorna il registro dispositivi di HA).
 export function RoomAssigner() {
+  const t = useT()
   const { sendMessage } = useHA()
   const areas = useStore((s) => s.areas)
   const [devices, setDevices] = useState<DeviceRow[]>([])
@@ -75,7 +77,7 @@ export function RoomAssigner() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 'var(--space-md)' }}>
         <input
           className="glass-input"
-          placeholder="Nuova stanza…"
+          placeholder={t('Nuova stanza…')}
           value={newArea}
           onChange={(e) => setNewArea(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') createArea() }}
@@ -86,19 +88,19 @@ export function RoomAssigner() {
           className="glass-btn glass-btn-accent"
           style={{ padding: '0 16px', display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
         >
-          <Plus size={16} /> Crea
+          <Plus size={16} /> {t('Crea')}
         </button>
       </div>
 
       {loading ? (
-        <div style={{ color: 'var(--text-tertiary)', fontSize: 14, padding: '12px 0' }}>Caricamento dispositivi…</div>
+        <div style={{ color: 'var(--text-tertiary)', fontSize: 14, padding: '12px 0' }}>{t('Caricamento dispositivi…')}</div>
       ) : devices.length === 0 ? (
-        <div style={{ color: 'var(--text-tertiary)', fontSize: 14, padding: '12px 0' }}>Nessun dispositivo trovato</div>
+        <div style={{ color: 'var(--text-tertiary)', fontSize: 14, padding: '12px 0' }}>{t('Nessun dispositivo trovato')}</div>
       ) : (
         <>
           {unassignedCount > 0 && (
             <div style={{ fontSize: 12, color: '#ffb300', marginBottom: 10 }}>
-              {unassignedCount} {unassignedCount === 1 ? 'dispositivo senza stanza' : 'dispositivi senza stanza'}
+              {unassignedCount} {unassignedCount === 1 ? t('dispositivo senza stanza') : t('dispositivi senza stanza')}
             </div>
           )}
           <div className="glass-scroll" style={{ maxHeight: 420, overflowY: 'auto' }}>
@@ -118,7 +120,7 @@ export function RoomAssigner() {
                   value={d.area_id ?? ''}
                   onChange={(e) => assign(d.id, e.target.value || null)}
                 >
-                  <option value="">Nessuna</option>
+                  <option value="">{t('Nessuna')}</option>
                   {areas.map((a) => (
                     <option key={a.area_id} value={a.area_id}>{a.name}</option>
                   ))}

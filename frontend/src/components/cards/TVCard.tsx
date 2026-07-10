@@ -6,6 +6,7 @@ import { mediaKind, isTV, findPairedRemote } from '../../lib/mediaDevices'
 import type { MediaKind } from '../../lib/mediaDevices'
 import { TVRemoteModal } from '../TVRemoteModal'
 import { MediaCard } from './MediaCard'
+import { useT } from '../../i18n'
 import type { HassEntity } from '../../types/ha'
 
 // Determina il tipo di media player (TV LG/Apple/Android/generica o altoparlante).
@@ -21,13 +22,14 @@ export function useMediaKind(entity: HassEntity): MediaKind {
 
 // Card TV: mostra stato/sorgente e apre il telecomando a schermo intero.
 export function TVCard({ entity }: { entity: HassEntity }) {
+  const t = useT()
   const kind = useMediaKind(entity)
   const [open, setOpen] = useState(false)
   const attrs = entity.attributes as Record<string, unknown>
   const name = (attrs.friendly_name as string) ?? entity.entity_id
   const isOff = entity.state === 'off' || entity.state === 'standby' || entity.state === 'unavailable'
   const source = attrs.source as string | undefined
-  const sub = isOff ? 'Spenta · tocca per il telecomando' : `${source || 'Accesa'} · tocca per il telecomando`
+  const sub = isOff ? t('Spenta · tocca per il telecomando') : `${source || t('Accesa')} ${t('· tocca per il telecomando')}`
 
   return (
     <>
@@ -48,6 +50,7 @@ export function TVCard({ entity }: { entity: HassEntity }) {
 
 // Sezione media di una stanza: TV (con telecomando) e altoparlanti.
 export function MediaDevicesSection({ areaEntities }: { areaEntities: HassEntity[] }) {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const entityPlatform = useStore((s) => s.entityPlatform)
@@ -69,7 +72,7 @@ export function MediaDevicesSection({ areaEntities }: { areaEntities: HassEntity
     <>
       {tvs.length > 0 && (
         <div>
-          <div className="text-caption" style={{ marginBottom: 10 }}>TV</div>
+          <div className="text-caption" style={{ marginBottom: 10 }}>{t('TV')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {tvs.map((e) => <TVCard key={e.entity_id} entity={e} />)}
           </div>
@@ -77,7 +80,7 @@ export function MediaDevicesSection({ areaEntities }: { areaEntities: HassEntity
       )}
       {speakers.length > 0 && (
         <div>
-          <div className="text-caption" style={{ marginBottom: 10 }}>Altoparlanti</div>
+          <div className="text-caption" style={{ marginBottom: 10 }}>{t('Altoparlanti')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {speakers.map((e) => <MediaCard key={e.entity_id} entity={e} />)}
           </div>

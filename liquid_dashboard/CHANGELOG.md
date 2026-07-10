@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.19] — 2026-07-10
+### Aggiunto
+- **Supporto multilingua (Italiano, English, Español)**: nuovo selettore lingua in
+  Impostazioni → Lingua. L'intera interfaccia (pagine, card, modali) è stata tradotta;
+  la lingua scelta si sincronizza fra tutti i dispositivi come le altre preferenze
+  personali. Disponibile anche nell'app iOS/Android.
+
 ## [1.46.18] — 2026-07-10
 ### Aggiunto
 - **Punti predefiniti per ventilatori con doppio angolo**: sui ventilatori che regolano sia

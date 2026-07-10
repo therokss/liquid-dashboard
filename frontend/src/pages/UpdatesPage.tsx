@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { ChevronLeft, RefreshCw, ArrowUpCircle, CheckCircle2, ExternalLink, Package, ShieldCheck } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
+import { useT } from '../i18n'
 import type { HassEntity } from '../types/ha'
 
 const attr = (e: HassEntity, k: string) => (e.attributes as Record<string, unknown>)[k]
@@ -25,6 +26,7 @@ const progressOf = (e: HassEntity): number | null => {
 }
 
 function UpdateRow({ e, onInstall, willBackup }: { e: HassEntity; onInstall: (id: string) => void; willBackup: boolean }) {
+  const t = useT()
   const installed = (attr(e, 'installed_version') as string) || '—'
   const latest = (attr(e, 'latest_version') as string) || '—'
   const url = attr(e, 'release_url') as string | undefined
@@ -43,7 +45,7 @@ function UpdateRow({ e, onInstall, willBackup }: { e: HassEntity; onInstall: (id
             <span><span style={{ fontFamily: 'monospace' }}>{installed}</span> → <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{latest}</span></span>
             {willBackup && !inProg && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: '#34d399' }}>
-                <ShieldCheck size={12} /> backup
+                <ShieldCheck size={12} /> {t('backup')}
               </span>
             )}
           </div>
@@ -51,11 +53,11 @@ function UpdateRow({ e, onInstall, willBackup }: { e: HassEntity; onInstall: (id
         {inProg ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent)', fontSize: 12.5, fontWeight: 700, flexShrink: 0 }}>
             <RefreshCw size={14} className="ld-spin" />
-            {pct != null ? `${Math.round(pct)}%` : 'In corso…'}
+            {pct != null ? `${Math.round(pct)}%` : t('In corso…')}
           </div>
         ) : (
           <button className="glass-btn glass-btn-accent" style={{ padding: '8px 16px', fontSize: 13, flexShrink: 0 }} onClick={() => onInstall(e.entity_id)} disabled={!canInstall(e)}>
-            Aggiorna
+            {t('Aggiorna')}
           </button>
         )}
       </div>
@@ -66,7 +68,7 @@ function UpdateRow({ e, onInstall, willBackup }: { e: HassEntity; onInstall: (id
       )}
       {url && (
         <a href={url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12.5, color: 'var(--text-secondary)', textDecoration: 'none' }}>
-          <ExternalLink size={12} /> Note di rilascio
+          <ExternalLink size={12} /> {t('Note di rilascio')}
         </a>
       )}
     </div>
@@ -74,6 +76,7 @@ function UpdateRow({ e, onInstall, willBackup }: { e: HassEntity; onInstall: (id
 }
 
 export function UpdatesPage({ onBack }: { onBack: () => void }) {
+  const t = useT()
   const { callService } = useHA()
   const entities = useStore((s) => s.entities)
   const [confirmAll, setConfirmAll] = useState(false)
@@ -120,12 +123,12 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'var(--space-lg)' }}>
           <button onClick={onBack} style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-pill)', color: 'var(--text-primary)', padding: '6px 12px 6px 8px', display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-            <ChevronLeft size={16} /> Indietro
+            <ChevronLeft size={16} /> {t('Indietro')}
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <RefreshCw size={22} color="var(--accent)" />
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
-              Aggiornamenti
+              {t('Aggiornamenti')}
             </h2>
           </div>
         </div>
@@ -136,10 +139,10 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
             <div className="glass-card" style={{ padding: 'var(--space-lg)', marginBottom: 'var(--space-lg)', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 140 }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-                  {available.length} {available.length === 1 ? 'aggiornamento' : 'aggiornamenti'}
+                  {available.length} {available.length === 1 ? t('aggiornamento') : t('aggiornamenti')}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                  {anyInProgress ? 'Installazione in corso…' : confirmAll ? 'Tocca di nuovo per confermare' : 'disponibili'}
+                  {anyInProgress ? t('Installazione in corso…') : confirmAll ? t('Tocca di nuovo per confermare') : t('disponibili')}
                 </div>
               </div>
               <button
@@ -148,7 +151,7 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
                 disabled={installable.length === 0}
                 onClick={installAll}
               >
-                {confirmAll ? 'Confermi? Aggiorna tutti' : 'Aggiorna tutti'}
+                {confirmAll ? t('Confermi? Aggiorna tutti') : t('Aggiorna tutti')}
               </button>
             </div>
 
@@ -163,8 +166,8 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
                   <ShieldCheck size={20} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Backup prima di aggiornare</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>Consigliato · dove supportato (Core, add-on)</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{t('Backup prima di aggiornare')}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>{t('Consigliato · dove supportato (Core, add-on)')}</div>
                 </div>
                 <label className="glass-toggle" style={{ flexShrink: 0 }} onClick={(ev) => ev.stopPropagation()}>
                   <input type="checkbox" checked={backup} onChange={() => setBackup((b) => !b)} />
@@ -181,7 +184,7 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
 
             {upToDateCount > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-tertiary)', fontSize: 13, padding: '0 4px' }}>
-                <CheckCircle2 size={15} color="#34d399" /> Altri {upToDateCount} componenti sono aggiornati
+                <CheckCircle2 size={15} color="#34d399" /> {t('Altri {{n}} componenti sono aggiornati', { n: upToDateCount })}
               </div>
             )}
           </>
@@ -190,9 +193,9 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
             <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center', color: '#34d399' }}>
               <CheckCircle2 size={44} strokeWidth={1.5} />
             </div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>Tutto aggiornato</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>{t('Tutto aggiornato')}</div>
             <div style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-              <Package size={14} /> {upToDateCount > 0 ? `${upToDateCount} componenti monitorati` : 'Nessun aggiornamento in sospeso'}
+              <Package size={14} /> {upToDateCount > 0 ? t('{{n}} componenti monitorati', { n: upToDateCount }) : t('Nessun aggiornamento in sospeso')}
             </div>
           </div>
         )}

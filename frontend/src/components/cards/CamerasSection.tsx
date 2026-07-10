@@ -5,6 +5,7 @@ import { Video, X } from 'lucide-react'
 import { useStore } from '../../store'
 import { DeviceControls } from '../DeviceDetailModal'
 import { WebRTCPlayer } from '../WebRTCPlayer'
+import { useT } from '../../i18n'
 import type { HassEntity } from '../../types/ha'
 
 function apiBase(): string {
@@ -26,6 +27,7 @@ function streamType(e: HassEntity): string | undefined {
 }
 
 export function CamerasSection() {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const hidden = useStore((s) => s.hiddenEntities)
   const userHidden = useStore((s) => s.userHiddenEntities)
@@ -38,7 +40,7 @@ export function CamerasSection() {
 
   return (
     <div style={{ marginBottom: 'var(--space-xl)' }}>
-      <div className="text-caption" style={{ marginBottom: 10 }}>Videocamere</div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>{t('Videocamere')}</div>
       <div className="grid-fluid-lg">
         {cams.map((c) => (
           <button key={c.entity_id} onClick={() => setFull(c)}
@@ -69,6 +71,7 @@ export function CamerasSection() {
 // Cascata: WebRTC (video fluido, P2P) → stream MJPEG (via proxy) → snapshot → placeholder.
 // Le camere che espongono frontend_stream_type 'hls' partono direttamente da MJPEG.
 function CameraView({ entityId, streamType: st }: { entityId: string; streamType?: string }) {
+  const t = useT()
   const preferWebRTC = st !== 'hls'
   const [mode, setMode] = useState<'webrtc' | 'mjpeg' | 'snap' | 'err'>(preferWebRTC ? 'webrtc' : 'mjpeg')
   const [tick, setTick] = useState(Date.now())
@@ -84,7 +87,7 @@ function CameraView({ entityId, streamType: st }: { entityId: string; streamType
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--text-tertiary)' }}>
         <Video size={26} strokeWidth={1.5} />
-        <span style={{ fontSize: 12 }}>Anteprima non disponibile</span>
+        <span style={{ fontSize: 12 }}>{t('Anteprima non disponibile')}</span>
       </div>
     )
   }
@@ -93,6 +96,7 @@ function CameraView({ entityId, streamType: st }: { entityId: string; streamType
 }
 
 function CameraModal({ entity, onClose }: { entity: HassEntity; onClose: () => void }) {
+  const t = useT()
   return (
     <motion.div
       data-theme="dark"
@@ -105,7 +109,7 @@ function CameraModal({ entity, onClose }: { entity: HassEntity; onClose: () => v
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Video size={18} color="var(--accent)" />
           <span style={{ flex: 1, color: 'white', fontSize: 17, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{camName(entity)}</span>
-          <button onClick={onClose} aria-label="Chiudi" style={{ width: 36, height: 36, borderRadius: 11, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <button onClick={onClose} aria-label={t('Chiudi')} style={{ width: 36, height: 36, borderRadius: 11, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <X size={18} />
           </button>
         </div>
