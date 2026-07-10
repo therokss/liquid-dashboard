@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import type { HassEntity } from '../types/ha'
+import { FanDirectionControl } from './FanDirectionControl'
 
 const dom = (id: string) => id.split('.')[0]
 
@@ -61,14 +62,27 @@ export function DeviceControls({ entityId, excludeIds }: { entityId: string; exc
   const { controls, sensors } = useDeviceGroup(entityId, excludeIds)
   const { callService } = useHA()
   if (controls.length === 0 && sensors.length === 0) return null
+
+  // Ventilatori con doppio angolo (es. Dreo): number "horizontal_angle" +
+  // "vertical_angle" (esclude le varianti "*_osc_angle_*"/oscillation, che regolano
+  // l'AMPIEZZA di oscillazione, non la posizione fissa) → pad direzionale con preset
+  // al posto dei due slider generici.
+  const hIdx = controls.findIndex(({ e }) => dom(e.entity_id) === 'number' && e.entity_id.includes('horizontal_angle') && !e.entity_id.includes('osc'))
+  const vIdx = controls.findIndex(({ e }) => dom(e.entity_id) === 'number' && e.entity_id.includes('vertical_angle') && !e.entity_id.includes('osc'))
+  const hasDirection = hIdx >= 0 && vIdx >= 0
+  const restControls = hasDirection ? controls.filter((_, i) => i !== hIdx && i !== vIdx) : controls
+
   return (
     <>
-      {controls.length > 0 && (
+      {hasDirection && (
+        <FanDirectionControl hEntity={controls[hIdx].e} vEntity={controls[vIdx].e} callService={callService} />
+      )}
+      {restControls.length > 0 && (
         <>
           <div className="text-caption" style={{ marginBottom: 8 }}>Controlli</div>
           <div className="glass-panel" style={{ padding: '2px var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
-            {controls.map(({ e, label }, i) => (
-              <ControlRow key={e.entity_id} e={e} label={label} callService={callService} last={i === controls.length - 1} />
+            {restControls.map(({ e, label }, i) => (
+              <ControlRow key={e.entity_id} e={e} label={label} callService={callService} last={i === restControls.length - 1} />
             ))}
           </div>
         </>

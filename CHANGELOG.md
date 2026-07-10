@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.18] — 2026-07-10
+### Aggiunto
+- **Punti predefiniti per ventilatori con doppio angolo**: sui ventilatori che regolano sia
+  l'angolo orizzontale sia quello verticale (es. Dreo), il dettaglio dispositivo mostra ora un
+  pad direzionale trascinabile (con inclinazione 3D via CSS) al posto dei due slider separati.
+  Le posizioni si salvano con un nome e si richiamano con un tap; sono condivise fra tutti i
+  dispositivi/schermi (nuovo endpoint `/api/fan-presets`) e disponibili anche nell'app iOS/Android.
+
 ## [1.46.17] — 2026-07-08
 ### Migliorato
 - **Chip calendari leggibili**: i chip selezionati (Impostazioni → Calendari) usavano testo
