@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { TrendingUp, TrendingDown, Minus, Thermometer, Droplets, Wind, Zap, Eye } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
+import { useT } from '../../i18n'
 import type { HassEntity, SensorAttributes } from '../../types/ha'
 
 interface SensorCardProps {
@@ -77,6 +78,7 @@ function parseTrend(values: number[]): 'up' | 'down' | 'flat' {
 }
 
 export function SensorCard({ entity, compact }: SensorCardProps) {
+  const t = useT()
   const attrs = entity.attributes as SensorAttributes
   const name = attrs.friendly_name ?? entity.entity_id
   const value = entity.state
@@ -166,7 +168,7 @@ export function SensorCard({ entity, compact }: SensorCardProps) {
             }}
           >
             {trend === 'up' ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-            {trend === 'up' ? 'In salita' : 'In discesa'}
+            {trend === 'up' ? t('In salita') : t('In discesa')}
           </div>
         )}
       </div>

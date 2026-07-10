@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Sun, Moon, Sunset, CloudMoon, Upload, Sparkles } from 'lucide-react'
 import { useStore } from '../../store'
+import { useT } from '../../i18n'
 import type { WallpaperSlot, ThemeConfig } from '../../store'
 
 interface ThemeStepProps {
@@ -22,6 +23,7 @@ const THEME_MODES = [
 ]
 
 export function ThemeStep({ onDone }: ThemeStepProps) {
+  const t = useT()
   const wallpapers = useStore((s) => s.wallpapers)
   const theme = useStore((s) => s.theme)
   const setWallpaper = useStore((s) => s.setWallpaper)
@@ -53,16 +55,16 @@ export function ThemeStep({ onDone }: ThemeStepProps) {
     >
       <div>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: 8 }}>
-          Personalizza il look
+          {t('Personalizza il look')}
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
-          Opzionale — puoi farlo anche dopo dalle impostazioni.
+          {t('Opzionale — puoi farlo anche dopo dalle impostazioni.')}
         </p>
       </div>
 
       {/* Tema chiaro/scuro */}
       <div>
-        <div className="text-caption" style={{ marginBottom: 12 }}>Tema</div>
+        <div className="text-caption" style={{ marginBottom: 12 }}>{t('Tema')}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           {THEME_MODES.map(({ value, label, icon }) => {
             const isActive = theme.mode === value
@@ -89,7 +91,7 @@ export function ThemeStep({ onDone }: ThemeStepProps) {
                 }}
               >
                 {icon}
-                {label}
+                {t(label)}
               </motion.button>
             )
           })}
@@ -99,7 +101,7 @@ export function ThemeStep({ onDone }: ThemeStepProps) {
       {/* Intensità vetro */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div className="text-caption">Effetto vetro</div>
+          <div className="text-caption">{t('Effetto vetro')}</div>
           <div style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>
             {Math.round(theme.glassIntensity * 100)}%
           </div>
@@ -116,14 +118,14 @@ export function ThemeStep({ onDone }: ThemeStepProps) {
           }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text-tertiary)' }}>
-          <span>Trasparente</span>
-          <span>Opaco</span>
+          <span>{t('Trasparente')}</span>
+          <span>{t('Opaco')}</span>
         </div>
       </div>
 
       {/* Wallpaper per ora */}
       <div>
-        <div className="text-caption" style={{ marginBottom: 12 }}>Sfondi per ora del giorno</div>
+        <div className="text-caption" style={{ marginBottom: 12 }}>{t('Sfondi per ora del giorno')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
           {WALLPAPER_SLOTS.map(({ slot, label, icon, hours, gradient }) => {
             const preview = previews[slot] ?? wallpapers[slot]
@@ -155,7 +157,7 @@ export function ThemeStep({ onDone }: ThemeStepProps) {
                   {!preview && (
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, background: 'rgba(0,0,0,0.2)' }}>
                       <Upload size={18} color="white" />
-                      <span style={{ fontSize: 11, color: 'white', fontWeight: 600 }}>Carica foto</span>
+                      <span style={{ fontSize: 11, color: 'white', fontWeight: 600 }}>{t('Carica foto')}</span>
                     </div>
                   )}
                   <div
@@ -173,7 +175,7 @@ export function ThemeStep({ onDone }: ThemeStepProps) {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'white' }}>
                       {icon}
-                      <span style={{ fontSize: 13, fontWeight: 700 }}>{label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{t(label)}</span>
                     </div>
                     <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>{hours}</span>
                   </div>
@@ -183,7 +185,7 @@ export function ThemeStep({ onDone }: ThemeStepProps) {
           })}
         </div>
         <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8, lineHeight: 1.5 }}>
-          Se non carichi immagini, verranno usati gradienti automatici.
+          {t('Se non carichi immagini, verranno usati gradienti automatici.')}
         </p>
       </div>
 
@@ -193,7 +195,7 @@ export function ThemeStep({ onDone }: ThemeStepProps) {
         onClick={handleDone}
         style={{ width: '100%' }}
       >
-        Inizia a usare la dashboard
+        {t('Inizia a usare la dashboard')}
       </motion.button>
     </motion.div>
   )

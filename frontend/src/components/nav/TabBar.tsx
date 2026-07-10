@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { Home, LayoutGrid, ShieldCheck, Play, Settings } from 'lucide-react'
+import { useT } from '../../i18n'
 
 export type Tab = 'home' | 'rooms' | 'security' | 'media' | 'settings'
 
@@ -17,6 +18,7 @@ const TABS: Array<{ id: Tab; icon: typeof Home; label: string }> = [
 ]
 
 export function TabBar({ active, onChange }: TabBarProps) {
+  const t = useT()
   return (
     <div
       style={{
@@ -102,7 +104,7 @@ export function TabBar({ active, onChange }: TabBarProps) {
                   transition: 'color 0.2s ease',
                 }}
               >
-                {label}
+                {t(label)}
               </span>
             </motion.button>
           )

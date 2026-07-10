@@ -10,6 +10,7 @@ async function fetchAreas(conn: Connection) {
 }
 import { useStore } from '../../store'
 import { getToken } from '../../hooks/useHA'
+import { useT } from '../../i18n'
 import type { HassArea } from '../../types/ha'
 
 interface RoomsStepProps {
@@ -49,6 +50,7 @@ function getAreaGradient(index: number): string {
 }
 
 export function RoomsStep({ onNext }: RoomsStepProps) {
+  const t = useT()
   const hassUrl = useStore((s) => s.hassUrl)
   const setEnabledAreas = useStore((s) => s.setEnabledAreas)
 
@@ -100,10 +102,10 @@ export function RoomsStep({ onNext }: RoomsStepProps) {
     >
       <div>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: 8 }}>
-          Scegli le stanze
+          {t('Scegli le stanze')}
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
-          Seleziona le aree da mostrare nella dashboard. Puoi cambiarle in qualsiasi momento.
+          {t('Seleziona le aree da mostrare nella dashboard. Puoi cambiarle in qualsiasi momento.')}
         </p>
       </div>
 
@@ -115,8 +117,8 @@ export function RoomsStep({ onNext }: RoomsStepProps) {
         </div>
       ) : areas.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--text-secondary)', fontSize: 14 }}>
-          Nessuna area trovata in Home Assistant.
-          <br />Creale in Impostazioni → Aree.
+          {t('Nessuna area trovata in Home Assistant.')}
+          <br />{t('Creale in Impostazioni → Aree.')}
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
@@ -199,13 +201,13 @@ export function RoomsStep({ onNext }: RoomsStepProps) {
             onClick={() => setSelected(new Set(areas.map((a) => a.area_id)))}
             style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-pill)', color: 'var(--text-secondary)', fontSize: 12, padding: '6px 14px', cursor: 'pointer' }}
           >
-            Tutte
+            {t('Tutte')}
           </button>
           <button
             onClick={() => setSelected(new Set())}
             style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-pill)', color: 'var(--text-secondary)', fontSize: 12, padding: '6px 14px', cursor: 'pointer' }}
           >
-            Nessuna
+            {t('Nessuna')}
           </button>
         </div>
       )}
@@ -217,7 +219,7 @@ export function RoomsStep({ onNext }: RoomsStepProps) {
         disabled={selected.size === 0}
         style={{ width: '100%', opacity: selected.size === 0 ? 0.5 : 1 }}
       >
-        Continua ({selected.size} stanze)
+        {t('Continua ({{n}} stanze)', { n: selected.size })}
       </motion.button>
     </motion.div>
   )

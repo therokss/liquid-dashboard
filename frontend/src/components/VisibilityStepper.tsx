@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useStore } from '../store'
 import { getDomain } from '../types/ha'
+import { useT } from '../i18n'
 import type { HassEntity } from '../types/ha'
 
 const MANAGEABLE_DOMAINS = new Set([
@@ -49,6 +50,7 @@ function buildManageable(entities: Record<string, HassEntity>, autoHidden: Recor
 }
 
 export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const areas = useStore((s) => s.areas)
   const entityAreas = useStore((s) => s.entityAreas)
@@ -146,9 +148,9 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
       onChange={(e) => { setReviewAll(false); setAreaFilter(e.target.value) }}
       style={{ width: '100%' }}
     >
-      <option value="all">Tutte le stanze</option>
+      <option value="all">{t('Tutte le stanze')}</option>
       {areaOptions.opts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-      {areaOptions.hasNone && <option value="none">Senza stanza</option>}
+      {areaOptions.hasNone && <option value="none">{t('Senza stanza')}</option>}
     </select>
   )
 
@@ -162,12 +164,12 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       {/* Selettore stanza + toggle vista (scheda una-alla-volta ↔ lista) */}
       <div>
-        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 600 }}>Scegli la stanza da configurare</div>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 600 }}>{t('Scegli la stanza da configurare')}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>{areaSelect}</div>
           <button
             onClick={() => setViewMode((v) => (v === 'list' ? 'stepper' : 'list'))}
-            aria-label={viewMode === 'list' ? 'Vista scheda' : 'Vista lista'}
+            aria-label={viewMode === 'list' ? t('Vista scheda') : t('Vista lista')}
             className="glass-btn"
             style={{ flexShrink: 0, padding: '0 14px' }}
           >
@@ -187,11 +189,11 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
                   <RowIcon size={18} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14.5, color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entityName(it)}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{areaName[entityAreas[it.entity_id]] ?? 'Senza stanza'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{areaName[entityAreas[it.entity_id]] ?? t('Senza stanza')}</div>
                   </div>
                   <button
                     onClick={() => decide(it.entity_id, vis)}
-                    aria-label={vis ? 'Nascondi' : 'Mostra'}
+                    aria-label={vis ? t('Nascondi') : t('Mostra')}
                     style={{ flexShrink: 0, width: 46, height: 30, borderRadius: 9, cursor: 'pointer', border: vis ? 'none' : '1px solid var(--glass-border)', background: vis ? 'var(--accent)' : 'var(--glass-bg)', color: vis ? '#04121e' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     {vis ? <Eye size={16} /> : <EyeOff size={16} />}
@@ -200,7 +202,7 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
               )
             })}
             {listFor(areaFilter).length === 0 && (
-              <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>Nessun dispositivo</div>
+              <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>{t('Nessun dispositivo')}</div>
             )}
           </div>
         </div>
@@ -210,7 +212,7 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
       {/* Progresso */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button
-          aria-label="Precedente"
+          aria-label={t('Precedente')}
           onClick={() => index > 0 && (setDir(-1), setIndex((i) => i - 1))}
           disabled={index === 0 || done}
           style={{
@@ -224,8 +226,8 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
         </button>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6 }}>
-            <span>{total === 0 ? 'Nessuno da rivedere' : `${Math.min(index + 1, total)} di ${total}`}</span>
-            <span>{hiddenCount} nascosti</span>
+            <span>{total === 0 ? t('Nessuno da rivedere') : t('{{a}} di {{b}}', { a: Math.min(index + 1, total), b: total })}</span>
+            <span>{t('{{n}} nascosti', { n: hiddenCount })}</span>
           </div>
           <div style={{ height: 5, borderRadius: 3, background: 'var(--glass-border)', overflow: 'hidden' }}>
             <motion.div
@@ -236,7 +238,7 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
           </div>
         </div>
         <button
-          aria-label="Successivo"
+          aria-label={t('Successivo')}
           onClick={() => { if (!done && index < total - 1) { setDir(1); setIndex((i) => i + 1) } }}
           disabled={done || index >= total - 1}
           style={{
@@ -257,7 +259,7 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
               color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600,
             }}
           >
-            Fine
+            {t('Fine')}
           </button>
         )}
       </div>
@@ -271,17 +273,17 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
             </div>
             <div>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 800, color: 'var(--text-primary)' }}>
-                {areaFilter === 'all' ? 'Tutto configurato' : 'Stanza configurata'}
+                {areaFilter === 'all' ? t('Tutto configurato') : t('Stanza configurata')}
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: 13.5, marginTop: 6 }}>
-                Hai già deciso tutti i dispositivi{areaFilter !== 'all' ? ' di questa stanza' : ''}. Cambia stanza dal menù in alto.
+                {t('Hai già deciso tutti i dispositivi{{suffix}}. Cambia stanza dal menù in alto.', { suffix: areaFilter !== 'all' ? t(' di questa stanza') : '' })}
               </p>
             </div>
             <button
               onClick={reviewAgain}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 'var(--radius-md)', cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-primary)', fontSize: 13.5, fontWeight: 600 }}
             >
-              <RotateCcw size={15} /> Rivedi da capo
+              <RotateCcw size={15} /> {t('Rivedi da capo')}
             </button>
           </div>
         ) : (
@@ -308,14 +310,14 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
                     {entityName(e!)}
                   </h3>
                   <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 12 }}>
-                    <span style={chipStyle}>{DOMAIN_LABEL[domain] ?? domain}</span>
+                    <span style={chipStyle}>{t(DOMAIN_LABEL[domain] ?? domain)}</span>
                     {area && <span style={chipStyle}>{area}</span>}
-                    <span style={chipStyle}>{stateLabel(e!)}</span>
+                    <span style={chipStyle}>{t(stateLabel(e!))}</span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: visible ? 'var(--accent)' : 'var(--text-tertiary)' }}>
                   {visible ? <Eye size={15} /> : <EyeOff size={15} />}
-                  {visible ? 'Verrà mostrato in dashboard' : 'Nascosto dalla dashboard'}
+                  {visible ? t('Verrà mostrato in dashboard') : t('Nascosto dalla dashboard')}
                 </div>
               </div>
             </motion.div>
@@ -327,10 +329,10 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
       {!done && total > 0 && (
         <div style={{ display: 'flex', gap: 12 }}>
           <button onClick={() => choose(true)} style={choiceBtn(!visible, 'hide')}>
-            <EyeOff size={18} /> Nascondi
+            <EyeOff size={18} /> {t('Nascondi')}
           </button>
           <button onClick={() => choose(false)} style={choiceBtn(visible, 'show')}>
-            {visible ? <Check size={18} /> : <Eye size={18} />} Mostra
+            {visible ? <Check size={18} /> : <Eye size={18} />} {t('Mostra')}
           </button>
         </div>
       )}

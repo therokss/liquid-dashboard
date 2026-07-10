@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useStore } from '../../store'
 import { GlassCard } from '../glass/GlassCard'
+import { useT } from '../../i18n'
 import type { HassEntity } from '../../types/ha'
 
 type Kind = 'phone' | 'watch' | 'laptop' | 'tablet'
@@ -120,6 +121,7 @@ function timeOf(iso?: string): string | null {
 }
 
 export function MyDevicesSection() {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const currentUserId = useStore((s) => s.currentUserId)
@@ -195,7 +197,7 @@ export function MyDevicesSection() {
 
   return (
     <div style={{ marginBottom: 'var(--space-xl)' }}>
-      <div className="text-caption" style={{ marginBottom: 10 }}>I miei dispositivi</div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>{t('I miei dispositivi')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {devices.map((d) => <DeviceRow key={d.key} d={d} onOpen={() => setSelected(d)} />)}
       </div>
@@ -211,6 +213,7 @@ export function MyDevicesSection() {
 }
 
 function DeviceRow({ d, onOpen }: { d: MobileDevice; onOpen: () => void }) {
+  const t = useT()
   const Icon = KIND_ICON[d.kind]
   const bcol = batteryColor(d.battery)
   return (
@@ -225,7 +228,7 @@ function DeviceRow({ d, onOpen }: { d: MobileDevice; onOpen: () => void }) {
             <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--glass-border)', overflow: 'hidden', minWidth: 40 }}>
               <div style={{ height: '100%', width: `${Math.max(2, Math.min(100, d.battery))}%`, background: bcol, borderRadius: 3 }} />
             </div>
-            {d.location && <span style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}>{d.location}</span>}
+            {d.location && <span style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}>{t(d.location)}</span>}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, color: bcol, fontWeight: 700, fontSize: 15 }}>
@@ -239,16 +242,17 @@ function DeviceRow({ d, onOpen }: { d: MobileDevice; onOpen: () => void }) {
 }
 
 function DeviceModal({ d, onClose }: { d: MobileDevice; onClose: () => void }) {
+  const t = useT()
   const Icon = KIND_ICON[d.kind]
   const bcol = batteryColor(d.battery)
   const rows: Array<{ icon: LucideIcon; label: string; value: string }> = []
-  if (d.batteryState) rows.push({ icon: Battery, label: 'Batteria', value: `${d.battery}% · ${d.batteryState}` })
-  if (d.location) rows.push({ icon: MapPin, label: 'Posizione', value: d.location })
-  if (d.connection) rows.push({ icon: d.connection === 'Wi-Fi' ? Wifi : Signal, label: 'Connessione', value: d.ssid && d.connection === 'Wi-Fi' ? `${d.connection} · ${d.ssid}` : d.connection })
-  if (d.storage) rows.push({ icon: HardDrive, label: 'Spazio', value: d.storage })
-  if (d.activity) rows.push({ icon: Activity, label: 'Attività', value: d.activity })
-  if (d.appVersion) rows.push({ icon: Info, label: 'App', value: d.appVersion })
-  if (d.lastUpdate) rows.push({ icon: Clock, label: 'Aggiornato', value: d.lastUpdate })
+  if (d.batteryState) rows.push({ icon: Battery, label: t('Batteria'), value: `${d.battery}% · ${t(d.batteryState)}` })
+  if (d.location) rows.push({ icon: MapPin, label: t('Posizione'), value: t(d.location) })
+  if (d.connection) rows.push({ icon: d.connection === 'Wi-Fi' ? Wifi : Signal, label: t('Connessione'), value: d.ssid && d.connection === 'Wi-Fi' ? `${t(d.connection)} · ${d.ssid}` : t(d.connection) })
+  if (d.storage) rows.push({ icon: HardDrive, label: t('Spazio'), value: d.storage })
+  if (d.activity) rows.push({ icon: Activity, label: t('Attività'), value: t(d.activity) })
+  if (d.appVersion) rows.push({ icon: Info, label: t('App'), value: d.appVersion })
+  if (d.lastUpdate) rows.push({ icon: Clock, label: t('Aggiornato'), value: d.lastUpdate })
 
   return (
     <motion.div
@@ -270,7 +274,7 @@ function DeviceModal({ d, onClose }: { d: MobileDevice; onClose: () => void }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</h3>
           </div>
-          <button onClick={onClose} aria-label="Chiudi" style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <button onClick={onClose} aria-label={t('Chiudi')} style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <X size={17} />
           </button>
         </div>
@@ -281,7 +285,7 @@ function DeviceModal({ d, onClose }: { d: MobileDevice; onClose: () => void }) {
             {d.charging ? <Zap size={20} fill={bcol} color={bcol} /> : <Battery size={20} color={bcol} />}
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 40, fontWeight: 300, color: 'var(--text-primary)', letterSpacing: '-0.03em', lineHeight: 1 }}>{d.battery}</span>
             <span style={{ fontSize: 18, color: 'var(--text-secondary)' }}>%</span>
-            {d.batteryState && <span style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--text-secondary)', alignSelf: 'center' }}>{d.batteryState}</span>}
+            {d.batteryState && <span style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--text-secondary)', alignSelf: 'center' }}>{t(d.batteryState)}</span>}
           </div>
           <div style={{ height: 8, borderRadius: 4, background: 'var(--glass-border)', overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${Math.max(2, Math.min(100, d.battery))}%`, background: bcol, borderRadius: 4, boxShadow: `0 0 10px ${bcol}` }} />

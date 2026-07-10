@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ConnectStep } from './steps/ConnectStep'
 import { RoomsStep } from './steps/RoomsStep'
 import { ThemeStep } from './steps/ThemeStep'
+import { useT } from '../i18n'
 import logoUrl from '../assets/logo.png'
 
 interface SetupWizardProps {
@@ -14,6 +15,7 @@ const STEPS: Step[] = ['connect', 'rooms', 'theme']
 const STEP_LABELS = ['Connetti', 'Stanze', 'Look']
 
 export function SetupWizard({ onComplete }: SetupWizardProps) {
+  const t = useT()
   const [currentStep, setCurrentStep] = useState<Step>('connect')
   const stepIndex = STEPS.indexOf(currentStep)
 
@@ -63,7 +65,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
             Liquid Dashboard
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 6 }}>
-            Configurazione iniziale
+            {t('Configurazione iniziale')}
           </p>
         </div>
 
@@ -100,7 +102,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
                   transition: 'color 0.3s ease',
                 }}
               >
-                {STEP_LABELS[i]}
+                {t(STEP_LABELS[i])}
               </span>
               {i < STEPS.length - 1 && (
                 <div

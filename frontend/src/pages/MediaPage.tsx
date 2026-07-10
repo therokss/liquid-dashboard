@@ -6,6 +6,7 @@ import { MediaCard } from '../components/cards/MediaCard'
 import { TVCard } from '../components/cards/TVCard'
 import { MasonryColumns } from '../components/MasonryColumns'
 import { mediaKind, isTV, findPairedRemote } from '../lib/mediaDevices'
+import { useT } from '../i18n'
 import { getDomain } from '../types/ha'
 import type { HassEntity } from '../types/ha'
 
@@ -23,6 +24,7 @@ function isNowPlaying(e: HassEntity): boolean {
 }
 
 export function MediaPage() {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const entityPlatform = useStore((s) => s.entityPlatform)
@@ -80,14 +82,14 @@ export function MediaPage() {
             letterSpacing: '-0.04em',
           }}
         >
-          Media
+          {t('Media')}
         </h1>
       </div>
 
       <MasonryColumns rowGap="0px">
       {tvs.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>TV</div>
+          <div className="text-caption" style={{ marginBottom: 10 }}>{t('TV')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {tvs.map((entity) => <TVCard key={entity.entity_id} entity={entity} />)}
           </div>
@@ -96,7 +98,7 @@ export function MediaPage() {
 
       {playing.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>In riproduzione</div>
+          <div className="text-caption" style={{ marginBottom: 10 }}>{t('In riproduzione')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {playing.map((entity, i) => (
               <motion.div key={entity.entity_id} className="anim-slide-up" style={{ animationDelay: `${i * 60}ms` }}>
@@ -109,7 +111,7 @@ export function MediaPage() {
 
       {others.length > 0 && (
         <div>
-          <div className="text-caption" style={{ marginBottom: 10 }}>Disponibili</div>
+          <div className="text-caption" style={{ marginBottom: 10 }}>{t('Disponibili')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {others.map((entity, i) => (
               <motion.div key={entity.entity_id} className="anim-scale-in" style={{ animationDelay: `${i * 40}ms` }}>
@@ -126,10 +128,10 @@ export function MediaPage() {
             <Music size={48} style={{ opacity: 0.3 }} />
           </div>
           <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-            Nessun media player disponibile
+            {t('Nessun media player disponibile')}
           </div>
           <div style={{ fontSize: 14, lineHeight: 1.5 }}>
-            Aggiungi un media player a Home Assistant per controllarlo qui
+            {t('Aggiungi un media player a Home Assistant per controllarlo qui')}
           </div>
         </div>
       )}

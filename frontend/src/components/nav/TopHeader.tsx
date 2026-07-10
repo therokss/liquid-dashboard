@@ -3,6 +3,7 @@ import { Maximize, Minimize } from 'lucide-react'
 import { useStore } from '../../store'
 import { artworkUrl } from '../../lib/media'
 import { setKiosk } from '../../lib/kiosk'
+import { useT } from '../../i18n'
 import type { HassEntity } from '../../types/ha'
 
 function initials(name: string): string {
@@ -10,6 +11,7 @@ function initials(name: string): string {
 }
 
 function PersonAvatar({ entity }: { entity: HassEntity }) {
+  const t = useT()
   const name = (entity.attributes.friendly_name as string) || entity.entity_id
   const home = entity.state === 'home'
   const pic = artworkUrl(entity.attributes.entity_picture as string | undefined)
@@ -18,7 +20,7 @@ function PersonAvatar({ entity }: { entity: HassEntity }) {
 
   return (
     <div
-      title={`${name} · ${home ? 'A casa' : 'Fuori'}`}
+      title={`${name} · ${home ? t('A casa') : t('Fuori')}`}
       style={{
         position: 'relative',
         width: 38,
@@ -45,6 +47,7 @@ function PersonAvatar({ entity }: { entity: HassEntity }) {
 }
 
 export function TopHeader() {
+  const t = useT()
   const isAdmin = useStore((s) => s.isAdmin)
   const kioskMode = useStore((s) => s.kioskMode)
   const setKioskMode = useStore((s) => s.setKioskMode)
@@ -81,7 +84,7 @@ export function TopHeader() {
         {isAdmin && (
           <button
             onClick={toggleKiosk}
-            aria-label={kioskMode ? 'Mostra barra Home Assistant' : 'Schermo intero'}
+            aria-label={kioskMode ? t('Mostra barra Home Assistant') : t('Schermo intero')}
             style={{
               width: 38, height: 38, borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',

@@ -11,6 +11,7 @@ import { AppliancesSection } from '../components/cards/ApplianceCard'
 import { HueSyncSection } from '../components/cards/HueSyncCard'
 import { MediaDevicesSection } from '../components/cards/TVCard'
 import { DeviceDetailModal, useDeviceGroup } from '../components/DeviceDetailModal'
+import { useT } from '../i18n'
 import { getDomain } from '../types/ha'
 import type { HassArea, HassEntity } from '../types/ha'
 
@@ -54,6 +55,7 @@ interface AreaDetailProps {
 }
 
 function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const entityAreas = useStore((s) => s.entityAreas)
   const entityDevices = useStore((s) => s.entityDevices)
@@ -192,14 +194,14 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   if (tempSensors.length) {
     const avg = tempSensors.reduce((s, e) => s + num(e.state)!, 0) / tempSensors.length
     badges.push({
-      key: 'temp', icon: <Thermometer size={16} />, label: 'Temperatura', value: `${round1(avg)}°`,
+      key: 'temp', icon: <Thermometer size={16} />, label: t('Temperatura'), value: `${round1(avg)}°`,
       list: tempSensors.map((e) => ({ name: nameOf(e), value: `${round1(num(e.state)!)}${unitOf(e) || '°'}` })),
     })
   }
   if (humSensors.length) {
     const avg = humSensors.reduce((s, e) => s + num(e.state)!, 0) / humSensors.length
     badges.push({
-      key: 'hum', icon: <Droplets size={16} />, label: 'Umidità', value: `${Math.round(avg)}%`,
+      key: 'hum', icon: <Droplets size={16} />, label: t('Umidità'), value: `${Math.round(avg)}%`,
       list: humSensors.map((e) => ({ name: nameOf(e), value: `${round1(num(e.state)!)}${unitOf(e) || '%'}` })),
     })
   }
@@ -211,9 +213,9 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
     const open = list.filter((e) => e.state === 'on').length
     const Icon = open > 0 ? IconO : IconC
     badges.push({
-      key, icon: <Icon size={16} />, label: list.length === 1 ? one : many,
-      value: open === 0 ? closedW : open === 1 ? openW : `${open} ${openN}`,
-      list: list.map((e) => ({ name: nameOf(e), value: e.state === 'on' ? 'Aperto' : 'Chiuso' })),
+      key, icon: <Icon size={16} />, label: t(list.length === 1 ? one : many),
+      value: open === 0 ? t(closedW) : open === 1 ? t(openW) : `${open} ${t(openN)}`,
+      list: list.map((e) => ({ name: nameOf(e), value: e.state === 'on' ? t('Aperto') : t('Chiuso') })),
     })
   }
   pushOpenables('doors', doors, 'Porta', 'Porte', 'Aperta', 'aperte', 'Chiusa', DoorOpen, DoorClosed)
@@ -221,10 +223,10 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   pushOpenables('garage', garages, 'Garage', 'Garage', 'Aperto', 'aperti', 'Chiuso', Warehouse, Warehouse)
 
   if (areaPowerSensors.length) badges.push({
-    key: 'areaP', icon: <Zap size={16} />, label: 'Corrente area', value: fmtW(areaW),
+    key: 'areaP', icon: <Zap size={16} />, label: t('Corrente area'), value: fmtW(areaW),
     list: areaPowerSensors.map((e) => ({ name: nameOf(e), value: fmtW(toW(e)) })),
   })
-  if (houseW !== null) badges.push({ key: 'houseP', icon: <Zap size={16} />, label: 'Corrente casa', value: fmtW(houseW) })
+  if (houseW !== null) badges.push({ key: 'houseP', icon: <Zap size={16} />, label: t('Corrente casa'), value: fmtW(houseW) })
 
   const openBadgeList = badges.find((b) => b.key === openBadge && b.list && b.list.length)?.list
 
@@ -277,7 +279,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
               }}
             >
               <ChevronLeft size={16} />
-              Stanze
+              {t('Stanze')}
             </button>
             <div
               style={{
@@ -308,7 +310,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
             {area.name}
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 2 }}>
-            {areaEntities.length} {areaEntities.length === 1 ? 'elemento' : 'elementi'}
+            {areaEntities.length} {areaEntities.length === 1 ? t('elemento') : t('elementi')}
           </p>
         </div>
       </div>
@@ -368,7 +370,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
       <MasonryColumns rowGap="var(--space-xl)">
         {lights.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Luci</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Luci')}</div>
             {lights.length === 1 ? (
               <LightCard entity={lights[0]} />
             ) : (
@@ -381,7 +383,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         {climates.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Clima</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Clima')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {climates.map((e) => <ClimateCard key={e.entity_id} entity={e} />)}
             </div>
@@ -396,7 +398,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         {fans.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Ventilatori</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Ventilatori')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {fans.map((e) => <FanCard key={e.entity_id} entity={e} onToggle={() => callService('homeassistant', e.state === 'on' ? 'turn_off' : 'turn_on', { entity_id: e.entity_id })} />)}
             </div>
@@ -405,7 +407,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         {vacuums.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Aspirapolvere</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Aspirapolvere')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {vacuums.map((e) => (
                 <VacuumCard
@@ -421,7 +423,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         {switches.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Interruttori</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Interruttori')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {switches.map((e) => (
                 <SwitchCard
@@ -436,7 +438,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         {deviceCards.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Dispositivi</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Dispositivi')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {deviceCards.map((r) => <DeviceCard key={r.id} entityId={r.id} onOpen={() => setDetailEntity(r.id)} />)}
             </div>
@@ -445,7 +447,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         {actions.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Azioni</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Azioni')}</div>
             <div className="grid-cards">
               {actions.map((e) => <PressCard key={e.entity_id} entity={e} onPress={() => pressAction(e)} hasMore={isReprButton(e)} onLongPress={isReprButton(e) ? () => setDetailEntity(e.entity_id) : undefined} />)}
             </div>
@@ -454,7 +456,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         {automations.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Automazioni</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Automazioni')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {automations.map((e) => (
                 <SwitchCard
@@ -470,7 +472,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         {selects.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Selettori</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Selettori')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {selects.map((e) => (
                 <SelectCard
@@ -485,7 +487,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
         {numbers.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Regolazioni</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Regolazioni')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {numbers.map((e) => (
                 <NumberCard
@@ -504,7 +506,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
             <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
               <PackageOpen size={32} strokeWidth={1.5} />
             </div>
-            <div>Nessun dispositivo assegnato a questa stanza</div>
+            <div>{t('Nessun dispositivo assegnato a questa stanza')}</div>
           </div>
         )}
       </MasonryColumns>
@@ -515,10 +517,11 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 }
 
 function SwitchCard({ entity, onToggle, labels, onDetail }: { entity: { entity_id: string; state: string; attributes: Record<string, unknown> }; onToggle: () => void; labels?: [string, string]; onDetail?: () => void }) {
+  const t = useT()
   const isOn = entity.state === 'on'
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
-  const [onLabel, offLabel] = labels ?? ['Acceso', 'Spento']
-  const sub = onDetail ? `${isOn ? onLabel : offLabel} · tocca per i controlli` : (isOn ? onLabel : offLabel)
+  const [onLabel, offLabel] = (labels ?? ['Acceso', 'Spento']).map((l) => t(l)) as [string, string]
+  const sub = onDetail ? t('{{state}} · tocca per i controlli', { state: isOn ? onLabel : offLabel }) : (isOn ? onLabel : offLabel)
 
   return (
     <div className="glass-card" onClick={onDetail} style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12, cursor: onDetail ? 'pointer' : 'default' }}>
@@ -537,6 +540,7 @@ function SwitchCard({ entity, onToggle, labels, onDetail }: { entity: { entity_i
 }
 
 function FanCard({ entity, onToggle }: { entity: HassEntity; onToggle: () => void }) {
+  const t = useT()
   const [detail, setDetail] = useState(false)
   const isOn = entity.state === 'on'
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
@@ -549,7 +553,7 @@ function FanCard({ entity, onToggle }: { entity: HassEntity; onToggle: () => voi
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{isOn ? (typeof pct === 'number' ? `${pct}%` : 'Acceso') : 'Spento'} · tocca per i controlli</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{isOn ? (typeof pct === 'number' ? `${pct}%` : t('Acceso')) : t('Spento')} {t('· tocca per i controlli')}</div>
         </div>
         <label className="glass-toggle" style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
           <input type="checkbox" checked={isOn} onChange={onToggle} />
@@ -576,6 +580,7 @@ function applianceIcon(title: string) {
 // Card "dispositivo" generica: rappresenta un device con più controlli (lavatrice, forno
 // smart, ecc.) col nome pulito del dispositivo; tocca per aprire il dettaglio con tutto.
 function DeviceCard({ entityId, onOpen }: { entityId: string; onOpen: () => void }) {
+  const t = useT()
   const { title } = useDeviceGroup(entityId)
   const lp = useLongPress(onOpen)
   return (
@@ -585,7 +590,7 @@ function DeviceCard({ entityId, onOpen }: { entityId: string; onOpen: () => void
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>Tieni premuto per i controlli</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>{t('Tieni premuto per i controlli')}</div>
       </div>
       <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
     </motion.div>
@@ -616,9 +621,10 @@ const VACUUM_STATE: Record<string, string> = {
 // Card aspirapolvere/robot: stato + batteria, con Avvia/Pausa e Rientra alla base.
 // Tocca per il dettaglio completo (modalità, potenza di aspirazione, ecc.).
 function VacuumCard({ entity, onOpen, onCommand }: { entity: HassEntity; onOpen: () => void; onCommand: (svc: string) => void }) {
+  const t = useT()
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
   const state = entity.state
-  const label = VACUUM_STATE[state] ?? state
+  const label = VACUUM_STATE[state] ? t(VACUUM_STATE[state]) : state
   const battery = entity.attributes.battery_level as number | undefined
   const active = state === 'cleaning' || state === 'returning'
   return (
@@ -635,11 +641,11 @@ function VacuumCard({ entity, onOpen, onCommand }: { entity: HassEntity; onOpen:
       </div>
       <div style={{ display: 'flex', gap: 8 }} onClick={(ev) => ev.stopPropagation()}>
         {active ? (
-          <button className="glass-btn" style={{ flex: 1, padding: '9px 12px', fontSize: 13 }} onClick={() => onCommand('pause')}>Pausa</button>
+          <button className="glass-btn" style={{ flex: 1, padding: '9px 12px', fontSize: 13 }} onClick={() => onCommand('pause')}>{t('Pausa')}</button>
         ) : (
-          <button className="glass-btn glass-btn-accent" style={{ flex: 1, padding: '9px 12px', fontSize: 13 }} onClick={() => onCommand('start')}>Avvia</button>
+          <button className="glass-btn glass-btn-accent" style={{ flex: 1, padding: '9px 12px', fontSize: 13 }} onClick={() => onCommand('start')}>{t('Avvia')}</button>
         )}
-        <button className="glass-btn" style={{ flex: 1, padding: '9px 12px', fontSize: 13, opacity: state === 'docked' ? 0.5 : 1 }} disabled={state === 'docked'} onClick={() => onCommand('return_to_base')}>Rientra</button>
+        <button className="glass-btn" style={{ flex: 1, padding: '9px 12px', fontSize: 13, opacity: state === 'docked' ? 0.5 : 1 }} disabled={state === 'docked'} onClick={() => onCommand('return_to_base')}>{t('Rientra')}</button>
       </div>
     </div>
   )
@@ -654,10 +660,11 @@ function pressIcon(domain: string) {
 // Card "premi": button/input_button/scene/script → un tocco esegue l'azione. Se il
 // dispositivo ha altri controlli (hasMore), un long-press apre il dettaglio con tutto.
 function PressCard({ entity, onPress, onLongPress, hasMore }: { entity: HassEntity; onPress: () => void; onLongPress?: () => void; hasMore?: boolean }) {
+  const t = useT()
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
   const d = getDomain(entity.entity_id)
-  const base = d === 'scene' ? 'Attiva' : d === 'script' ? 'Esegui' : 'Premi'
-  const label = hasMore ? `${base} · tieni premuto per i controlli` : base
+  const base = t(d === 'scene' ? 'Attiva' : d === 'script' ? 'Esegui' : 'Premi')
+  const label = hasMore ? t('{{base}} · tieni premuto per i controlli', { base }) : base
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longFired = useRef(false)
   const startPress = () => {
@@ -745,16 +752,17 @@ function RoomCard({ area, gradient, stat, onClick, index }: {
   onClick: () => void
   index: number
 }) {
+  const t = useT()
   const [c1, c2] = gradient
   const total = stat?.total ?? 0
   const devices = stat?.devices ?? 0
   const lightsOn = stat?.lightsOn ?? 0
   const windowsOpen = stat?.windowsOpen ?? 0
   const subtitle = total === 0
-    ? 'Vuota'
+    ? t('Vuota')
     : devices > 0
-      ? `${devices} ${devices === 1 ? 'dispositivo' : 'dispositivi'}`
-      : `${total} ${total === 1 ? 'sensore' : 'sensori'}`
+      ? `${devices} ${devices === 1 ? t('dispositivo') : t('dispositivi')}`
+      : `${total} ${total === 1 ? t('sensore') : t('sensori')}`
 
   return (
     <motion.button
@@ -833,6 +841,7 @@ function RoomCard({ area, gradient, stat, onClick, index }: {
 }
 
 export function RoomsPage() {
+  const t = useT()
   const areas = useStore((s) => s.areas)
   const enabledAreas = useStore((s) => s.enabledAreas)
   const entities = useStore((s) => s.entities)
@@ -883,7 +892,7 @@ export function RoomsPage() {
               letterSpacing: '-0.04em',
             }}
           >
-            Stanze
+            {t('Stanze')}
           </h1>
         </div>
 
@@ -907,9 +916,9 @@ export function RoomsPage() {
               <Home size={40} strokeWidth={1.5} />
             </div>
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              Nessuna stanza trovata
+              {t('Nessuna stanza trovata')}
             </div>
-            <div style={{ fontSize: 14 }}>Assegna delle aree ai dispositivi in Home Assistant</div>
+            <div style={{ fontSize: 14 }}>{t('Assegna delle aree ai dispositivi in Home Assistant')}</div>
           </div>
         )}
       </div>

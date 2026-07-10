@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { HassEntity, HassArea, DeviceInfo } from '../types/ha'
+import type { Lang } from '../i18n'
 
 export type Theme = 'dark' | 'light' | 'auto'
 export type WallpaperSlot = 'morning' | 'day' | 'evening' | 'night'
@@ -34,6 +35,7 @@ export interface DashboardConfig {
   kioskMode: boolean                       // nasconde la barra di HA (schermo intero)
   onboardingDone: boolean                  // wizard di primo avvio completato
   serverExtraEntities: string[]            // sensori extra fissati nella pagina Info server
+  language: Lang
 
   // Meteo & calendario
   weatherEnabled: boolean
@@ -107,6 +109,7 @@ interface AppStore extends DashboardConfig, HAState {
   setKioskMode: (enabled: boolean) => void
   setOnboardingDone: (done: boolean) => void
   toggleServerEntity: (entityId: string) => void
+  setLanguage: (lang: Lang) => void
   setWeatherEnabled: (enabled: boolean) => void
   setWeatherEntity: (entityId: string | null) => void
   setExternalTempSource: (source: string) => void
@@ -160,6 +163,7 @@ const DEFAULT_CONFIG: DashboardConfig = {
   kioskMode: true,
   onboardingDone: false,
   serverExtraEntities: [],
+  language: 'it',
   weatherEnabled: true,
   weatherEntity: null,
   externalTempSource: 'weather',
@@ -290,6 +294,7 @@ export const useStore = create<AppStore>()(
         }),
       setKioskMode: (kioskMode) => set({ kioskMode }),
       setOnboardingDone: (onboardingDone) => set({ onboardingDone }),
+      setLanguage: (language) => set({ language }),
       toggleServerEntity: (entityId) =>
         set((s) => ({
           serverExtraEntities: s.serverExtraEntities.includes(entityId)
@@ -388,6 +393,7 @@ export const useStore = create<AppStore>()(
         kioskMode: state.kioskMode,
         onboardingDone: state.onboardingDone,
         serverExtraEntities: state.serverExtraEntities,
+        language: state.language,
         weatherEnabled: state.weatherEnabled,
         weatherEntity: state.weatherEntity,
         externalTempSource: state.externalTempSource,

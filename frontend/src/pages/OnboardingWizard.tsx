@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle2, Home, Eye } from 'lucide-react'
 import { RoomAssigner } from '../components/RoomAssigner'
 import { VisibilityStepper } from '../components/VisibilityStepper'
+import { useT } from '../i18n'
 
 type Step = 'intro' | 'rooms' | 'visibility' | 'done'
 
@@ -19,6 +20,7 @@ const ghostBtn: React.CSSProperties = {
 }
 
 export function OnboardingWizard({ onDone }: { onDone: () => void }) {
+  const t = useT()
   const [step, setStep] = useState<Step>('intro')
 
   return (
@@ -45,19 +47,19 @@ export function OnboardingWizard({ onDone }: { onDone: () => void }) {
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 56, marginBottom: 12 }}>💧</div>
                 <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
-                  Benvenuto
+                  {t('Benvenuto')}
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: 15, marginTop: 8 }}>
-                  Configuriamo la tua casa in un minuto.
+                  {t('Configuriamo la tua casa in un minuto.')}
                 </p>
               </div>
               <div className="glass-panel" style={{ padding: 'var(--space-lg)' }}>
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16, lineHeight: 1.4 }}>
-                  Hai già assegnato tutti i dispositivi alle stanze in Home Assistant?
+                  {t('Hai già assegnato tutti i dispositivi alle stanze in Home Assistant?')}
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <button style={primaryBtn} onClick={() => setStep('visibility')}>Sì, sono a posto</button>
-                  <button style={ghostBtn} onClick={() => setStep('rooms')}>No, sistemali ora</button>
+                  <button style={primaryBtn} onClick={() => setStep('visibility')}>{t('Sì, sono a posto')}</button>
+                  <button style={ghostBtn} onClick={() => setStep('rooms')}>{t('No, sistemali ora')}</button>
                 </div>
               </div>
             </motion.div>
@@ -66,18 +68,18 @@ export function OnboardingWizard({ onDone }: { onDone: () => void }) {
           {step === 'rooms' && (
             <motion.div key="rooms" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <StepHeader icon={<Home size={22} />} title="Assegna le stanze" subtitle="Metti ogni dispositivo nella sua stanza." />
+              <StepHeader icon={<Home size={22} />} title={t('Assegna le stanze')} subtitle={t('Metti ogni dispositivo nella sua stanza.')} />
               <div style={{ flex: 1, marginBottom: 'var(--space-lg)' }}>
                 <RoomAssigner />
               </div>
-              <button style={primaryBtn} onClick={() => setStep('visibility')}>Avanti</button>
+              <button style={primaryBtn} onClick={() => setStep('visibility')}>{t('Avanti')}</button>
             </motion.div>
           )}
 
           {step === 'visibility' && (
             <motion.div key="visibility" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <StepHeader icon={<Eye size={22} />} title="Cosa mostrare" subtitle="Un dispositivo alla volta: scegli se mostrarlo o nasconderlo." />
+              <StepHeader icon={<Eye size={22} />} title={t('Cosa mostrare')} subtitle={t('Un dispositivo alla volta: scegli se mostrarlo o nasconderlo.')} />
               <div style={{ flex: 1, minHeight: 0 }}>
                 <VisibilityStepper onDone={() => setStep('done')} />
               </div>
@@ -92,13 +94,13 @@ export function OnboardingWizard({ onDone }: { onDone: () => void }) {
               </div>
               <div>
                 <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
-                  Tutto pronto!
+                  {t('Tutto pronto!')}
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: 15, marginTop: 8 }}>
-                  Puoi rifare queste impostazioni quando vuoi da Impostazioni.
+                  {t('Puoi rifare queste impostazioni quando vuoi da Impostazioni.')}
                 </p>
               </div>
-              <button style={primaryBtn} onClick={onDone}>Inizia</button>
+              <button style={primaryBtn} onClick={onDone}>{t('Inizia')}</button>
             </motion.div>
           )}
         </AnimatePresence>

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
+import { useT } from '../i18n'
 import type { HassEntity } from '../types/ha'
 import { FanDirectionControl } from './FanDirectionControl'
 
@@ -30,6 +31,7 @@ function commonPrefix(names: string[]): string {
 // Raggruppa tutte le entità dello stesso device della entità passata, separando
 // controlli e sensori (con etichette ripulite dal prefisso comune del dispositivo).
 export function useDeviceGroup(entityId: string, excludeIds?: Set<string>) {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   return useMemo(() => {
@@ -52,13 +54,14 @@ export function useDeviceGroup(entityId: string, excludeIds?: Set<string>) {
     const sensors = usable.filter((e) => SENSOR_DOMAINS.has(dom(e.entity_id)))
       .map((e) => ({ e, label: strip(e) }))
       .sort((a, b) => a.label.localeCompare(b.label))
-    return { title: prefix || nm(entities[entityId] ?? ({} as HassEntity)) || 'Dispositivo', controls, sensors }
-  }, [entityId, entities, entityDevices, excludeIds])
+    return { title: prefix || nm(entities[entityId] ?? ({} as HassEntity)) || t('Dispositivo'), controls, sensors }
+  }, [entityId, entities, entityDevices, excludeIds, t])
 }
 
 // Pannelli Controlli + Sensori riusabili (usati sia dal bottom-sheet del dispositivo
 // sia dentro la videocamera a schermo intero).
 export function DeviceControls({ entityId, excludeIds }: { entityId: string; excludeIds?: Set<string> }) {
+  const t = useT()
   const { controls, sensors } = useDeviceGroup(entityId, excludeIds)
   const { callService } = useHA()
   if (controls.length === 0 && sensors.length === 0) return null
@@ -79,7 +82,7 @@ export function DeviceControls({ entityId, excludeIds }: { entityId: string; exc
       )}
       {restControls.length > 0 && (
         <>
-          <div className="text-caption" style={{ marginBottom: 8 }}>Controlli</div>
+          <div className="text-caption" style={{ marginBottom: 8 }}>{t('Controlli')}</div>
           <div className="glass-panel" style={{ padding: '2px var(--space-lg)', marginBottom: 'var(--space-lg)' }}>
             {restControls.map(({ e, label }, i) => (
               <ControlRow key={e.entity_id} e={e} label={label} callService={callService} last={i === restControls.length - 1} />
@@ -89,12 +92,12 @@ export function DeviceControls({ entityId, excludeIds }: { entityId: string; exc
       )}
       {sensors.length > 0 && (
         <>
-          <div className="text-caption" style={{ marginBottom: 8 }}>Sensori</div>
+          <div className="text-caption" style={{ marginBottom: 8 }}>{t('Sensori')}</div>
           <div className="glass-panel" style={{ padding: '2px var(--space-lg)' }}>
             {sensors.map(({ e, label }, i) => (
               <div key={e.entity_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '11px 0', borderBottom: i < sensors.length - 1 ? '1px solid var(--glass-border-dim)' : 'none' }}>
                 <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{label}</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{fmtState(e)}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t(fmtState(e))}</span>
               </div>
             ))}
           </div>
@@ -105,6 +108,7 @@ export function DeviceControls({ entityId, excludeIds }: { entityId: string; exc
 }
 
 export function DeviceDetailModal({ entityId, onClose }: { entityId: string; onClose: () => void }) {
+  const t = useT()
   const { title } = useDeviceGroup(entityId)
 
   return createPortal(
@@ -122,7 +126,7 @@ export function DeviceDetailModal({ entityId, onClose }: { entityId: string; onC
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h3>
-          <button onClick={onClose} aria-label="Chiudi" style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <button onClick={onClose} aria-label={t('Chiudi')} style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <X size={17} />
           </button>
         </div>
@@ -165,6 +169,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 function ControlRow({ e, label, callService, last }: { e: HassEntity; label: string; callService: CS; last: boolean }) {
+  const t = useT()
   const domain = dom(e.entity_id)
   const on = e.state === 'on' || e.state === 'locked' || e.state === 'open'
 
@@ -195,7 +200,7 @@ function ControlRow({ e, label, callService, last }: { e: HassEntity; label: str
   if (domain === 'button' || domain === 'input_button') {
     return (
       <Row label={label} last={last}>
-        <button className="glass-btn" style={{ padding: '7px 16px', fontSize: 13 }} onClick={() => callService(domain, 'press', { entity_id: e.entity_id })}>Premi</button>
+        <button className="glass-btn" style={{ padding: '7px 16px', fontSize: 13 }} onClick={() => callService(domain, 'press', { entity_id: e.entity_id })}>{t('Premi')}</button>
       </Row>
     )
   }

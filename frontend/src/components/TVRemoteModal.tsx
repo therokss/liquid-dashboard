@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
+import { useT } from '../i18n'
 import { findPairedRemote } from '../lib/mediaDevices'
 import type { MediaKind } from '../lib/mediaDevices'
 import type { HassEntity } from '../types/ha'
@@ -129,6 +130,7 @@ function Key({ onPress, children, size = 52, accent, label }: { onPress: () => v
 
 // Croce direzionale con OK centrale (griglia 3×3).
 function DPad({ on }: { on: (c: Cmd) => void }) {
+  const t = useT()
   const cell = (node: React.ReactNode) => (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{node}</div>
   )
@@ -142,13 +144,13 @@ function DPad({ on }: { on: (c: Cmd) => void }) {
       }}
     >
       {cell(null)}
-      {cell(<Key onPress={() => on('up')} label="Su"><ChevronUp size={26} /></Key>)}
+      {cell(<Key onPress={() => on('up')} label={t('Su')}><ChevronUp size={26} /></Key>)}
       {cell(null)}
-      {cell(<Key onPress={() => on('left')} label="Sinistra"><ChevronLeft size={26} /></Key>)}
+      {cell(<Key onPress={() => on('left')} label={t('Sinistra')}><ChevronLeft size={26} /></Key>)}
       {cell(<Key onPress={() => on('ok')} accent label="OK"><span style={{ fontSize: 15, fontWeight: 800 }}>OK</span></Key>)}
-      {cell(<Key onPress={() => on('right')} label="Destra"><ChevronRight size={26} /></Key>)}
+      {cell(<Key onPress={() => on('right')} label={t('Destra')}><ChevronRight size={26} /></Key>)}
       {cell(null)}
-      {cell(<Key onPress={() => on('down')} label="Giù"><ChevronDown size={26} /></Key>)}
+      {cell(<Key onPress={() => on('down')} label={t('Giù')}><ChevronDown size={26} /></Key>)}
       {cell(null)}
     </div>
   )
@@ -166,6 +168,7 @@ function PlusMinus({ onPlus, onMinus, label }: { onPlus: () => void; onMinus: ()
 }
 
 export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; kind: MediaKind; onClose: () => void }) {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const deviceInfo = useStore((s) => s.deviceInfo)
@@ -254,10 +257,10 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-            <div style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{isOff ? 'Spenta' : activeSource || 'Accesa'}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{isOff ? t('Spenta') : activeSource || t('Accesa')}</div>
           </div>
-          <Key onPress={power} size={44} accent={!isOff} label="Accensione"><Power size={20} /></Key>
-          <button onClick={onClose} aria-label="Chiudi" style={{ width: 36, height: 36, borderRadius: 10, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Key onPress={power} size={44} accent={!isOff} label={t('Accensione')}><Power size={20} /></Key>
+          <button onClick={onClose} aria-label={t('Chiudi')} style={{ width: 36, height: 36, borderRadius: 10, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <X size={18} />
           </button>
         </div>
@@ -265,9 +268,9 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
         {/* LG: riga utility — tastierino / canali / uscita audio / exit */}
         {isLG && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
-            <Key onPress={() => { setShowNum((v) => !v); setShowSound(false); setShowChannels(false) }} accent={showNum} label="Tastierino"><span style={{ fontSize: 13, fontWeight: 800 }}>123</span></Key>
-            <Key onPress={() => { setShowChannels((v) => !v); setShowNum(false); setShowSound(false) }} accent={showChannels} label="Canali"><ListVideo size={20} /></Key>
-            <Key onPress={() => { setShowSound((v) => !v); setShowNum(false); setShowChannels(false) }} accent={showSound} label="Uscita audio"><Speaker size={20} /></Key>
+            <Key onPress={() => { setShowNum((v) => !v); setShowSound(false); setShowChannels(false) }} accent={showNum} label={t('Tastierino')}><span style={{ fontSize: 13, fontWeight: 800 }}>123</span></Key>
+            <Key onPress={() => { setShowChannels((v) => !v); setShowNum(false); setShowSound(false) }} accent={showChannels} label={t('Canali')}><ListVideo size={20} /></Key>
+            <Key onPress={() => { setShowSound((v) => !v); setShowNum(false); setShowChannels(false) }} accent={showSound} label={t('Uscita audio')}><Speaker size={20} /></Key>
             <Key onPress={() => on('exit')} label="Exit"><span style={{ fontSize: 11, fontWeight: 800 }}>EXIT</span></Key>
           </div>
         )}
@@ -287,12 +290,12 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
         {/* LG: selettore uscita audio */}
         {isLG && showSound && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 8 }}>Uscita audio</div>
+            <div className="text-caption" style={{ marginBottom: 8 }}>{t('Uscita audio')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {SOUND_OUTPUTS.map((o) => {
                 const active = o.value === activeSoundOut
                 return (
-                  <button key={o.value} onClick={() => soundOut(o.value)} style={{ padding: '10px 6px', borderRadius: 'var(--radius-md)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: active ? '1px solid var(--accent)' : '1px solid var(--glass-border)', background: active ? 'var(--accent)' : 'var(--glass-bg)', color: active ? '#04121e' : 'var(--text-secondary)' }}>{o.label}</button>
+                  <button key={o.value} onClick={() => soundOut(o.value)} style={{ padding: '10px 6px', borderRadius: 'var(--radius-md)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: active ? '1px solid var(--accent)' : '1px solid var(--glass-border)', background: active ? 'var(--accent)' : 'var(--glass-bg)', color: active ? '#04121e' : 'var(--text-secondary)' }}>{t(o.label)}</button>
                 )
               })}
             </div>
@@ -303,9 +306,9 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
         {isLG && showChannels && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span className="text-caption">Canali</span>
+              <span className="text-caption">{t('Canali')}</span>
               <button onClick={() => setEditCh((v) => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: 13, fontWeight: 700, padding: '2px 4px' }}>
-                {editCh ? 'Fine' : 'Modifica'}
+                {editCh ? t('Fine') : t('Modifica')}
               </button>
             </div>
             {editCh ? (
@@ -313,15 +316,15 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
                 <div className="glass-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto', paddingRight: 2 }}>
                   {channels.map((c, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <input value={c.n || ''} onChange={(ev) => chUpdate(i, { n: parseInt(ev.target.value, 10) || 0 })} inputMode="numeric" placeholder="N°" style={{ width: 54, flexShrink: 0, boxSizing: 'border-box', padding: '9px 8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, textAlign: 'center' }} />
-                      <input value={c.name} onChange={(ev) => chUpdate(i, { name: ev.target.value })} placeholder="Nome canale" style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '9px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-primary)', fontSize: 14 }} />
-                      <button onClick={() => chRemove(i)} aria-label="Rimuovi" style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 9, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: '#ff6b6b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={16} /></button>
+                      <input value={c.n || ''} onChange={(ev) => chUpdate(i, { n: parseInt(ev.target.value, 10) || 0 })} inputMode="numeric" placeholder={t('N°')} style={{ width: 54, flexShrink: 0, boxSizing: 'border-box', padding: '9px 8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, textAlign: 'center' }} />
+                      <input value={c.name} onChange={(ev) => chUpdate(i, { name: ev.target.value })} placeholder={t('Nome canale')} style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', padding: '9px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-primary)', fontSize: 14 }} />
+                      <button onClick={() => chRemove(i)} aria-label={t('Rimuovi')} style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 9, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: '#ff6b6b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Trash2 size={16} /></button>
                     </div>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={chAdd} style={{ flex: 1, padding: '10px', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: '1px dashed var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Plus size={16} /> Aggiungi canale</button>
-                  <button onClick={chReset} style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }}>Ripristina IT</button>
+                  <button onClick={chAdd} style={{ flex: 1, padding: '10px', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: '1px dashed var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Plus size={16} /> {t('Aggiungi canale')}</button>
+                  <button onClick={chReset} style={{ padding: '10px 14px', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }}>{t('Ripristina IT')}</button>
                 </div>
               </div>
             ) : (
@@ -340,9 +343,9 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
         {/* Riga navigazione: Indietro / Home / (Menu solo non-LG) */}
         {hasDPad && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: 14 }}>
-            <Key onPress={() => on('back')} label="Indietro"><CornerUpLeft size={20} /></Key>
-            <Key onPress={() => on('home')} label="Home"><Home size={20} /></Key>
-            {!isLG && <Key onPress={() => on('menu')} label="Menu"><Menu size={20} /></Key>}
+            <Key onPress={() => on('back')} label={t('Indietro')}><CornerUpLeft size={20} /></Key>
+            <Key onPress={() => on('home')} label={t('Home')}><Home size={20} /></Key>
+            {!isLG && <Key onPress={() => on('menu')} label={t('Menu')}><Menu size={20} /></Key>}
           </div>
         )}
 
@@ -351,24 +354,24 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
 
         {/* Volume / Play-Pause / Canali */}
         <div style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'center', gap: 16 }}>
-          <PlusMinus onPlus={() => on('volup')} onMinus={() => on('voldown')} label="Vol" />
+          <PlusMinus onPlus={() => on('volup')} onMinus={() => on('voldown')} label={t('Vol')} />
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-            <Key onPress={() => on('play_pause')} size={56} label="Play/Pausa">
+            <Key onPress={() => on('play_pause')} size={56} label={t('Play/Pausa')}>
               {media.state === 'playing' ? <Pause size={24} /> : <Play size={24} />}
             </Key>
-            <Key onPress={() => on('mute')} label="Muto">{muted ? <VolumeX size={20} /> : <Volume2 size={20} />}</Key>
-            {isLG && <Key onPress={() => on('info')} label="Info"><Info size={18} /></Key>}
+            <Key onPress={() => on('mute')} label={t('Muto')}>{muted ? <VolumeX size={20} /> : <Volume2 size={20} />}</Key>
+            {isLG && <Key onPress={() => on('info')} label={t('Info')}><Info size={18} /></Key>}
           </div>
           {hasChannels
-            ? <PlusMinus onPlus={() => on('chup')} onMinus={() => on('chdown')} label="Ch" />
+            ? <PlusMinus onPlus={() => on('chup')} onMinus={() => on('chdown')} label={t('Ch')} />
             : <div style={{ width: 58 }} />}
         </div>
 
         {/* Riproduzione estesa: Precedente / Stop / Successivo */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 14 }}>
-          <Key onPress={() => on('prev')} label="Precedente"><SkipBack size={20} /></Key>
-          <Key onPress={() => on('stop')} label="Stop"><Square size={18} /></Key>
-          <Key onPress={() => on('next')} label="Successivo"><SkipForward size={20} /></Key>
+          <Key onPress={() => on('prev')} label={t('Precedente')}><SkipBack size={20} /></Key>
+          <Key onPress={() => on('stop')} label={t('Stop')}><Square size={18} /></Key>
+          <Key onPress={() => on('next')} label={t('Successivo')}><SkipForward size={20} /></Key>
         </div>
 
         {/* LG: tasti colorati */}
@@ -383,7 +386,7 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
         {/* Sorgenti / App */}
         {sources.length > 0 && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 8 }}>Sorgenti</div>
+            <div className="text-caption" style={{ marginBottom: 8 }}>{t('Sorgenti')}</div>
             <div className="glass-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
               {sources.map((s) => {
                 const active = s === activeSource
@@ -409,11 +412,11 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
         {/* Wake-on-LAN: MAC manuale (le TV LG spesso non lo espongono a HA) */}
         {isLG && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 8 }}>Accensione (Wake-on-LAN)</div>
+            <div className="text-caption" style={{ marginBottom: 8 }}>{t('Accensione (Wake-on-LAN)')}</div>
             <input
               value={macInput}
               onChange={(ev) => { setMacInput(ev.target.value); setTvMac(entityId, ev.target.value) }}
-              placeholder="MAC — es. 74:e6:b8:3a:8a:4c"
+              placeholder={t('MAC — es. 74:e6:b8:3a:8a:4c')}
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
@@ -421,8 +424,8 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
             />
             <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 6, lineHeight: 1.4 }}>
               {mac
-                ? 'Il magic packet verrà inviato a questo MAC all’accensione.'
-                : 'La tua TV LG non espone il MAC a Home Assistant: scrivilo qui una volta per accenderla col Wake-on-LAN.'}
+                ? t('Il magic packet verrà inviato a questo MAC all’accensione.')
+                : t('La tua TV LG non espone il MAC a Home Assistant: scrivilo qui una volta per accenderla col Wake-on-LAN.')}
             </div>
           </div>
         )}

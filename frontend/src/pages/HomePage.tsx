@@ -15,6 +15,7 @@ import { WasteCard } from '../components/cards/WasteCard'
 import { EnergyCard } from '../components/cards/EnergyCard'
 import { MyDevicesSection } from '../components/cards/MyDevicesCard'
 import { usePinnedEntities } from '../hooks/useEntities'
+import { useT } from '../i18n'
 import { getDomain } from '../types/ha'
 
 function useGreeting(): string {
@@ -34,6 +35,7 @@ function formatDate(): string {
 }
 
 export function HomePage() {
+  const t = useT()
   const connected = useStore((s) => s.connected)
   const entities = useStore((s) => s.entities)
   const hiddenEntities = useStore((s) => s.hiddenEntities)
@@ -125,7 +127,7 @@ export function HomePage() {
             marginBottom: 4,
           }}
         >
-          {greeting}
+          {t(greeting)}
         </h1>
         <p className="on-wall-dim" style={{ fontSize: 14, textTransform: 'capitalize' }}>
           {formatDate()}
@@ -153,7 +155,7 @@ export function HomePage() {
               }}
             >
               <Lightbulb size={14} />
-              {totalLightsOn} {totalLightsOn === 1 ? 'luce accesa' : 'luci accese'}
+              {totalLightsOn} {totalLightsOn === 1 ? t('luce accesa') : t('luci accese')}
             </div>
           )}
           {enabledAreasData.slice(0, 3).map((area) => (
@@ -182,7 +184,7 @@ export function HomePage() {
       {/* Meteo */}
       {weatherEnabled && hasWeather && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>Meteo</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Meteo')}</div>
           <WeatherCard />
         </div>
       )}
@@ -197,7 +199,7 @@ export function HomePage() {
       {/* Calendario */}
       {calendarEnabled && hasCalendar && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>Calendario</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Calendario')}</div>
           <CalendarCard />
         </div>
       )}
@@ -205,7 +207,7 @@ export function HomePage() {
       {/* Rifiuti */}
       {wasteEnabled && hasWaste && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>Rifiuti</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Rifiuti')}</div>
           <WasteCard />
         </div>
       )}
@@ -216,7 +218,7 @@ export function HomePage() {
       {/* Featured media player */}
       {featuredMedia && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>In riproduzione</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('In riproduzione')}</div>
           <motion.div className="anim-slide-up">
             <MediaCard entity={featuredMedia} featured />
           </motion.div>
@@ -226,7 +228,7 @@ export function HomePage() {
       {/* Entità attive */}
       {activeEntities.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>Attivo ora</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Attivo ora')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }} className="stagger-grid">
             {activeEntities.map((entity, i) => {
               const domain = getDomain(entity.entity_id)
@@ -245,7 +247,7 @@ export function HomePage() {
       {/* Ambienti — temperatura media per stanza */}
       {areaTemps.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>Ambienti</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Ambienti')}</div>
           <div className="grid-fluid stagger-grid">
             {areaTemps.map((a, i) => (
               <motion.div key={a.id} className="anim-scale-in" style={{ animationDelay: `${i * 60}ms`, minWidth: 0 }}>
@@ -263,10 +265,10 @@ export function HomePage() {
             <Moon size={40} strokeWidth={1.5} />
           </div>
           <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-            Tutto spento
+            {t('Tutto spento')}
           </div>
           <div style={{ fontSize: 14 }}>
-            Vai in <strong style={{ color: 'var(--text-secondary)' }}>Stanze</strong> per controllare i dispositivi
+            {t('Vai in')} <strong style={{ color: 'var(--text-secondary)' }}>{t('Stanze')}</strong> {t('per controllare i dispositivi')}
           </div>
         </div>
       )}

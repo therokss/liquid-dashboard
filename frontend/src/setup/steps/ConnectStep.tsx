@@ -6,6 +6,7 @@ import { useStore } from '../../store'
 import { saveToken } from '../../hooks/useHA'
 import { QRScanner } from '../../components/QRScanner'
 import { parseCredsQR } from '../../lib/credsQR'
+import { useT } from '../../i18n'
 
 interface ConnectStepProps {
   onNext: () => void
@@ -14,6 +15,7 @@ interface ConnectStepProps {
 type Status = 'idle' | 'testing' | 'success' | 'error'
 
 export function ConnectStep({ onNext }: ConnectStepProps) {
+  const t = useT()
   const hassUrl = useStore((s) => s.hassUrl)
   const setHassUrl = useStore((s) => s.setHassUrl)
 
@@ -36,7 +38,7 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
 
   async function testAndConnect() {
     if (!token.trim()) {
-      setErrorMsg('Inserisci il token di accesso')
+      setErrorMsg(t('Inserisci il token di accesso'))
       setStatus('error')
       return
     }
@@ -70,7 +72,7 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
       setTimeout(() => onNext(), 800)
     } catch {
       setStatus('error')
-      setErrorMsg('Impossibile connettersi. Verifica il token e l\'URL di Home Assistant.')
+      setErrorMsg(t('Impossibile connettersi. Verifica il token e l\'URL di Home Assistant.'))
     }
   }
 
@@ -107,10 +109,10 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
         </motion.div>
 
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginTop: 16 }}>
-          Connetti Home Assistant
+          {t('Connetti Home Assistant')}
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 6, lineHeight: 1.5 }}>
-          Genera un token in <strong style={{ color: 'var(--text-primary)' }}>Profilo → Token di lunga durata</strong>
+          {t('Genera un token in')} <strong style={{ color: 'var(--text-primary)' }}>{t('Profilo → Token di lunga durata')}</strong>
         </p>
       </div>
 
@@ -129,7 +131,7 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
         <Wifi size={16} color="var(--accent)" style={{ flexShrink: 0 }} />
         <div>
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
-            URL Home Assistant
+            {t('URL Home Assistant')}
           </div>
           <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 600 }}>
             {autoUrl || hassUrl}
@@ -140,7 +142,7 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
       {/* Token input */}
       <div>
         <label style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          Token di accesso
+          {t('Token di accesso')}
         </label>
         <input
           className="glass-input"
@@ -157,7 +159,7 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
           className="glass-btn"
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 10, fontSize: 14 }}
         >
-          <QrCode size={18} /> Scansiona QR
+          <QrCode size={18} /> {t('Scansiona QR')}
         </button>
       </div>
 
@@ -181,7 +183,7 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
           size={14}
           style={{ transform: showAdvanced ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }}
         />
-        URL personalizzato
+        {t('URL personalizzato')}
       </button>
 
       {showAdvanced && (
@@ -226,7 +228,7 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
           background: status === 'success' ? '#66bb6a' : undefined,
         }}
       >
-        {status === 'testing' ? 'Connessione in corso…' : status === 'success' ? 'Connesso!' : 'Connetti'}
+        {status === 'testing' ? t('Connessione in corso…') : status === 'success' ? t('Connesso!') : t('Connetti')}
       </motion.button>
 
       {showScanner && <QRScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}

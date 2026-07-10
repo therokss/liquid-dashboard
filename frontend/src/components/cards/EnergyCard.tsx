@@ -9,6 +9,7 @@ import { GlassCard } from '../glass/GlassCard'
 import { MasonryColumns } from '../MasonryColumns'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
+import { useT } from '../../i18n'
 import {
   fetchEnergyPrefs, extractStatIds, hasEnergyConfig, fetchStatsSum, sumOf, kwhFactor,
 } from '../../lib/energy'
@@ -31,6 +32,7 @@ function startOfToday(): Date { const d = new Date(); d.setHours(0, 0, 0, 0); re
 const DEVICE_COLORS = ['#00dbe7', '#4a8eff', '#66bb6a', '#ffb300', '#b56eff', '#ff7043', '#ec407a', '#26c6da', '#9ccc65', '#ffa726']
 
 export function EnergyCard() {
+  const t = useT()
   const { sendMessage } = useHA()
   const entities = useStore((s) => s.entities)
   const powerSel = useStore((s) => s.energyPowerEntity)
@@ -142,13 +144,13 @@ export function EnergyCard() {
             <Zap size={22} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{hasPower ? 'Consumo attuale' : 'Consumo oggi'}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{hasPower ? t('Consumo attuale') : t('Consumo oggi')}</div>
             <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
               {hasPower ? pf.value : kwh(gridToday)}
               <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-secondary)', marginLeft: 4 }}>{hasPower ? pf.unit : 'kWh'}</span>
             </div>
             {hasPower && prefs && (
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>Oggi {kwh(gridToday)} kWh</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{t('Oggi {{v}} kWh', { v: kwh(gridToday) })}</div>
             )}
           </div>
           <div style={{ textAlign: 'right', marginRight: 4 }}>
@@ -191,6 +193,7 @@ interface SankeyArea {
 
 // Sankey a 4 livelli: Rete elettrica → Casa → Aree → Dispositivi
 function Sankey({ areas }: { areas: SankeyArea[] }) {
+  const t = useT()
   const total = areas.reduce((s, a) => s + a.value, 0) || 1
   const W = 360, H = 388
   const reteTop = 14, reteH = 20, reteBottom = reteTop + reteH
@@ -211,9 +214,9 @@ function Sankey({ areas }: { areas: SankeyArea[] }) {
       {/* Rete → Casa */}
       <rect x={0} y={reteBottom} width={W} height={casaTop - reteBottom} fill="rgba(255,179,0,0.16)" />
       <rect x={0} y={reteTop} width={W} height={reteH} rx={4} fill="#ffb300" />
-      <text x={W / 2} y={reteTop + reteH / 2 + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#3a2600">Rete elettrica</text>
+      <text x={W / 2} y={reteTop + reteH / 2 + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#3a2600">{t('Rete elettrica')}</text>
       <rect x={0} y={casaTop} width={W} height={casaH} rx={4} fill="#ffb300" />
-      <text x={W / 2} y={casaTop + casaH / 2 + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#3a2600">Casa</text>
+      <text x={W / 2} y={casaTop + casaH / 2 + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#3a2600">{t('Casa')}</text>
 
       {/* Casa → Aree */}
       {areas.map((a, i) => {
@@ -267,6 +270,7 @@ function StatTile({ label, value, unit, color, icon }: {
 }
 
 function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergyStatIds; sendMessage: Send; livePowerW: number | null; onBack: () => void }) {
+  const t = useT()
   const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('today')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
@@ -361,7 +365,7 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
     const map = new Map<string, SankeyArea>()
     for (const d of devices) {
       const areaId = entityAreas[d.id]
-      const areaName = (areaId && areasList.find((a) => a.area_id === areaId)?.name) || 'Altro'
+      const areaName = (areaId && areasList.find((a) => a.area_id === areaId)?.name) || t('Altro')
       let g = map.get(areaName)
       if (!g) { g = { name: areaName, value: 0, color: '', devices: [] }; map.set(areaName, g) }
       g.value += d.value
@@ -369,7 +373,7 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
     }
     const arr = Array.from(map.values()).sort((a, b) => b.value - a.value)
     arr.forEach((a, i) => { a.color = DEVICE_COLORS[i % DEVICE_COLORS.length] })
-    if (unmonitored > 0.01) arr.push({ name: 'Consumi non monitorati', value: unmonitored, color: '#5a6b82', devices: [] })
+    if (unmonitored > 0.01) arr.push({ name: t('Consumi non monitorati'), value: unmonitored, color: '#5a6b82', devices: [] })
     return arr
   })()
 
@@ -397,10 +401,10 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
             gap: 4, cursor: 'pointer', fontSize: 13, fontWeight: 600,
           }}
         >
-          <ChevronLeft size={16} /> Home
+          <ChevronLeft size={16} /> {t('Home')}
         </button>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
-          Elettricità
+          {t('Elettricità')}
         </h2>
       </div>
 
@@ -420,7 +424,7 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
                 fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
               }}
             >
-              {label}
+              {t(label)}
             </button>
           )
         })}
@@ -428,12 +432,12 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
       {period === 'custom' && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 'var(--space-lg)', alignItems: 'center', flexWrap: 'wrap' }}>
           <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-            Da
+            {t('Da')}
             <input type="date" value={customStart} max={customEnd || undefined} onChange={(e) => setCustomStart(e.target.value)}
               style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: 13, padding: '7px 10px', outline: 'none' }} />
           </label>
           <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-            A
+            {t('A')}
             <input type="date" value={customEnd} min={customStart || undefined} onChange={(e) => setCustomEnd(e.target.value)}
               style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', fontSize: 13, padding: '7px 10px', outline: 'none' }} />
           </label>
@@ -443,23 +447,23 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
       {/* Tiles */}
       <div className="grid-fluid" style={{ marginBottom: 'var(--space-xl)' }}>
         {livePowerW !== null && (
-          <StatTile label="Consumo istantaneo" value={fmtPower(livePowerW, 'W').value} unit={fmtPower(livePowerW, 'W').unit} color="#ffb300" icon={<Zap size={16} />} />
+          <StatTile label={t('Consumo istantaneo')} value={fmtPower(livePowerW, 'W').value} unit={fmtPower(livePowerW, 'W').unit} color="#ffb300" icon={<Zap size={16} />} />
         )}
-        <StatTile label="Prelievo rete" value={kwh(gridShown)} unit="kWh" color="#ff7043" icon={<ArrowDownToLine size={16} />} />
+        <StatTile label={t('Prelievo rete')} value={kwh(gridShown)} unit="kWh" color="#ff7043" icon={<ArrowDownToLine size={16} />} />
         {ids.gridTo.length > 0 && (
-          <StatTile label="Immesso in rete" value={kwh(returned)} unit="kWh" color="#42a5f5" icon={<ArrowUpFromLine size={16} />} />
+          <StatTile label={t('Immesso in rete')} value={kwh(returned)} unit="kWh" color="#42a5f5" icon={<ArrowUpFromLine size={16} />} />
         )}
         {ids.solar.length > 0 && (
-          <StatTile label="Produzione solare" value={kwh(solar)} unit="kWh" color="#66bb6a" icon={<Sun size={16} />} />
+          <StatTile label={t('Produzione solare')} value={kwh(solar)} unit="kWh" color="#66bb6a" icon={<Sun size={16} />} />
         )}
         {(ids.batteryFrom.length > 0 || ids.batteryTo.length > 0) && (
-          <StatTile label="Batteria (carica)" value={kwh(battIn)} unit="kWh" color="#ab47bc" icon={<BatteryCharging size={16} />} />
+          <StatTile label={t('Batteria (carica)')} value={kwh(battIn)} unit="kWh" color="#ab47bc" icon={<BatteryCharging size={16} />} />
         )}
         {(ids.batteryFrom.length > 0 || ids.batteryTo.length > 0) && (
-          <StatTile label="Batteria (scarica)" value={kwh(battOut)} unit="kWh" color="#7e57c2" icon={<BatteryCharging size={16} />} />
+          <StatTile label={t('Batteria (scarica)')} value={kwh(battOut)} unit="kWh" color="#7e57c2" icon={<BatteryCharging size={16} />} />
         )}
         {ids.gridCost.length > 0 && (
-          <StatTile label="Costo" value={`€ ${cost.toFixed(2)}`} unit="" color="#ffb300" icon={<Euro size={16} />} />
+          <StatTile label={t('Costo')} value={`€ ${cost.toFixed(2)}`} unit="" color="#ffb300" icon={<Euro size={16} />} />
         )}
       </div>
 
@@ -468,7 +472,7 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
       {/* Consumo istantaneo (W) per dispositivo — tempo reale */}
       {livePower.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 12 }}>Consumo istantaneo</div>
+          <div className="text-caption" style={{ marginBottom: 12 }}>{t('Consumo istantaneo')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {livePower.map((d) => {
               const p = fmtPower(d.w, 'W')
@@ -494,11 +498,11 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
       {/* Flusso di energia (Rete → Casa → dispositivi) */}
       {homeTotal > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 12 }}>Flusso di energia</div>
+          <div className="text-caption" style={{ marginBottom: 12 }}>{t('Flusso di energia')}</div>
           <GlassCard size="md">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
-              <span>Rete <b style={{ color: 'var(--text-primary)' }}>{kwh(gridShown)}</b> kWh</span>
-              <span>Casa <b style={{ color: 'var(--text-primary)' }}>{kwh(homeTotal)}</b> kWh</span>
+              <span>{t('Rete')} <b style={{ color: 'var(--text-primary)' }}>{kwh(gridShown)}</b> kWh</span>
+              <span>{t('Casa')} <b style={{ color: 'var(--text-primary)' }}>{kwh(homeTotal)}</b> kWh</span>
             </div>
 
             <Sankey areas={areaHierarchy} />
@@ -518,7 +522,7 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
       {/* Consumo per dispositivo */}
       {devices.length > 0 && (
         <div>
-          <div className="text-caption" style={{ marginBottom: 12 }}>Consumo per dispositivo</div>
+          <div className="text-caption" style={{ marginBottom: 12 }}>{t('Consumo per dispositivo')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {devices.slice(0, 8).map((d) => (
               <div key={d.id}>
@@ -541,8 +545,8 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
           kWh sono vuoti. Spieghiamo invece di lasciare la sezione vuota. */}
       {homeTotal <= 0 && devices.length === 0 && (
         <div style={{ padding: 'var(--space-lg)', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13, lineHeight: 1.5 }}>
-          Nessuna statistica di consumo per questo periodo.<br />
-          Prova <b style={{ color: 'var(--text-secondary)' }}>7 giorni</b> o <b style={{ color: 'var(--text-secondary)' }}>30 giorni</b> — le statistiche di oggi compaiono dopo la prima ora.
+          {t('Nessuna statistica di consumo per questo periodo.')}<br />
+          {t('Prova')} <b style={{ color: 'var(--text-secondary)' }}>{t('7 giorni')}</b> {t('o')} <b style={{ color: 'var(--text-secondary)' }}>{t('30 giorni')}</b> {t('— le statistiche di oggi compaiono dopo la prima ora.')}
         </div>
       )}
       </MasonryColumns>

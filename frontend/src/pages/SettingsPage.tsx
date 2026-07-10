@@ -14,6 +14,7 @@ import { CAPABILITIES, canModify, savePermissions } from '../lib/permissions'
 import { MasonryColumns } from '../components/MasonryColumns'
 import { WASTE_TYPES, WEEKDAY_ORDER, WEEKDAY_INITIALS, INTERVAL_OPTIONS } from '../lib/waste'
 import { fileToWallpaperDataUrl } from '../lib/image'
+import { useT, type Lang } from '../i18n'
 import type { WallpaperSlot } from '../store'
 import type { HassEntity } from '../types/ha'
 
@@ -29,6 +30,9 @@ const WALLPAPER_SLOTS: Array<{ slot: WallpaperSlot; label: string; hours: string
 ]
 
 export function SettingsPage() {
+  const t = useT()
+  const language = useStore((s) => s.language)
+  const setLanguage = useStore((s) => s.setLanguage)
   const theme = useStore((s) => s.theme)
   const setTheme = useStore((s) => s.setTheme)
   const wallpapers = useStore((s) => s.wallpapers)
@@ -83,7 +87,7 @@ export function SettingsPage() {
             letterSpacing: '-0.04em',
           }}
         >
-          Impostazioni
+          {t('Impostazioni')}
         </h1>
       </div>
 
@@ -93,7 +97,7 @@ export function SettingsPage() {
         <Section title="Connessione">
           <SettingRow label="Home Assistant URL">
             <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
-              {hassUrl || 'Non configurato'}
+              {hassUrl || t('Non configurato')}
             </span>
           </SettingRow>
           <button
@@ -101,14 +105,35 @@ export function SettingsPage() {
             className="glass-btn"
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', marginTop: 12, fontSize: 14 }}
           >
-            <QrCode size={18} /> Mostra QR per un altro dispositivo
+            <QrCode size={18} /> {t('Mostra QR per un altro dispositivo')}
           </button>
+        </Section>
+
+        {/* Lingua */}
+        <Section title="Lingua">
+          <SettingRow label="Lingua dell'app">
+            <div style={{ display: 'flex', gap: 8 }}>
+              {([
+                ['it', 'Italiano'],
+                ['en', 'English'],
+                ['es', 'Español'],
+              ] as const).map(([code, label]) => (
+                <button
+                  key={code}
+                  className={language === code ? 'ld-chip ld-chip-on' : 'ld-chip'}
+                  onClick={() => setLanguage(code as Lang)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </SettingRow>
         </Section>
 
         {/* Sistema — solo amministratori */}
         {isAdmin && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Sistema</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Sistema')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <motion.button
                 whileTap={{ scale: 0.98 }}
@@ -124,9 +149,9 @@ export function SettingsPage() {
                   <RefreshCw size={20} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Aggiornamenti</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{t('Aggiornamenti')}</div>
                   <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                    {updateCount > 0 ? `${updateCount} ${updateCount === 1 ? 'disponibile' : 'disponibili'}` : 'Tutto aggiornato'}
+                    {updateCount > 0 ? `${updateCount} ${updateCount === 1 ? t('disponibile') : t('disponibili')}` : t('Tutto aggiornato')}
                   </div>
                 </div>
                 {updateCount > 0 && (
@@ -151,8 +176,8 @@ export function SettingsPage() {
                   <Server size={20} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Informazioni server</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>CPU, memoria, disco, rete e sensori</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{t('Informazioni server')}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>{t('CPU, memoria, disco, rete e sensori')}</div>
                 </div>
                 <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
               </motion.button>
@@ -167,8 +192,8 @@ export function SettingsPage() {
                   <LayoutGrid size={20} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Dashboard</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>Crea, modifica e assegna dashboard agli schermi</div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{t('Dashboard')}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>{t('Crea, modifica e assegna dashboard agli schermi')}</div>
                 </div>
                 <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
               </motion.button>
@@ -185,7 +210,7 @@ export function SettingsPage() {
         {/* Avviso per utenti non-admin con impostazioni limitate */}
         {!isAdmin && !anyEditable && (
           <div className="glass-panel" style={{ padding: 'var(--space-lg)', color: 'var(--text-secondary)', fontSize: 13.5, lineHeight: 1.5 }}>
-            L'amministratore ha limitato le impostazioni modificabili. Contattalo per eventuali modifiche.
+            {t("L'amministratore ha limitato le impostazioni modificabili. Contattalo per eventuali modifiche.")}
           </div>
         )}
 
@@ -202,7 +227,7 @@ export function SettingsPage() {
         {/* Visibilità dispositivi */}
         {can('visibility') && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>Visibilità dispositivi</div>
+            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Visibilità dispositivi')}</div>
             <VisibilityStepper />
           </div>
         )}
@@ -247,14 +272,14 @@ export function SettingsPage() {
                     }}
                   >
                     {icon}
-                    {label}
+                    {t(label)}
                   </motion.button>
                 )
               })}
             </div>
           </SettingRow>
 
-          <SettingRow label={`Effetto vetro — ${Math.round(theme.glassIntensity * 100)}%`}>
+          <SettingRow label={t('Effetto vetro — {{pct}}%', { pct: Math.round(theme.glassIntensity * 100) })}>
             <input
               type="range"
               className="glass-slider"
@@ -315,7 +340,7 @@ export function SettingsPage() {
                     />
                   )}
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 600 }}>{label}</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 600 }}>{t(label)}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{hours}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -346,7 +371,7 @@ export function SettingsPage() {
                         }}
                       >
                         <Upload size={12} />
-                        {uploadingSlot === slot ? 'Carico…' : currentWp ? 'Cambia' : 'Carica'}
+                        {uploadingSlot === slot ? t('Carico…') : currentWp ? t('Cambia') : t('Carica')}
                       </div>
                     </label>
                     {currentWp && (
@@ -409,12 +434,12 @@ export function SettingsPage() {
               }}
             >
               <RefreshCw size={16} />
-              Riconfigura dashboard
+              {t('Riconfigura dashboard')}
             </motion.button>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <p style={{ fontSize: 14, color: 'var(--text-secondary)', textAlign: 'center' }}>
-                Sei sicuro? Perderai tutte le impostazioni.
+                {t('Sei sicuro? Perderai tutte le impostazioni.')}
               </p>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
@@ -422,7 +447,7 @@ export function SettingsPage() {
                   className="glass-btn"
                   style={{ flex: 1 }}
                 >
-                  Annulla
+                  {t('Annulla')}
                 </button>
                 <motion.button
                   whileTap={{ scale: 0.97 }}
@@ -439,7 +464,7 @@ export function SettingsPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  Reset
+                  {t('Reset')}
                 </motion.button>
               </div>
             </div>
@@ -465,6 +490,7 @@ function apiBaseUrl(): string {
 }
 
 function AreaVisibilitySettings() {
+  const t = useT()
   const areas = useStore((s) => s.areas)
   const enabledAreas = useStore((s) => s.enabledAreas)
   const setEnabledAreas = useStore((s) => s.setEnabledAreas)
@@ -485,10 +511,10 @@ function AreaVisibilitySettings() {
   const sorted = [...areas].sort((a, b) => a.name.localeCompare(b.name))
   return (
     <div>
-      <div className="text-caption" style={{ marginBottom: 10 }}>Stanze visibili</div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>{t('Stanze visibili')}</div>
       <div className="glass-panel" style={{ padding: 'var(--space-md) var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 0 }}>
         <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', paddingBottom: 4, lineHeight: 1.5 }}>
-          Spegni le stanze che non vuoi mostrare nella dashboard.
+          {t('Spegni le stanze che non vuoi mostrare nella dashboard.')}
         </div>
         {sorted.map((a) => (
           <div key={a.area_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--glass-border-dim)' }}>
@@ -502,6 +528,7 @@ function AreaVisibilitySettings() {
 }
 
 function FullscreenDashboardSetup() {
+  const t = useT()
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'err'>('idle')
   const [msg, setMsg] = useState('')
   const [exists, setExists] = useState<boolean | null>(null)
@@ -519,10 +546,10 @@ function FullscreenDashboardSetup() {
     try {
       const r = await fetch(apiBaseUrl() + '/api/create-dashboard', { method: 'POST' })
       const d = await r.json().catch(() => null)
-      if (r.ok && d?.ok) { setStatus('ok'); setMsg('Dashboard "Casa" creata.'); setExists(true) }
-      else { setStatus('err'); setMsg(d?.error || 'Errore nella creazione') }
+      if (r.ok && d?.ok) { setStatus('ok'); setMsg(t('Dashboard "Casa" creata.')); setExists(true) }
+      else { setStatus('err'); setMsg(d?.error || t('Errore nella creazione')) }
     } catch {
-      setStatus('err'); setMsg('Server non raggiungibile')
+      setStatus('err'); setMsg(t('Server non raggiungibile'))
     }
   }
 
@@ -530,18 +557,17 @@ function FullscreenDashboardSetup() {
 
   return (
     <div>
-      <div className="text-caption" style={{ marginBottom: 10 }}>Plancia a schermo intero</div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>{t('Plancia a schermo intero')}</div>
       <div className="glass-panel" style={{ padding: 'var(--space-md) var(--space-lg)' }}>
         {configured ? (
           <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
             <span style={{ color: 'var(--accent)', fontWeight: 700 }}>✓</span>
-            <span>Plancia <b>Casa</b> configurata. {status === 'ok' ? <>Impostala dal tuo <b>Profilo → Dashboard predefinita → Casa</b>.</> : 'Si apre a tutto schermo dal pannello «Casa».'}</span>
+            <span>{t('Plancia')} <b>Casa</b> {t('configurata.')} {status === 'ok' ? <>{t('Impostala dal tuo')} <b>{t('Profilo → Dashboard predefinita → Casa')}</b>.</> : t('Si apre a tutto schermo dal pannello «Casa».')}</span>
           </div>
         ) : (
           <>
             <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>
-              La plancia a schermo intero non risulta configurata. Creane una che apre la Liquid Dashboard a tutto schermo,
-              poi impostala come predefinita dal tuo profilo.
+              {t('La plancia a schermo intero non risulta configurata. Creane una che apre la Liquid Dashboard a tutto schermo, poi impostala come predefinita dal tuo profilo.')}
             </p>
             <button
               onClick={create}
@@ -549,7 +575,7 @@ function FullscreenDashboardSetup() {
               className="glass-btn glass-btn-accent"
               style={{ width: '100%', opacity: status === 'loading' ? 0.7 : 1 }}
             >
-              {status === 'loading' ? 'Creazione…' : 'Crea dashboard «Casa»'}
+              {status === 'loading' ? t('Creazione…') : t('Crea dashboard «Casa»')}
             </button>
             {status === 'err' && <div style={{ marginTop: 12, fontSize: 13, color: '#ff8f8f' }}>{msg}</div>}
           </>
@@ -560,6 +586,7 @@ function FullscreenDashboardSetup() {
 }
 
 function PermissionsPanel() {
+  const t = useT()
   const permissions = useStore((s) => s.userPermissions)
   const setUserPermissions = useStore((s) => s.setUserPermissions)
   const [saving, setSaving] = useState(false)
@@ -575,22 +602,22 @@ function PermissionsPanel() {
 
   return (
     <div>
-      <div className="text-caption" style={{ marginBottom: 10 }}>Permessi utenti</div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>{t('Permessi utenti')}</div>
       <div className="glass-panel" style={{ padding: 'var(--space-md) var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 0 }}>
         <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', paddingBottom: 4, lineHeight: 1.5 }}>
-          Scegli cosa possono modificare gli utenti <b>non amministratori</b>. Vale per tutti i dispositivi.
+          {t('Scegli cosa possono modificare gli utenti')} <b>{t('non amministratori')}</b>. {t('Vale per tutti i dispositivi.')}
         </div>
         {CAPABILITIES.map((c) => (
           <div key={c.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--glass-border-dim)' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 15, color: 'var(--text-primary)' }}>{c.label}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{c.desc}</div>
+              <div style={{ fontSize: 15, color: 'var(--text-primary)' }}>{t(c.label)}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{t(c.desc)}</div>
             </div>
             <Toggle checked={permissions[c.key] !== false} onChange={(v) => toggle(c.key, v)} />
           </div>
         ))}
         <div style={{ fontSize: 11.5, color: saving ? 'var(--accent)' : 'var(--text-tertiary)', paddingTop: 8 }}>
-          {saving ? 'Salvataggio…' : 'Le modifiche sono immediate.'}
+          {saving ? t('Salvataggio…') : t('Le modifiche sono immediate.')}
         </div>
       </div>
     </div>
@@ -608,6 +635,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (b: boolean
 }
 
 function WeatherCalendarSettings() {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const weatherEnabled = useStore((s) => s.weatherEnabled)
   const setWeatherEnabled = useStore((s) => s.setWeatherEnabled)
@@ -653,7 +681,7 @@ function WeatherCalendarSettings() {
                   value={weatherEntity ?? ''}
                   onChange={(e) => setWeatherEntity(e.target.value || null)}
                 >
-                  <option value="">Automatico</option>
+                  <option value="">{t('Automatico')}</option>
                   {weatherList.map((w) => (
                     <option key={w.entity_id} value={w.entity_id}>{entityName(w)}</option>
                   ))}
@@ -665,7 +693,7 @@ function WeatherCalendarSettings() {
                   value={externalTempSource}
                   onChange={(e) => setExternalTempSource(e.target.value)}
                 >
-                  <option value="weather">Dal meteo</option>
+                  <option value="weather">{t('Dal meteo')}</option>
                   {tempSensors.map((s) => (
                     <option key={s.entity_id} value={s.entity_id}>{entityName(s)}</option>
                   ))}
@@ -684,7 +712,7 @@ function WeatherCalendarSettings() {
           {calendarEnabled && (
             <div style={{ padding: '12px 0' }}>
               <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 10 }}>
-                Calendari {calendarEntities.length === 0 ? '(tutti)' : `(${calendarEntities.length} selezionati)`}
+                {t('Calendari')} {calendarEntities.length === 0 ? t('(tutti)') : t('({{n}} selezionati)', { n: calendarEntities.length })}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {calendarList.map((c) => {
@@ -709,6 +737,7 @@ function WeatherCalendarSettings() {
 }
 
 function WasteSettings() {
+  const t = useT()
   const wasteEnabled = useStore((s) => s.wasteEnabled)
   const setWasteEnabled = useStore((s) => s.setWasteEnabled)
   const wasteSchedule = useStore((s) => s.wasteSchedule)
@@ -725,16 +754,16 @@ function WasteSettings() {
       </SettingRow>
       {wasteEnabled && (
         <div style={{ paddingTop: 6 }}>
-          {WASTE_TYPES.map((t) => {
-            const days = wasteSchedule[t.id] ?? []
-            const interval = wasteInterval[t.id] ?? 1
-            const anchor = wasteAnchor[t.id] ?? ''
-            const Icon = t.Icon
+          {WASTE_TYPES.map((wt) => {
+            const days = wasteSchedule[wt.id] ?? []
+            const interval = wasteInterval[wt.id] ?? 1
+            const anchor = wasteAnchor[wt.id] ?? ''
+            const Icon = wt.Icon
             return (
-              <div key={t.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--glass-border-dim)' }}>
+              <div key={wt.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--glass-border-dim)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <Icon size={16} color={t.color} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t.label}</span>
+                  <Icon size={16} color={wt.color} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t(wt.label)}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {WEEKDAY_ORDER.map((d) => {
@@ -742,13 +771,13 @@ function WasteSettings() {
                     return (
                       <button
                         key={d}
-                        onClick={() => toggleWasteDay(t.id, d)}
+                        onClick={() => toggleWasteDay(wt.id, d)}
                         style={{
                           width: 34,
                           height: 34,
                           borderRadius: '50%',
-                          border: on ? `1px solid ${t.color}` : '1px solid var(--glass-border)',
-                          background: on ? t.color : 'transparent',
+                          border: on ? `1px solid ${wt.color}` : '1px solid var(--glass-border)',
+                          background: on ? wt.color : 'transparent',
                           color: on ? '#fff' : 'var(--text-secondary)',
                           fontSize: 12,
                           fontWeight: 700,
@@ -769,19 +798,19 @@ function WasteSettings() {
                     <select
                       className="ld-select"
                       value={interval}
-                      onChange={(e) => setWasteInterval(t.id, Number(e.target.value))}
+                      onChange={(e) => setWasteInterval(wt.id, Number(e.target.value))}
                     >
                       {INTERVAL_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
+                        <option key={o.value} value={o.value}>{t(o.label)}</option>
                       ))}
                     </select>
                     {interval > 1 && (
                       <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)' }}>
-                        1ª raccolta
+                        {t('1ª raccolta')}
                         <input
                           type="date"
                           value={anchor}
-                          onChange={(e) => setWasteAnchor(t.id, e.target.value)}
+                          onChange={(e) => setWasteAnchor(wt.id, e.target.value)}
                           style={{
                             background: 'var(--glass-bg)',
                             border: '1px solid var(--glass-border)',
@@ -798,14 +827,14 @@ function WasteSettings() {
                 )}
                 {interval > 1 && !anchor && (
                   <div style={{ fontSize: 11, color: '#ffb300', marginTop: 6 }}>
-                    Imposta la data di una raccolta per calcolare le settimane.
+                    {t('Imposta la data di una raccolta per calcolare le settimane.')}
                   </div>
                 )}
               </div>
             )
           })}
           <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 10 }}>
-            Seleziona i giorni di raccolta. La sera prima vedrai il promemoria "Esponi stasera" nella Home.
+            {t('Seleziona i giorni di raccolta. La sera prima vedrai il promemoria "Esponi stasera" nella Home.')}
           </div>
         </div>
       )}
@@ -814,6 +843,7 @@ function WasteSettings() {
 }
 
 function EnergySettings() {
+  const t = useT()
   const entities = useStore((s) => s.entities)
   const energyEnabled = useStore((s) => s.energyEnabled)
   const setEnergyEnabled = useStore((s) => s.setEnergyEnabled)
@@ -840,7 +870,7 @@ function EnergySettings() {
             value={energyPowerEntity ?? ''}
             onChange={(e) => setEnergyPowerEntity(e.target.value || null)}
           >
-            <option value="">Automatico</option>
+            <option value="">{t('Automatico')}</option>
             {powerSensors.map((s) => (
               <option key={s.entity_id} value={s.entity_id}>{entityName(s)}</option>
             ))}
@@ -848,16 +878,17 @@ function EnergySettings() {
         </SettingRow>
       )}
       <div style={{ fontSize: 12, color: 'var(--text-tertiary)', paddingTop: 10 }}>
-        L'energia (kWh/costi) proviene dalla dashboard Energia di HA. Il "consumo istantaneo" usa un sensore di potenza (W).
+        {t('L\'energia (kWh/costi) proviene dalla dashboard Energia di HA. Il "consumo istantaneo" usa un sensore di potenza (W).')}
       </div>
     </Section>
   )
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const t = useT()
   return (
     <div>
-      <div className="text-caption" style={{ marginBottom: 10 }}>{title}</div>
+      <div className="text-caption" style={{ marginBottom: 10 }}>{t(title)}</div>
       <div
         className="glass-panel"
         style={{ padding: 'var(--space-md) var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 0 }}
@@ -869,6 +900,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
+  const t = useT()
   return (
     <div
       style={{
@@ -880,7 +912,7 @@ function SettingRow({ label, children }: { label: string; children: React.ReactN
         borderBottom: '1px solid var(--glass-border-dim)',
       }}
     >
-      <span style={{ fontSize: 15, color: 'var(--text-primary)', flex: 1 }}>{label}</span>
+      <span style={{ fontSize: 15, color: 'var(--text-primary)', flex: 1 }}>{t(label)}</span>
       {children}
     </div>
   )

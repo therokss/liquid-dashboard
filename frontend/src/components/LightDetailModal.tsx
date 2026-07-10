@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { X, Sun, Palette, Thermometer, Clapperboard } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
+import { useT } from '../i18n'
 import type { HassEntity, LightAttributes } from '../types/ha'
 
 const PRESETS: Array<{ c: string; rgb: [number, number, number] }> = [
@@ -25,6 +26,7 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onClose: () => void }) {
+  const t = useT()
   const { callService } = useHA()
   const entities = useStore((s) => s.entities)
   const attrs = entity.attributes as LightAttributes
@@ -73,7 +75,7 @@ export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onCl
             <div className="glass-toggle-track" />
             <div className="glass-toggle-thumb" style={{ transform: isOn ? 'translateX(20px)' : 'translateX(0)' }} />
           </label>
-          <button onClick={onClose} aria-label="Chiudi" style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <button onClick={onClose} aria-label={t('Chiudi')} style={{ width: 32, height: 32, borderRadius: 10, cursor: 'pointer', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <X size={17} />
           </button>
         </div>
@@ -81,7 +83,7 @@ export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onCl
         {isOn && (
           <>
             {/* Luminosità */}
-            <Section icon={<Sun size={15} />} title="Luminosità">
+            <Section icon={<Sun size={15} />} title={t('Luminosità')}>
               <input type="range" className="glass-slider" min={1} max={100} defaultValue={briPct}
                 onChange={(e) => call({ brightness_pct: Number(e.target.value) })}
                 style={{ width: '100%', background: `linear-gradient(to right, var(--accent) ${briPct}%, rgba(255,255,255,0.18) ${briPct}%)` }} />
@@ -89,7 +91,7 @@ export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onCl
 
             {/* Colori */}
             {supportsColor && (
-              <Section icon={<Palette size={15} />} title="Colore">
+              <Section icon={<Palette size={15} />} title={t('Colore')}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
                   {PRESETS.map((p) => (
                     <button key={p.c} onClick={() => call({ rgb_color: p.rgb })}
@@ -104,7 +106,7 @@ export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onCl
 
             {/* Temperatura colore */}
             {supportsTemp && (
-              <Section icon={<Thermometer size={15} />} title="Temperatura">
+              <Section icon={<Thermometer size={15} />} title={t('Temperatura')}>
                 <input type="range" className="glass-slider" min={minK} max={maxK} step={50} defaultValue={curK ?? Math.round((minK + maxK) / 2)}
                   onChange={(e) => call({ color_temp_kelvin: Number(e.target.value) })}
                   style={{ width: '100%', background: 'linear-gradient(to right, #ffb46b, #fff4e0, #cfe6ff)' }} />
@@ -115,7 +117,7 @@ export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onCl
 
         {/* Scene collegate */}
         {scenes.length > 0 && (
-          <Section icon={<Clapperboard size={15} />} title="Scene">
+          <Section icon={<Clapperboard size={15} />} title={t('Scene')}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {scenes.map((s) => (
                 <button key={s.entity_id} onClick={() => callService('scene', 'turn_on', { entity_id: s.entity_id })}
