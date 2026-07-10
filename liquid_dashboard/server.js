@@ -11,6 +11,7 @@ const CREDS_PATH = '/data/ld_credentials.json';
 const PREFS_PATH = '/data/ld_prefs.json';
 const USER_CFG_PATH = '/data/ld_user_configs.json';
 const DASHBOARDS_PATH = '/data/ld_dashboards.json';
+const FAN_PRESETS_PATH = '/data/ld_fan_presets.json';
 
 // Cerca SUPERVISOR_TOKEN in env e nelle directory s6-rc (HA base image)
 function detectSupervisorToken() {
@@ -201,6 +202,47 @@ if (INGRESS_ENTRY) {
 }
 app.get('/api/dashboards', dashboardsGetHandler);
 app.post('/api/dashboards', dashboardsSaveHandler);
+
+// --- Punti predefiniti ventilatori (orizzontale/verticale) ------------------------
+// Per i ventilatori con doppio angolo (es. Dreo): posizioni salvate, condivise fra
+// tutti gli utenti/schermi (chiave = entity_id del number orizzontale). A differenza
+// di /api/dashboards, il salvataggio NON è admin-only: orientare un ventilatore è
+// un'azione quotidiana, non una modifica strutturale della dashboard.
+function readFanPresets() {
+  try { return JSON.parse(fs.readFileSync(FAN_PRESETS_PATH, 'utf8')); } catch { return {}; }
+}
+async function fanPresetsGetHandler(req, res) {
+  if (!req.headers['x-remote-user-id']) {
+    const user = await getUser(req);
+    if (!user) { res.status(401).json({ error: 'unauthorized' }); return; }
+  }
+  const all = readFanPresets();
+  const entityId = typeof req.query.entityId === 'string' ? req.query.entityId : '';
+  if (entityId) { res.json({ presets: all[entityId] || [] }); return; }
+  res.json({ all });
+}
+async function fanPresetsSaveHandler(req, res) {
+  const user = await getUser(req);
+  if (!user) { res.status(401).json({ ok: false, error: 'unauthorized' }); return; }
+  const { entityId, presets } = req.body || {};
+  if (!entityId || typeof entityId !== 'string' || !Array.isArray(presets)) {
+    res.status(400).json({ ok: false, error: 'bad request' }); return;
+  }
+  const all = readFanPresets();
+  all[entityId] = presets;
+  try {
+    fs.writeFileSync(FAN_PRESETS_PATH, JSON.stringify(all));
+    res.json({ ok: true, presets: all[entityId] });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+}
+if (INGRESS_ENTRY) {
+  app.get(`${INGRESS_ENTRY}/api/fan-presets`, fanPresetsGetHandler);
+  app.post(`${INGRESS_ENTRY}/api/fan-presets`, fanPresetsSaveHandler);
+}
+app.get('/api/fan-presets', fanPresetsGetHandler);
+app.post('/api/fan-presets', fanPresetsSaveHandler);
 
 // --- Versione della config (solo timestamp dei file) per il sync "live" ------------
 // Il polling di app/dashboard interroga questo endpoint leggerissimo ogni ~10s:
@@ -537,7 +579,7 @@ function proxyToHA(browserWs) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Liquid Dashboard] v1.46.17 — porta ${PORT}`);
+  console.log(`[Liquid Dashboard] v1.46.18 — porta ${PORT}`);
   console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
   console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
   if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);

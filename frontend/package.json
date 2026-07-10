@@ -10,10 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/qrcode": "^1.5.6",
     "framer-motion": "^11.3.0",
     "home-assistant-js-websocket": "^9.4.0",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.511.0",
     "node-vibrant": "^3.2.1-alpha.1",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-grid-layout": "^1.5.3",
