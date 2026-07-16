@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.20] — 2026-07-16
+### Corretto
+- **Schermo intero (kiosk): il tasto per mostrare di nuovo la barra di Home Assistant
+  non la faceva più riapparire.** Lo script che nasconde la sidebar/barra nativa di HA
+  usava un trucco CSS non più affidabile con le versioni recenti del frontend di HA,
+  dove la visibilità del pulsante sidebar è ora condizionata da uno stato interno di
+  HA e non solo dal CSS. Riscritto usando il protocollo ufficiale che HA espone per gli
+  add-on in ingress (postMessage), che aggiorna quello stato reale invece di provare a
+  fingerlo via CSS.
+
 ## [1.46.19] — 2026-07-10
 ### Aggiunto
 - **Supporto multilingua (Italiano, English, Español)**: nuovo selettore lingua in
