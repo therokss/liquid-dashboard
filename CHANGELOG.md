@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.21] — 2026-07-18
+### Aggiunto
+- **Scorciatoia "Impostazioni Home Assistant"** in Impostazioni → Sistema (solo admin): apre
+  direttamente la sezione Impostazioni di HA. Utile come via alternativa quando la sidebar
+  nativa resta nascosta dopo lo schermo intero — nell'add-on naviga tramite lo stesso canale
+  ufficiale dell'ingress (`postMessage` verso `ha-panel-app`), senza dipendere dalla visibilità
+  del pulsante hamburger; nell'app iOS/Android apre l'URL di Home Assistant nel browser esterno.
+
 ## [1.46.20] — 2026-07-16
 ### Corretto
 - **Schermo intero (kiosk): il tasto per mostrare di nuovo la barra di Home Assistant

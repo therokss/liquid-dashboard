@@ -26,3 +26,12 @@ export function setKiosk(hidden: boolean): void {
     window.parent.postMessage({ type: 'home-assistant/unsubscribe-properties' }, '*')
   }
 }
+
+// Scorciatoia verso le impostazioni di Home Assistant: usa lo stesso canale
+// postMessage ('home-assistant/navigate', gestito da ha-panel-app.ts) invece
+// di affidarsi alla sola visibilità del pulsante hamburger — funziona anche
+// se la sidebar nativa non è (ancora) tornata visibile.
+export function openHomeAssistantSettings(): void {
+  if (window.parent === window) return
+  window.parent.postMessage({ type: 'home-assistant/navigate', path: '/config' }, '*')
+}

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sun, Moon, Sparkles, Upload, Trash2, RefreshCw, Server, ChevronRight, LayoutGrid, QrCode } from 'lucide-react'
+import { Sun, Moon, Sparkles, Upload, Trash2, RefreshCw, Server, ChevronRight, LayoutGrid, QrCode, Settings } from 'lucide-react'
 import { CredsQRModal } from '../components/CredsQRModal'
 import { DashboardsPage } from '../lib/dashboards/DashboardsPage'
 import { useStore } from '../store'
@@ -15,6 +15,7 @@ import { MasonryColumns } from '../components/MasonryColumns'
 import { WASTE_TYPES, WEEKDAY_ORDER, WEEKDAY_INITIALS, INTERVAL_OPTIONS } from '../lib/waste'
 import { fileToWallpaperDataUrl } from '../lib/image'
 import { useT, type Lang } from '../i18n'
+import { openHomeAssistantSettings } from '../lib/kiosk'
 import type { WallpaperSlot } from '../store'
 import type { HassEntity } from '../types/ha'
 
@@ -194,6 +195,22 @@ export function SettingsPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{t('Dashboard')}</div>
                   <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>{t('Crea, modifica e assegna dashboard agli schermi')}</div>
+                </div>
+                <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
+              </motion.button>
+
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={openHomeAssistantSettings}
+                className="glass-panel"
+                style={{ width: '100%', textAlign: 'left', cursor: 'pointer', padding: 'var(--space-md) var(--space-lg)', display: 'flex', alignItems: 'center', gap: 14 }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: 'var(--accent-glow)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                  <Settings size={20} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{t('Impostazioni Home Assistant')}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginTop: 2 }}>{t('Utenti, integrazioni, add-on e altro')}</div>
                 </div>
                 <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
               </motion.button>
