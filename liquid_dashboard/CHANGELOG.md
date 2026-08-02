@@ -3,6 +3,18 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.22] — 2026-08-02
+### Corretto
+- **La scorciatoia "Impostazioni Home Assistant" non faceva nulla.** Il messaggio di
+  navigazione veniva inviato solo sul canale dell'ingress, che ha un destinatario
+  soltanto quando la dashboard è aperta dal pannello dell'add-on nella sidebar: nella
+  **plancia a schermo intero** (dashboard Lovelace con card iframe) e nell'app
+  iOS/Android il messaggio cadeva nel vuoto e il pulsante restava muto. Ora la
+  dashboard riconosce il contesto in cui gira: nella plancia naviga direttamente il
+  frontend di Home Assistant (stesso meccanismo che HA usa al suo interno, senza
+  ricaricare la pagina) e nell'app apre l'indirizzo di Home Assistant in una scheda
+  del browser, come già annunciato nella 1.46.21.
+
 ## [1.46.21] — 2026-07-18
 ### Aggiunto
 - **Scorciatoia "Impostazioni Home Assistant"** in Impostazioni → Sistema (solo admin): apre
