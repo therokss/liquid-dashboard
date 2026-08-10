@@ -70,6 +70,69 @@ function standaloneHaUrl(): string {
   return (s.activeHassUrl || s.hassUrl || s.hassUrlExternal || '').trim()
 }
 
+// ─── Plancia: iframe schiacciato ───────────────────────────────────────────
+//
+// Nel pannello dell'add-on l'iframe è sempre alto quanto lo schermo. Nella
+// plancia invece la dashboard sta in una card iframe di Lovelace, e l'altezza
+// gliela dà la vista: solo la vista "pannello" (`type: panel`) le passa tutta
+// l'altezza. In una vista a sezioni o a masonry la card ne riceve una fissa e
+// bassa (poche decine di px su un telefono): la dashboard resta schiacciata
+// sotto l'header, con la barra delle schede appiccicata subito sotto — perché
+// è `position: fixed` rispetto a un contenitore alto quanto nulla.
+//
+// La cura vera è mettere la vista a pannello, ma non possiamo darla per
+// scontata sulle plance già create a mano. L'ingress è same-origin, quindi
+// misuriamo il nostro iframe e, SOLO se è inutilizzabile, ce lo allarghiamo
+// dall'interno fino allo spazio disponibile nella pagina di HA.
+
+// Sotto quest'altezza la dashboard non è usabile: nessun contesto legittimo ci
+// dà così poco (il pannello add-on dà l'altezza piena).
+const MIN_USABLE_HEIGHT = 420
+
+// Quanti antenati risalire: iframe → #root → ha-card → hui-card → contenitore
+// della vista. Si ferma prima appena ne trova uno già abbastanza alto.
+const MAX_ANCESTORS = 6
+
+function grow(el: HTMLElement, height: number): void {
+  el.style.height = `${height}px`
+  el.style.minHeight = '0'
+  el.style.maxHeight = 'none'
+  // Lo spaziatore dell'aspect ratio della card iframe (padding-top in %)
+  el.style.paddingTop = '0'
+}
+
+// Risale al genitore, attraversando anche i confini dello shadow DOM (la card
+// iframe di Lovelace tiene iframe e contenitori dentro il proprio shadow root).
+function parentOf(el: HTMLElement): HTMLElement | null {
+  if (el.parentElement) return el.parentElement
+  const root = el.getRootNode()
+  return root instanceof ShadowRoot ? (root.host as HTMLElement) : null
+}
+
+export function fitToHostFrame(): void {
+  let frame: HTMLElement | null = null
+  try {
+    frame = window.frameElement as HTMLElement | null // null anche se cross-origin
+  } catch {
+    return
+  }
+  if (!frame || frame.tagName !== 'IFRAME') return
+  if (window.innerHeight >= MIN_USABLE_HEIGHT) return // stiamo larghi, non toccare niente
+
+  const ha = haWindow()
+  if (!ha) return
+  const available = ha.innerHeight - Math.max(0, frame.getBoundingClientRect().top)
+  if (available <= window.innerHeight + 1) return // non c'è più spazio da prendere
+
+  grow(frame, available)
+  let node = parentOf(frame)
+  for (let i = 0; i < MAX_ANCESTORS && node; i++) {
+    if (node.getBoundingClientRect().height >= available - 1) break // già capiente
+    grow(node, available)
+    node = parentOf(node)
+  }
+}
+
 export function openHomeAssistantSettings(): void {
   navigateHomeAssistant(HA_SETTINGS_PATH)
 }

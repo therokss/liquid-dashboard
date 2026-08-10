@@ -4,7 +4,7 @@ import { CloudOff } from 'lucide-react'
 import { useStore } from './store'
 import { useHA, saveToken, clearToken, clearAuth } from './hooks/useHA'
 import { useWallpaper, useAccentFromWallpaper } from './hooks/useWallpaper'
-import { setKiosk } from './lib/kiosk'
+import { setKiosk, fitToHostFrame } from './lib/kiosk'
 import { loadPrefs, applyHouse, extractHouse, savePrefs, startHouseSync } from './lib/permissions'
 import { loadUserConfig, applyUserConfig, startUserConfigSync } from './lib/userConfig'
 import { startLiveSync } from './lib/liveSync'
@@ -291,6 +291,19 @@ export default function App() {
   useEffect(() => {
     setKiosk(true)
     useStore.getState().setKioskMode(true)
+  }, [])
+
+  // Plancia: se la card iframe che ci contiene è troppo bassa, ci allarghiamo da
+  // soli. Ritentiamo qualche volta perché la card di Lovelace può assestarsi dopo
+  // di noi, e ad ogni resize/rotazione dello schermo.
+  useEffect(() => {
+    fitToHostFrame()
+    const timers = [300, 1200, 3000].map((ms) => setTimeout(fitToHostFrame, ms))
+    window.addEventListener('resize', fitToHostFrame)
+    return () => {
+      timers.forEach(clearTimeout)
+      window.removeEventListener('resize', fitToHostFrame)
+    }
   }, [])
 
   if (!initialized) {

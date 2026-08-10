@@ -108,6 +108,10 @@ Casa**.
    ```
 3. **Profilo utente → Dashboard predefinita → Casa**.
 
+> La vista deve essere **`type: panel`**: è l'unica che passa alla card tutta l'altezza
+> disponibile. In una vista a sezioni o a masonry la card riceve un'altezza fissa e sul
+> telefono la dashboard resta schiacciata in una striscia.
+
 ### Tablet a muro / telefono
 Nel browser kiosk (es. *Fully Kiosk Browser*) usa come URL di avvio
 `http://homeassistant.local:8123/hassio/ingress/<slug>` — la **modalità kiosk** è già

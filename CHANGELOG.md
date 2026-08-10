@@ -3,7 +3,18 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
-## [1.46.22] — 2026-08-02
+## [1.46.23] — 2026-08-02
+### Corretto
+- **Plancia schiacciata sul telefono**: aperta dalla dashboard "Casa", la Liquid Dashboard
+  poteva ridursi a una striscia alta poche decine di pixel sotto l'header, con la barra
+  delle schede appiccicata subito sotto e il resto dello schermo nero. Succede quando la
+  vista che contiene la card iframe **non è di tipo "pannello"**: le altre viste (a sezioni,
+  a masonry) assegnano alla card un'altezza fissa e bassa, e su uno schermo stretto resta
+  quasi niente. Ora la dashboard se ne accorge e si allarga da sola fino allo spazio
+  disponibile. Dove l'altezza è già corretta — pannello dell'add-on nella barra laterale,
+  vista a pannello — non viene toccato nulla.
+
+
 ### Corretto
 - **La scorciatoia "Impostazioni Home Assistant" non faceva nulla.** Il messaggio di
   navigazione veniva inviato solo sul canale dell'ingress, che ha un destinatario
