@@ -101,6 +101,7 @@ interface AppStore extends DashboardConfig, HAState {
   setTheme: (theme: Partial<ThemeConfig>) => void
   togglePinnedEntity: (entityId: string) => void
   setTvMac: (entityId: string, mac: string) => void
+  setTvMacs: (macs: Record<string, string>) => void
   setTvChannels: (list: Array<{ n: number; name: string }>) => void
   toggleEntityHidden: (entityId: string) => void
   setEntityHidden: (entityId: string, hidden: boolean) => void
@@ -261,6 +262,7 @@ export const useStore = create<AppStore>()(
         })),
       setTvMac: (entityId, mac) =>
         set((s) => ({ tvMacs: { ...s.tvMacs, [entityId]: mac.trim() } })),
+      setTvMacs: (tvMacs) => set({ tvMacs }),
       setTvChannels: (tvChannels) => set({ tvChannels }),
       toggleEntityHidden: (entityId) =>
         set((s) => {

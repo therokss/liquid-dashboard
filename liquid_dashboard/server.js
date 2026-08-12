@@ -12,6 +12,7 @@ const PREFS_PATH = '/data/ld_prefs.json';
 const USER_CFG_PATH = '/data/ld_user_configs.json';
 const DASHBOARDS_PATH = '/data/ld_dashboards.json';
 const FAN_PRESETS_PATH = '/data/ld_fan_presets.json';
+const TV_MACS_PATH = '/data/ld_tv_macs.json';
 
 // Cerca SUPERVISOR_TOKEN in env e nelle directory s6-rc (HA base image)
 function detectSupervisorToken() {
@@ -243,6 +244,45 @@ if (INGRESS_ENTRY) {
 }
 app.get('/api/fan-presets', fanPresetsGetHandler);
 app.post('/api/fan-presets', fanPresetsSaveHandler);
+
+// --- MAC delle TV per il Wake-on-LAN ----------------------------------------------
+// Molte TV LG non espongono il MAC a Home Assistant, quindi si scrive a mano nel
+// telecomando. È una proprietà della TV, non del browser: sta qui (condiviso fra
+// utenti e schermi) invece che nel localStorage del singolo dispositivo, dove si
+// perdeva cambiando telefono o svuotando i dati del browser.
+function readTvMacs() {
+  try { return JSON.parse(fs.readFileSync(TV_MACS_PATH, 'utf8')); } catch { return {}; }
+}
+async function tvMacsGetHandler(req, res) {
+  if (!req.headers['x-remote-user-id']) {
+    const user = await getUser(req);
+    if (!user) { res.status(401).json({ error: 'unauthorized' }); return; }
+  }
+  res.json({ macs: readTvMacs() });
+}
+async function tvMacsSaveHandler(req, res) {
+  const user = await getUser(req);
+  if (!user) { res.status(401).json({ ok: false, error: 'unauthorized' }); return; }
+  const { entityId, mac } = req.body || {};
+  if (!entityId || typeof entityId !== 'string' || typeof mac !== 'string') {
+    res.status(400).json({ ok: false, error: 'bad request' }); return;
+  }
+  const all = readTvMacs();
+  const clean = mac.trim();
+  if (clean) all[entityId] = clean; else delete all[entityId];
+  try {
+    fs.writeFileSync(TV_MACS_PATH, JSON.stringify(all));
+    res.json({ ok: true, macs: all });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+}
+if (INGRESS_ENTRY) {
+  app.get(`${INGRESS_ENTRY}/api/tv-macs`, tvMacsGetHandler);
+  app.post(`${INGRESS_ENTRY}/api/tv-macs`, tvMacsSaveHandler);
+}
+app.get('/api/tv-macs', tvMacsGetHandler);
+app.post('/api/tv-macs', tvMacsSaveHandler);
 
 // --- Versione della config (solo timestamp dei file) per il sync "live" ------------
 // Il polling di app/dashboard interroga questo endpoint leggerissimo ogni ~10s:
@@ -579,7 +619,7 @@ function proxyToHA(browserWs) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Liquid Dashboard] v1.46.23 — porta ${PORT}`);
+  console.log(`[Liquid Dashboard] v1.46.24 — porta ${PORT}`);
   console.log(`[LD] HA WebSocket → ${HA_WS_URL}`);
   console.log(`[LD] Token supervisore: ${SUPERVISOR_TOKEN ? 'presente' : 'MANCANTE'}`);
   if (INGRESS_ENTRY) console.log(`[LD] Ingress path: ${INGRESS_ENTRY}`);

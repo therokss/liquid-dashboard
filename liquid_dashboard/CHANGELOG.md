@@ -3,6 +3,21 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.46.24] — 2026-08-02
+### Corretto
+- **Telecomando TV, pad direzionale ovale**: sugli schermi dove il telecomando è più alto
+  dello spazio disponibile il pannello schiacciava i suoi blocchi in verticale, e il
+  contorno del pad — che è un cerchio — veniva fuori come un'ellisse (216×168 px invece
+  di 216×216). Ora i blocchi mantengono la loro altezza e si scorre, come previsto.
+- **Telecomando TV, barre Volume e Canali**: i tasti restavano ammucchiati in cima alla
+  barra con un buco vuoto sotto. Ora sono distribuiti: **+** in alto, etichetta al centro,
+  **−** in fondo.
+- **Il MAC per il Wake-on-LAN non veniva ricordato**: era salvato solo nel browser in cui
+  l'avevi scritto, quindi spariva cambiando dispositivo o svuotando i dati. Il MAC è una
+  proprietà della TV, non del telefono: ora è **condiviso** lato add-on (`/api/tv-macs`)
+  e lo ritrovi su tutti gli schermi e per tutti gli utenti. I MAC già inseriti vengono
+  caricati sul server la prima volta che apri il telecomando.
+
 ## [1.46.23] — 2026-08-02
 ### Corretto
 - **Plancia schiacciata sul telefono**: aperta dalla dashboard "Casa", la Liquid Dashboard

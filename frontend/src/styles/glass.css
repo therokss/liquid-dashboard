@@ -312,6 +312,14 @@ body {
   transform: scale(1.2);
 }
 
+/* ─── Telecomando TV ─── */
+/* Il pannello del telecomando è una colonna flex che scorre: senza questo i suoi
+   blocchi si schiacciano in verticale quando il telecomando è più alto dello
+   schermo (il pad direzionale diventava un'ellisse invece di un cerchio). */
+.tv-remote > * {
+  flex-shrink: 0;
+}
+
 /* ─── Scrollbar custom ─── */
 .glass-scroll {
   overflow-y: auto;

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import {
@@ -9,6 +9,7 @@ import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { useT } from '../i18n'
 import { findPairedRemote } from '../lib/mediaDevices'
+import { syncTvMacs, saveTvMac } from '../lib/tvMacs'
 import type { MediaKind } from '../lib/mediaDevices'
 import type { HassEntity } from '../types/ha'
 
@@ -138,7 +139,7 @@ function DPad({ on }: { on: (c: Cmd) => void }) {
     <div
       style={{
         display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(3, 1fr)',
-        width: 216, height: 216, borderRadius: '50%', margin: '0 auto',
+        width: 216, height: 216, aspectRatio: '1 / 1', borderRadius: '50%', margin: '0 auto',
         background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
         boxShadow: 'inset 0 1px 0 var(--glass-rim), 0 4px 18px rgba(0,0,0,0.25)', padding: 6,
       }}
@@ -159,7 +160,10 @@ function DPad({ on }: { on: (c: Cmd) => void }) {
 // Barra verticale +/- (volume o canali) con etichetta centrale.
 function PlusMinus({ onPlus, onMinus, label }: { onPlus: () => void; onMinus: () => void; label: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-pill)', padding: '10px 6px' }}>
+    // La barra si allunga fino all'altezza della colonna centrale: i tasti vanno
+    // distribuiti (+ in alto, − in basso, etichetta al centro), altrimenti restano
+    // ammucchiati in cima con un buco sotto.
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-pill)', padding: '10px 6px' }}>
       <Key onPress={onPlus} size={46} label={`${label} +`}><Plus size={22} /></Key>
       <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
       <Key onPress={onMinus} size={46} label={`${label} -`}><Minus size={22} /></Key>
@@ -182,6 +186,27 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
   // non espongono il MAC a HA, quindi il registro è vuoto).
   const registryMac = deviceInfo[entityDevices[entityId] ?? '']?.mac
   const [macInput, setMacInput] = useState(tvMacs[entityId] ?? registryMac ?? '')
+
+  // Il MAC è condiviso lato add-on: all'apertura riallineiamo la copia locale, così
+  // lo trovi anche su un altro telefono o dopo aver svuotato i dati del browser.
+  useEffect(() => {
+    let annullato = false
+    void syncTvMacs().then(() => {
+      if (annullato) return
+      const shared = useStore.getState().tvMacs[entityId]
+      if (shared) setMacInput(shared)
+    })
+    return () => { annullato = true }
+  }, [entityId])
+
+  // Salvataggio del MAC: subito in locale, sul server a fine digitazione.
+  const macSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const changeMac = (value: string) => {
+    setMacInput(value)
+    setTvMac(entityId, value)
+    if (macSaveTimer.current) clearTimeout(macSaveTimer.current)
+    macSaveTimer.current = setTimeout(() => { void saveTvMac(entityId, value) }, 600)
+  }
   const [showNum, setShowNum] = useState(false)
   const [showSound, setShowSound] = useState(false)
   const [showChannels, setShowChannels] = useState(false)
@@ -247,7 +272,7 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 320, damping: 32 }}
         onClick={(ev) => ev.stopPropagation()}
-        className="glass-scroll"
+        className="glass-scroll tv-remote"
         style={{ background: '#08192b', borderTop: '1px solid var(--glass-border)', borderTopLeftRadius: 22, borderTopRightRadius: 22, maxWidth: 460, width: '100%', margin: '0 auto', maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 18, padding: 'var(--space-lg) var(--space-lg) calc(env(safe-area-inset-bottom, 0px) + var(--space-lg))' }}
       >
         {/* Header: nome + accensione + chiudi */}
@@ -415,7 +440,8 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
             <div className="text-caption" style={{ marginBottom: 8 }}>{t('Accensione (Wake-on-LAN)')}</div>
             <input
               value={macInput}
-              onChange={(ev) => { setMacInput(ev.target.value); setTvMac(entityId, ev.target.value) }}
+              onChange={(ev) => changeMac(ev.target.value)}
+              onBlur={(ev) => { void saveTvMac(entityId, ev.target.value) }}
               placeholder={t('MAC — es. 74:e6:b8:3a:8a:4c')}
               autoCapitalize="none"
               autoCorrect="off"
