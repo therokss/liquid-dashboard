@@ -13,6 +13,12 @@ La versione va tenuta allineata in `liquid_dashboard/config.yaml`, nel log di av
 
 Messaggi in italiano, senza trailer di attribuzione o firme di strumenti esterni.
 
+## Rilascio
+
+A lavoro finito e verificato si va fino in fondo senza chiedere conferma: merge del branch
+di versione su `main` (fast-forward) e push. È da `main` che Home Assistant vede
+l'aggiornamento dell'add-on, quindi una modifica che resta sul branch non è rilasciata.
+
 ## Build
 
 Il frontend sta in `frontend/` (Vite + React); l'add-on serve il build già compilato da
