@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { Tv, ChevronRight } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
@@ -11,7 +11,19 @@ import { useT } from '../../i18n'
 import type { HassEntity } from '../../types/ha'
 
 // Caricato solo all'apertura del telecomando (code-splitting)
-const TVRemoteModal = lazy(() => import('../TVRemoteModal').then((m) => ({ default: m.TVRemoteModal })))
+const loadTVRemote = () => import('../TVRemoteModal').then((m) => ({ default: m.TVRemoteModal }))
+const TVRemoteModal = lazy(loadTVRemote)
+
+// Se sullo schermo c'è una TV, il telecomando viene precaricato quando il browser è
+// libero: così il primo tocco apre subito il pannello invece di aspettare il download.
+let tvRemotePreloaded = false
+function preloadTVRemote() {
+  if (tvRemotePreloaded) return
+  tvRemotePreloaded = true
+  const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback
+  if (idle) idle(() => void loadTVRemote())
+  else setTimeout(() => void loadTVRemote(), 1500)
+}
 
 // Determina il tipo di media player (TV LG/Apple/Android/generica o altoparlante).
 export function useMediaKind(entity: HassEntity): MediaKind {
@@ -29,6 +41,7 @@ export function TVCard({ entity }: { entity: HassEntity }) {
   const t = useT()
   const kind = useMediaKind(entity)
   const [open, setOpen] = useState(false)
+  useEffect(preloadTVRemote, [])
   const attrs = entity.attributes as Record<string, unknown>
   const name = (attrs.friendly_name as string) ?? entity.entity_id
   const isOff = entity.state === 'off' || entity.state === 'standby' || entity.state === 'unavailable'

@@ -501,10 +501,10 @@ export function SettingsPage() {
       </MasonryColumns>
 
       <AnimatePresence initial={false}>
-        {showDashboards && <DashboardsPage onBack={() => setShowDashboards(false)} />}
-        {showServer && <ServerPage onBack={() => setShowServer(false)} />}
-        {showUpdates && <UpdatesPage onBack={() => setShowUpdates(false)} />}
-        {showQR && <Suspense fallback={null}><CredsQRModal url={hassUrl} externalUrl={hassUrlExternal} onClose={() => setShowQR(false)} /></Suspense>}
+        {showDashboards && <DashboardsPage key="dashboards" onBack={() => setShowDashboards(false)} />}
+        {showServer && <ServerPage key="server" onBack={() => setShowServer(false)} />}
+        {showUpdates && <UpdatesPage key="updates" onBack={() => setShowUpdates(false)} />}
+        {showQR && <Suspense key="qr" fallback={null}><CredsQRModal url={hassUrl} externalUrl={hassUrlExternal} onClose={() => setShowQR(false)} /></Suspense>}
       </AnimatePresence>
     </div>
   )

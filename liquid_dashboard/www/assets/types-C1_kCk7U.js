@@ -1,0 +1,1 @@
+const n={lg:12,sm:4},a=84;function o(){return"c"+Math.random().toString(36).slice(2,9)}function r(t){return{id:"d"+Math.random().toString(36).slice(2,9),name:t,cards:[],updatedAt:Date.now()}}export{n as G,a,r as e,o as n};
