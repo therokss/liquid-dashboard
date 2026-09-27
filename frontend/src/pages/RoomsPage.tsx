@@ -511,7 +511,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
         )}
       </MasonryColumns>
 
-      {detailEntity && <DeviceDetailModal entityId={detailEntity} onClose={() => setDetailEntity(null)} />}
+      <AnimatePresence>{detailEntity && <DeviceDetailModal entityId={detailEntity} onClose={() => setDetailEntity(null)} />}</AnimatePresence>
     </motion.div>
   )
 }
@@ -562,7 +562,7 @@ function FanCard({ entity, onToggle }: { entity: HassEntity; onToggle: () => voi
         </label>
         <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
       </div>
-      {detail && <DeviceDetailModal entityId={entity.entity_id} onClose={() => setDetail(false)} />}
+      <AnimatePresence>{detail && <DeviceDetailModal entityId={entity.entity_id} onClose={() => setDetail(false)} />}</AnimatePresence>
     </>
   )
 }
@@ -766,7 +766,7 @@ function RoomCard({ area, gradient, stat, onClick, index }: {
 
   return (
     <motion.button
-      className="anim-scale-in"
+      className="anim-scale-in room-card"
       style={{ animationDelay: `${index * 45}ms`, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
@@ -775,21 +775,25 @@ function RoomCard({ area, gradient, stat, onClick, index }: {
         style={{
           background: `linear-gradient(140deg, ${c1}, ${c2})`,
           borderRadius: 'var(--radius-lg)',
+          // Quadrata, ma cresce se nome/sottotitolo non ci stanno: niente overflow:hidden qui
+          // (con aspect-ratio lo impediva e tagliava il testo), i livelli decorativi sono
+          // ritagliati dal loro contenitore.
           aspectRatio: '1',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           padding: 'var(--space-lg)',
           position: 'relative',
-          overflow: 'hidden',
           boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
         }}
       >
-        {/* Livelli vetro */}
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.12)', borderRadius: 'inherit' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'var(--glass-specular)', borderRadius: 'inherit' }} />
-        {/* Bagliore radiale in basso */}
-        <div style={{ position: 'absolute', right: -30, bottom: -30, width: 120, height: 120, background: 'radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', overflow: 'hidden' }}>
+          {/* Livelli vetro */}
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.12)', borderRadius: 'inherit' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'var(--glass-specular)', borderRadius: 'inherit' }} />
+          {/* Bagliore radiale in basso */}
+          <div style={{ position: 'absolute', right: -30, bottom: -30, width: 120, height: 120, background: 'radial-gradient(circle, rgba(255,255,255,0.25), transparent 70%)', borderRadius: '50%' }} />
+        </div>
 
         {/* Top: icona + badge luci accese */}
         <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -828,10 +832,11 @@ function RoomCard({ area, gradient, stat, onClick, index }: {
 
         {/* Bottom: nome + sottotitolo */}
         <div style={{ position: 'relative', textAlign: 'left' }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: 'white', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+          {/* text-shadow: leggibile anche sopra il riflesso chiaro del tema chiaro */}
+          <div style={{ fontSize: 17, fontWeight: 800, color: 'white', letterSpacing: '-0.02em', lineHeight: 1.15, overflowWrap: 'anywhere', textShadow: '0 1px 3px rgba(0,0,0,0.28)' }}>
             {area.name}
           </div>
-          <div style={{ fontSize: 12.5, fontWeight: 500, color: 'rgba(255,255,255,0.8)', marginTop: 3 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: 'rgba(255,255,255,0.8)', marginTop: 3, textShadow: '0 1px 3px rgba(0,0,0,0.28)' }}>
             {subtitle}
           </div>
         </div>

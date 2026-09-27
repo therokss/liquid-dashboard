@@ -35,6 +35,7 @@ function ThemeApplier() {
     const apply = () => {
       const dark = theme.mode === 'dark' || (theme.mode === 'auto' && mq.matches)
       root.setAttribute('data-theme', dark ? 'dark' : 'light')
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#051424' : '#e9eef5')
     }
     apply()
     if (theme.mode === 'auto') {
@@ -117,7 +118,7 @@ function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
           Nessuna risposta da Home Assistant.<br />
           Verifica di essere sulla stessa rete Wi-Fi.
         </p>
-        <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--glass-border)', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: 'var(--text-tertiary)', fontFamily: 'monospace', wordBreak: 'break-all', textAlign: 'center' }}>
+        <div style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 10, padding: '10px 16px', fontSize: 13, color: 'var(--text-tertiary)', fontFamily: 'monospace', wordBreak: 'break-all', textAlign: 'center' }}>
           {hassUrl}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>

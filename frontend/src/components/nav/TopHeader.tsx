@@ -68,10 +68,13 @@ export function TopHeader() {
     } catch { /* ignora */ }
   }
 
-  if (!isAdmin && persons.length === 0) return null
+  // Senza contenuti l'header non si vede, ma resta lo spazio della safe-area in alto:
+  // .page non ne tiene conto e il titolo finirebbe sotto il notch.
+  if (!isAdmin && persons.length === 0) return <div style={{ height: 'env(safe-area-inset-top, 0px)', flexShrink: 0 }} />
 
   return (
     <div
+      className="top-header"
       style={{
         display: 'flex',
         alignItems: 'center',

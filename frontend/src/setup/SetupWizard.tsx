@@ -22,16 +22,18 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   return (
     <div
       style={{
-        minHeight: '100dvh',
+        // La pagina scorre (html/body sono overflow:hidden): su telefono in orizzontale
+        // il contenuto è più alto dello schermo. Centratura con margin:auto sul figlio,
+        // così quando trabocca non viene tagliato in alto come con align-items:center.
+        height: '100dvh',
+        overflowY: 'auto',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         padding: 'var(--space-md)',
         paddingTop: 'max(var(--space-xl), env(safe-area-inset-top, 20px))',
         paddingBottom: 'max(var(--space-xl), env(safe-area-inset-bottom, 20px))',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 420 }}>
+      <div style={{ width: '100%', maxWidth: 420, margin: 'auto' }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-2xl)' }}>
           <motion.div
@@ -78,7 +80,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
                   width: 28,
                   height: 28,
                   borderRadius: '50%',
-                  background: i <= stepIndex ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                  background: i <= stepIndex ? 'var(--accent)' : 'rgba(128,128,128,0.18)',
                   border: i <= stepIndex ? 'none' : '1px solid var(--glass-border)',
                   display: 'flex',
                   alignItems: 'center',
@@ -109,7 +111,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
                   style={{
                     flex: 1,
                     height: 1,
-                    background: i < stepIndex ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                    background: i < stepIndex ? 'var(--accent)' : 'rgba(128,128,128,0.3)',
                     marginLeft: 8,
                     transition: 'background 0.3s ease',
                   }}
@@ -122,7 +124,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         {/* Glass container */}
         <div
           className="glass-panel glass-scroll"
-          style={{ maxHeight: 'calc(100dvh - 320px)', overflowY: 'auto', padding: 'var(--space-xl)' }}
+          style={{ maxHeight: 'max(calc(100dvh - 320px), 300px)', overflowY: 'auto', padding: 'var(--space-xl)' }}
         >
           <AnimatePresence mode="wait">
             {currentStep === 'connect' && (

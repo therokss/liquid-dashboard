@@ -20,6 +20,13 @@ body {
   overscroll-behavior: none;
 }
 
+/* 1% dell'altezza visibile: dvh (esclude le barre del browser su mobile) con fallback vh.
+   Uso: calc(85 * var(--dvh)) nei pannelli che salgono dal basso. */
+:root { --dvh: 1vh; }
+@supports (height: 1dvh) {
+  :root { --dvh: 1dvh; }
+}
+
 /* ─── App background con wallpaper ─── */
 .app-root {
   position: fixed;
@@ -29,6 +36,11 @@ body {
   background-size: cover;
   background-position: center;
   transition: background-image 2s ease;
+}
+/* Tema chiaro: fondo sotto il wallpaper uguale a quello di index.html, così nel frame
+   prima che useWallpaper imposti --wallpaper-url non lampeggia il navy. */
+[data-theme="light"] .app-root {
+  background-color: #e9eef5;
 }
 
 .app-root::before {
@@ -41,6 +53,14 @@ body {
     radial-gradient(circle at 88% 94%, rgba(74, 142, 255, 0.14), transparent 46%),
     var(--wallpaper-overlay);
   transition: background 2s ease;
+}
+
+/* Tutti i figli diretti sopra il velo di ::before (wizard, caricamento, errore di
+   connessione non sono posizionati e finivano sotto l'overlay). Chi ha uno stile inline
+   (es. position: fixed dell'onboarding) lo mantiene; i portali vivono nel body. */
+.app-root > * {
+  position: relative;
+  z-index: 1;
 }
 
 .app-content {
@@ -177,6 +197,11 @@ body {
   border-color: rgba(255, 255, 255, 0.2);
   color: white;
   box-shadow: 0 4px 15px rgba(0, 179, 190, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* Tema chiaro: testo bianco su ciano #00dbe7 non leggibile → inchiostro scuro come .ld-chip-on */
+[data-theme="light"] .glass-btn-accent {
+  color: #04121e;
 }
 
 .glass-btn-accent:active {
@@ -320,6 +345,14 @@ body {
   flex-shrink: 0;
 }
 
+/* ─── Tab bar senza backdrop-filter (browser/webview vecchi) ─── */
+/* Senza sfocatura il vetro al 5-60% lascia leggere il contenuto sotto le icone:
+   sfondo quasi opaco. !important per battere lo stile inline di TabBar. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ld-tabbar { background: rgba(244, 246, 250, 0.96) !important; }
+  [data-theme="dark"] .ld-tabbar { background: rgba(8, 25, 43, 0.96) !important; }
+}
+
 /* ─── Scrollbar custom ─── */
 .glass-scroll {
   overflow-y: auto;
@@ -338,6 +371,14 @@ body {
 .glass-scroll::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
+}
+
+/* Tema chiaro: scrollbar scura (bianca era invisibile sulle card chiare) */
+[data-theme="light"] .glass-scroll {
+  scrollbar-color: rgba(15, 23, 42, 0.25) transparent;
+}
+[data-theme="light"] .glass-scroll::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.25);
 }
 
 /* ─── Typography ─── */
@@ -374,12 +415,30 @@ body {
   --on-wallpaper-dim: rgba(255, 255, 255, 0.82);
 }
 
+/* Tema scuro: --wallpaper-overlay copre il wallpaper con navy al 78-88%, quindi il fondo
+   effettivo è SEMPRE scuro, qualunque sia la luminosità del wallpaper grezzo (i gradienti
+   di mattina/giorno/sera e le foto chiare risultavano "chiari" → testo scuro su scuro).
+   Vale anche per i contenitori forzati scuri (es. editor dashboard, che applica lo stesso overlay). */
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  --on-wallpaper: #ffffff;
+  --on-wallpaper-dim: rgba(255, 255, 255, 0.82);
+}
+
 /* Utility per il testo direttamente sul wallpaper (saluto, data, titoli sezione tab).
    !important perché deve battere gli override di tema tipo [data-theme] .text-caption. */
 .on-wall { color: var(--on-wallpaper) !important; }
 .on-wall-dim { color: var(--on-wallpaper-dim) !important; }
 /* Ombra tenue per leggibilità sui bordi ad alto contrasto del wallpaper. */
 .on-wall, .on-wall-dim { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+
+/* Chip "N luci accese" (Home): il giallo #ffd400 sparisce su wallpaper chiari →
+   riempimento giallo pieno con testo scuro (solo tema chiaro + wallpaper chiaro). */
+:root[data-theme="light"]:not([data-wallpaper-dark="1"]) .ld-lights-chip {
+  background: rgba(255, 212, 0, 0.8) !important;
+  border-color: rgba(120, 90, 0, 0.18) !important;
+  color: #3a2c00 !important;
+}
 
 /* ─── Glow effect per entità attive ─── */
 .entity-glow {
@@ -432,6 +491,17 @@ body {
 }
 .grid-fluid > *,
 .grid-fluid-lg > * { min-width: 0; }
+
+/* Griglia stanze (card quadrate): su telefoni molto stretti (≤359px) due colonne invece
+   di una sola con card enormi; da tablet in su card più larghe, così nome e sottotitolo
+   non vengono tagliati. Telefoni normali: invariato. */
+@media (max-width: 359px) {
+  .grid-fluid-lg:has(> .room-card) { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--space-sm); }
+  .room-card > div { padding: var(--space-md) !important; }
+}
+@media (min-width: 768px) {
+  .grid-fluid-lg:has(> .room-card) { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
 
 /* Card con NOME + controllo (luci, interruttori): abbastanza larghe da non tagliare
    i nomi. Su telefono → 1 colonna piena; su tablet/desktop → più colonne. */
@@ -507,6 +577,11 @@ body {
     margin-left: auto;
     margin-right: auto;
   }
+  /* TopHeader allineato alla colonna di contenuto di .page (padding + max-width centrata) */
+  .top-header {
+    padding-left: max(var(--space-xl), calc(50% - 410px)) !important;
+    padding-right: max(var(--space-xl), calc(50% - 410px)) !important;
+  }
 }
 
 /* iPad landscape / desktop: allarga il contenuto e ingrandisci le card con nome.
@@ -515,6 +590,10 @@ body {
 @media (min-width: 1080px) {
   .page > * {
     max-width: 1100px;
+  }
+  .top-header {
+    padding-left: max(var(--space-xl), calc(50% - 550px)) !important;
+    padding-right: max(var(--space-xl), calc(50% - 550px)) !important;
   }
   /* Card con nome: leggermente più larghe su desktop per respiro. */
   .grid-cards {
@@ -526,5 +605,9 @@ body {
 @media (min-width: 1600px) {
   .page > * {
     max-width: 1500px;
+  }
+  .top-header {
+    padding-left: max(var(--space-xl), calc(50% - 750px)) !important;
+    padding-right: max(var(--space-xl), calc(50% - 750px)) !important;
   }
 }

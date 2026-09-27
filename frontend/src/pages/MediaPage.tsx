@@ -89,7 +89,7 @@ export function MediaPage() {
       <MasonryColumns rowGap="0px">
       {tvs.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>{t('TV')}</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('TV')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {tvs.map((entity) => <TVCard key={entity.entity_id} entity={entity} />)}
           </div>
@@ -98,7 +98,7 @@ export function MediaPage() {
 
       {playing.length > 0 && (
         <div style={{ marginBottom: 'var(--space-xl)' }}>
-          <div className="text-caption" style={{ marginBottom: 10 }}>{t('In riproduzione')}</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('In riproduzione')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {playing.map((entity, i) => (
               <motion.div key={entity.entity_id} className="anim-slide-up" style={{ animationDelay: `${i * 60}ms` }}>
@@ -111,7 +111,7 @@ export function MediaPage() {
 
       {others.length > 0 && (
         <div>
-          <div className="text-caption" style={{ marginBottom: 10 }}>{t('Disponibili')}</div>
+          <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Disponibili')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {others.map((entity, i) => (
               <motion.div key={entity.entity_id} className="anim-scale-in" style={{ animationDelay: `${i * 40}ms` }}>

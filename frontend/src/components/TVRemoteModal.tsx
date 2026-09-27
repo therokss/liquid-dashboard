@@ -273,7 +273,7 @@ export function TVRemoteModal({ entityId, kind, onClose }: { entityId: string; k
         transition={{ type: 'spring', stiffness: 320, damping: 32 }}
         onClick={(ev) => ev.stopPropagation()}
         className="glass-scroll tv-remote"
-        style={{ background: '#08192b', borderTop: '1px solid var(--glass-border)', borderTopLeftRadius: 22, borderTopRightRadius: 22, maxWidth: 460, width: '100%', margin: '0 auto', maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 18, padding: 'var(--space-lg) var(--space-lg) calc(env(safe-area-inset-bottom, 0px) + var(--space-lg))' }}
+        style={{ background: '#08192b', borderTop: '1px solid var(--glass-border)', borderTopLeftRadius: 22, borderTopRightRadius: 22, maxWidth: 460, width: '100%', margin: '0 auto', maxHeight: 'calc(92 * var(--dvh))', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 18, padding: 'var(--space-lg) var(--space-lg) calc(env(safe-area-inset-bottom, 0px) + var(--space-lg))' }}
       >
         {/* Header: nome + accensione + chiudi */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

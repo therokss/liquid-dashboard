@@ -97,7 +97,7 @@ export function SettingsPage() {
         {/* Connessione */}
         <Section title="Connessione">
           <SettingRow label="Home Assistant URL">
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'monospace', minWidth: 0, overflowWrap: 'anywhere' }}>
               {hassUrl || t('Non configurato')}
             </span>
           </SettingRow>
@@ -113,7 +113,7 @@ export function SettingsPage() {
         {/* Lingua */}
         <Section title="Lingua">
           <SettingRow label="Lingua dell'app">
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, minWidth: 0 }}>
               {([
                 ['it', 'Italiano'],
                 ['en', 'English'],
@@ -134,7 +134,7 @@ export function SettingsPage() {
         {/* Sistema — solo amministratori */}
         {isAdmin && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Sistema')}</div>
+            <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Sistema')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <motion.button
                 whileTap={{ scale: 0.98 }}
@@ -244,7 +244,7 @@ export function SettingsPage() {
         {/* Visibilità dispositivi */}
         {can('visibility') && (
           <div>
-            <div className="text-caption" style={{ marginBottom: 10 }}>{t('Visibilità dispositivi')}</div>
+            <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Visibilità dispositivi')}</div>
             <VisibilityStepper />
           </div>
         )}
@@ -528,7 +528,7 @@ function AreaVisibilitySettings() {
   const sorted = [...areas].sort((a, b) => a.name.localeCompare(b.name))
   return (
     <div>
-      <div className="text-caption" style={{ marginBottom: 10 }}>{t('Stanze visibili')}</div>
+      <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Stanze visibili')}</div>
       <div className="glass-panel" style={{ padding: 'var(--space-md) var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 0 }}>
         <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', paddingBottom: 4, lineHeight: 1.5 }}>
           {t('Spegni le stanze che non vuoi mostrare nella dashboard.')}
@@ -574,7 +574,7 @@ function FullscreenDashboardSetup() {
 
   return (
     <div>
-      <div className="text-caption" style={{ marginBottom: 10 }}>{t('Plancia a schermo intero')}</div>
+      <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Plancia a schermo intero')}</div>
       <div className="glass-panel" style={{ padding: 'var(--space-md) var(--space-lg)' }}>
         {configured ? (
           <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -619,7 +619,7 @@ function PermissionsPanel() {
 
   return (
     <div>
-      <div className="text-caption" style={{ marginBottom: 10 }}>{t('Permessi utenti')}</div>
+      <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Permessi utenti')}</div>
       <div className="glass-panel" style={{ padding: 'var(--space-md) var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 0 }}>
         <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', paddingBottom: 4, lineHeight: 1.5 }}>
           {t('Scegli cosa possono modificare gli utenti')} <b>{t('non amministratori')}</b>. {t('Vale per tutti i dispositivi.')}
@@ -905,7 +905,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   const t = useT()
   return (
     <div>
-      <div className="text-caption" style={{ marginBottom: 10 }}>{t(title)}</div>
+      <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t(title)}</div>
       <div
         className="glass-panel"
         style={{ padding: 'var(--space-md) var(--space-lg)', display: 'flex', flexDirection: 'column', gap: 0 }}
@@ -924,12 +924,14 @@ function SettingRow({ label, children }: { label: string; children: React.ReactN
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        // Su schermi stretti il controllo va a capo sotto l'etichetta invece di uscire dalla card
+        flexWrap: 'wrap',
         gap: 12,
         padding: '12px 0',
         borderBottom: '1px solid var(--glass-border-dim)',
       }}
     >
-      <span style={{ fontSize: 15, color: 'var(--text-primary)', flex: 1 }}>{t(label)}</span>
+      <span style={{ fontSize: 15, color: 'var(--text-primary)', flex: '1 1 140px', minWidth: 0, overflowWrap: 'anywhere' }}>{t(label)}</span>
       {children}
     </div>
   )

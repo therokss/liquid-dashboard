@@ -117,7 +117,7 @@ export function LightCard({ entity, compact }: LightCardProps) {
         </div>
         <ToggleSwitch isOn={isOn} onToggle={toggle} color={colorCss} />
       </GlassCard>
-      {showDetail && <LightDetailModal entity={entity} onClose={() => setShowDetail(false)} />}
+      <AnimatePresence>{showDetail && <LightDetailModal entity={entity} onClose={() => setShowDetail(false)} />}</AnimatePresence>
       </>
     )
   }
@@ -225,7 +225,7 @@ export function LightCard({ entity, compact }: LightCardProps) {
         )}
       </AnimatePresence>
     </GlassCard>
-    {showDetail && <LightDetailModal entity={entity} onClose={() => setShowDetail(false)} />}
+    <AnimatePresence>{showDetail && <LightDetailModal entity={entity} onClose={() => setShowDetail(false)} />}</AnimatePresence>
     </>
   )
 }

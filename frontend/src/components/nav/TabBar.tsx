@@ -21,6 +21,7 @@ export function TabBar({ active, onChange }: TabBarProps) {
   const t = useT()
   return (
     <div
+      className="ld-tabbar"
       style={{
         position: 'fixed',
         bottom: 0,

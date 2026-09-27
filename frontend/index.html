@@ -11,6 +11,26 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <title>Liquid Dashboard</title>
+    <!-- Tema applicato PRIMA del bundle (ThemeApplier usa useEffect: 1-2 frame senza data-theme).
+         Legge lo stesso stato persistito dello store; qualsiasi errore → resta il default scuro. -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('liquid-dashboard-config')
+          var theme = raw ? (JSON.parse(raw).state || {}).theme : null
+          var mode = (theme && theme.mode) || 'dark'
+          var dark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) meta.setAttribute('content', dark ? '#051424' : '#e9eef5')
+        } catch (e) { /* localStorage non disponibile: default scuro */ }
+      })()
+    </script>
+    <!-- Sfondo prima che React monti: evita il lampo bianco all'avvio -->
+    <style>
+      html, body { background: #051424; color-scheme: dark; }
+      html[data-theme="light"], html[data-theme="light"] body { background: #e9eef5; color-scheme: light; }
+    </style>
     <link rel="icon" type="image/svg+xml" href="/local/liquid-dashboard/icon.svg" />
   </head>
   <body>

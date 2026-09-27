@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Tv, ChevronRight } from 'lucide-react'
 import { useStore } from '../../store'
 import { getDomain } from '../../types/ha'
@@ -43,7 +44,7 @@ export function TVCard({ entity }: { entity: HassEntity }) {
         </div>
         <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
       </div>
-      {open && <TVRemoteModal entityId={entity.entity_id} kind={kind} onClose={() => setOpen(false)} />}
+      <AnimatePresence>{open && <TVRemoteModal entityId={entity.entity_id} kind={kind} onClose={() => setOpen(false)} />}</AnimatePresence>
     </>
   )
 }

@@ -197,7 +197,7 @@ export function MyDevicesSection() {
 
   return (
     <div style={{ marginBottom: 'var(--space-xl)' }}>
-      <div className="text-caption" style={{ marginBottom: 10 }}>{t('I miei dispositivi')}</div>
+      <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('I miei dispositivi')}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {devices.map((d) => <DeviceRow key={d.key} d={d} onOpen={() => setSelected(d)} />)}
       </div>

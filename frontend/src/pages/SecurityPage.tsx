@@ -28,7 +28,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   const t = useT()
   return (
     <div style={{ marginBottom: 'var(--space-xl)' }}>
-      <div className="text-caption" style={{ marginBottom: 10 }}>{t(title)}</div>
+      <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t(title)}</div>
       {children}
     </div>
   )

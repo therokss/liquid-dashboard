@@ -105,6 +105,16 @@
   border-radius: var(--radius-sm);
 }
 
+/* Tema chiaro: il bianco semitrasparente sparisce su fondi chiari → shimmer grigio scuro */
+[data-theme="light"] .skeleton {
+  background-image: linear-gradient(
+    90deg,
+    rgba(15,23,42,0.06) 0%,
+    rgba(15,23,42,0.12) 50%,
+    rgba(15,23,42,0.06) 100%
+  );
+}
+
 /* ─── Transizioni pagina ─── */
 .page-enter {
   animation: slideUp 0.45s var(--ease-out) both;

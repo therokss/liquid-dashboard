@@ -164,7 +164,8 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       {/* Selettore stanza + toggle vista (scheda una-alla-volta ↔ lista) */}
       <div>
-        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 600 }}>{t('Scegli la stanza da configurare')}</div>
+        {/* on-wall-dim: in Impostazioni sta direttamente sul wallpaper (anche scuro di notte) */}
+        <div className="on-wall-dim" style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 600 }}>{t('Scegli la stanza da configurare')}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>{areaSelect}</div>
           <button
@@ -225,7 +226,7 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
           <ChevronLeft size={18} />
         </button>
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6 }}>
+          <div className="on-wall-dim" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6 }}>
             <span>{total === 0 ? t('Nessuno da rivedere') : t('{{a}} di {{b}}', { a: Math.min(index + 1, total), b: total })}</span>
             <span>{t('{{n}} nascosti', { n: hiddenCount })}</span>
           </div>

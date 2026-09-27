@@ -40,7 +40,7 @@ export function CamerasSection() {
 
   return (
     <div style={{ marginBottom: 'var(--space-xl)' }}>
-      <div className="text-caption" style={{ marginBottom: 10 }}>{t('Videocamere')}</div>
+      <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Videocamere')}</div>
       <div className="grid-fluid-lg">
         {cams.map((c) => (
           <button key={c.entity_id} onClick={() => setFull(c)}

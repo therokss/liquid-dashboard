@@ -54,6 +54,8 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
         position: 'fixed', inset: 0, zIndex: 2000, overflowY: 'auto',
         background: 'var(--overlay-scrim)',
         backdropFilter: 'blur(32px) saturate(1.4)', WebkitBackdropFilter: 'blur(32px) saturate(1.4)',
+        // Overlay a tutto schermo: sopra al notch (come EnergyCard)
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + var(--space-lg))',
       }}
       className="page"
     >

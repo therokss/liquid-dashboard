@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Tv, Sparkles, Sun } from 'lucide-react'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
@@ -171,7 +172,7 @@ function HueSyncCard({ box }: { box: Box }) {
         </>
       )}
     </div>
-    {detail && <DeviceDetailModal entityId={box.hdmi.entity_id} onClose={() => setDetail(false)} />}
+    <AnimatePresence>{detail && <DeviceDetailModal entityId={box.hdmi.entity_id} onClose={() => setDetail(false)} />}</AnimatePresence>
     </>
   )
 }

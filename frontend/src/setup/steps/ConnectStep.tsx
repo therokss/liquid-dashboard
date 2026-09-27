@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Wifi, Check, AlertCircle, ChevronDown, QrCode } from 'lucide-react'
 import { createLongLivedTokenAuth, createConnection } from 'home-assistant-js-websocket'
 import { useStore } from '../../store'
@@ -231,7 +231,7 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
         {status === 'testing' ? t('Connessione in corso…') : status === 'success' ? t('Connesso!') : t('Connetti')}
       </motion.button>
 
-      {showScanner && <QRScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
+      <AnimatePresence>{showScanner && <QRScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}</AnimatePresence>
     </motion.div>
   )
 }

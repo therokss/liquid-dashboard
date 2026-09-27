@@ -373,7 +373,7 @@ function EntityPicker({ onClose }: { onClose: () => void }) {
         style={{
           background: '#08192b', borderTop: '1px solid var(--glass-border)',
           borderTopLeftRadius: 22, borderTopRightRadius: 22, maxWidth: 720, width: '100%', margin: '0 auto',
-          maxHeight: '82vh', display: 'flex', flexDirection: 'column',
+          maxHeight: 'calc(82 * var(--dvh))', display: 'flex', flexDirection: 'column',
           padding: 'var(--space-lg) var(--space-lg) calc(env(safe-area-inset-bottom, 0px) + var(--space-lg))',
         }}
       >

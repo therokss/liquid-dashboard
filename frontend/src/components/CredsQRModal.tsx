@@ -26,12 +26,14 @@ export function CredsQRModal({ url, externalUrl, onClose }: { url: string; exter
       data-theme="dark"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 3500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(3,10,20,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', padding: 'var(--space-lg)' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 3500, display: 'flex', overflowY: 'auto', background: 'rgba(3,10,20,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', padding: 'var(--space-lg)' }}
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
         onClick={(e) => e.stopPropagation()}
-        style={{ background: '#08192b', border: '1px solid var(--glass-border)', borderRadius: 22, maxWidth: 380, width: '100%', padding: 'var(--space-lg)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}
+        // margin:auto centra la card ma, su schermi bassi (telefono in orizzontale), la lascia
+        // scorrere nell'overlay invece di farla uscire dall'alto come con align-items:center
+        style={{ margin: 'auto', background: '#08192b', border: '1px solid var(--glass-border)', borderRadius: 22, maxWidth: 380, width: '100%', padding: 'var(--space-lg)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>{t('Trasferisci su un altro dispositivo')}</h3>

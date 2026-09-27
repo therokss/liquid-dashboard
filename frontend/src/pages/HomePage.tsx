@@ -139,6 +139,7 @@ export function HomePage() {
         <div style={{ display: 'flex', gap: 10, marginBottom: 'var(--space-xl)', overflowX: 'auto', paddingBottom: 4 }}>
           {totalLightsOn > 0 && (
             <div
+              className="ld-lights-chip"
               style={{
                 flexShrink: 0,
                 display: 'inline-flex',
