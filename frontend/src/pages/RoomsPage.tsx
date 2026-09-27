@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse, Fan, ChevronRight, Play, Bell, Sparkles, MoreHorizontal, WashingMachine, Microwave, Refrigerator, AirVent, Boxes } from 'lucide-react'
 import { useStore } from '../store'
@@ -12,6 +12,7 @@ import { HueSyncSection } from '../components/cards/HueSyncCard'
 import { MediaDevicesSection } from '../components/cards/TVCard'
 import { DeviceDetailModal, useDeviceGroup } from '../components/DeviceDetailModal'
 import { useT } from '../i18n'
+import { useNav, openArea, closeChild, useScrollMemory } from '../lib/navState'
 import { getDomain } from '../types/ha'
 import type { HassArea, HassEntity } from '../types/ha'
 
@@ -65,6 +66,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   const { callService } = useHA()
   const [openBadge, setOpenBadge] = useState<string | null>(null)
   const [detailEntity, setDetailEntity] = useState<string | null>(null)
+  const scrollRef = useScrollMemory('room')
 
   const areaEntities = useMemo(
     () =>
@@ -232,6 +234,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
   return (
     <motion.div
+      ref={scrollRef}
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
@@ -767,7 +770,7 @@ function RoomCard({ area, gradient, stat, onClick, index }: {
   return (
     <motion.button
       className="anim-scale-in room-card"
-      style={{ animationDelay: `${index * 45}ms`, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}
+      style={{ animationDelay: `${Math.min(index * 30, 120)}ms`, border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
     >
@@ -853,8 +856,8 @@ export function RoomsPage() {
   const entityAreas = useStore((s) => s.entityAreas)
   const hiddenEntities = useStore((s) => s.hiddenEntities)
   const userHidden = useStore((s) => s.userHiddenEntities)
-  const [selectedArea, setSelectedArea] = useState<HassArea | null>(null)
-  const [selectedIndex, setSelectedIndex] = useState(0)
+  const navArea = useNav().area
+  const scrollRef = useScrollMemory('rooms')
 
   // Se l'utente non ha configurato aree specifiche (es. setup saltato in modalità
   // proxy automatica), mostriamo tutte le aree caricate da Home Assistant.
@@ -865,6 +868,14 @@ export function RoomsPage() {
         : areas,
     [areas, enabledAreas]
   )
+
+  // Stanza aperta: ricordata per area_id (lib/navState), mai per nome
+  const selectedIndex = navArea ? visibleAreas.findIndex((a) => a.area_id === navArea) : -1
+  const selectedArea = selectedIndex >= 0 ? visibleAreas[selectedIndex] : null
+  // Area salvata che non esiste più (o non è più visibile): si torna alla lista
+  useEffect(() => {
+    if (navArea && areas.length > 0 && selectedIndex < 0) closeChild()
+  }, [navArea, areas.length, selectedIndex])
 
   // Statistiche per area (conteggio dispositivi controllabili, totale, luci accese)
   const areaStats = useMemo(() => {
@@ -885,7 +896,7 @@ export function RoomsPage() {
 
   return (
     <div style={{ position: 'relative', height: '100%' }}>
-      <div className="page" style={{ visibility: selectedArea ? 'hidden' : 'visible' }}>
+      <div ref={scrollRef} className="page" style={{ visibility: selectedArea ? 'hidden' : 'visible' }}>
         {/* Header */}
         <div style={{ marginBottom: 'var(--space-xl)' }}>
           <h1
@@ -910,7 +921,7 @@ export function RoomsPage() {
               index={index}
               gradient={AREA_GRADIENTS[index % AREA_GRADIENTS.length]}
               stat={areaStats[area.area_id]}
-              onClick={() => { setSelectedArea(area); setSelectedIndex(index) }}
+              onClick={() => openArea(area.area_id)}
             />
           ))}
         </div>
@@ -929,12 +940,12 @@ export function RoomsPage() {
       </div>
 
       {/* Area detail overlay */}
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {selectedArea && (
           <AreaDetail
             area={selectedArea}
             gradientColors={AREA_GRADIENTS[selectedIndex % AREA_GRADIENTS.length]}
-            onBack={() => setSelectedArea(null)}
+            onBack={closeChild}
           />
         )}
       </AnimatePresence>

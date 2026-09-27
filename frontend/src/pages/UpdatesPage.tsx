@@ -6,6 +6,7 @@ import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { useT } from '../i18n'
 import type { HassEntity } from '../types/ha'
+import { useScrollMemory } from '../lib/navState'
 
 const attr = (e: HassEntity, k: string) => (e.attributes as Record<string, unknown>)[k]
 const titleOf = (e: HassEntity) => (attr(e, 'title') as string) || (attr(e, 'friendly_name') as string) || e.entity_id
@@ -102,6 +103,7 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
     if (backup && e && supportsBackup(e)) data.backup = true
     return callService('update', 'install', data).catch(() => {})
   }
+  const scrollRef = useScrollMemory('updates')
   const installAll = () => {
     if (!confirmAll) { setConfirmAll(true); return }
     setConfirmAll(false)
@@ -110,6 +112,7 @@ export function UpdatesPage({ onBack }: { onBack: () => void }) {
 
   return createPortal(
     <motion.div
+      ref={scrollRef}
       data-theme="dark"
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}

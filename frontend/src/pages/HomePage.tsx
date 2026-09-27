@@ -5,6 +5,7 @@ import { Lightbulb, Moon } from 'lucide-react'
 import { useStore } from '../store'
 import { MasonryColumns } from '../components/MasonryColumns'
 import { ClimatePage } from './ClimatePage'
+import { useNav, openSub, closeChild, useScrollMemory } from '../lib/navState'
 import { AreaTempCard } from '../components/cards/AreaTempCard'
 import { LightCard } from '../components/cards/LightCard'
 import { ClimateCard } from '../components/cards/ClimateCard'
@@ -50,7 +51,8 @@ export function HomePage() {
   const energyEnabled = useStore((s) => s.energyEnabled)
   const greeting = useGreeting()
   const pinnedEntities = usePinnedEntities()
-  const [showClimate, setShowClimate] = useState(false)
+  const showClimate = useNav().sub === 'climate'
+  const scrollRef = useScrollMemory('home')
 
   // Entità attive da mostrare nella home (luci accese, media in play, clima attivo)
   const activeEntities = useMemo(() => {
@@ -114,7 +116,7 @@ export function HomePage() {
   const hasWaste = useMemo(() => Object.values(wasteSchedule).some((d) => d.length > 0), [wasteSchedule])
 
   return (
-    <div className="page">
+    <div ref={scrollRef} className="page">
       {/* Header */}
       <div style={{ marginBottom: 'var(--space-xl)' }}>
         <h1
@@ -234,7 +236,7 @@ export function HomePage() {
             {activeEntities.map((entity, i) => {
               const domain = getDomain(entity.entity_id)
               return (
-                <motion.div key={entity.entity_id} className="anim-slide-up" style={{ animationDelay: `${i * 60}ms` }}>
+                <motion.div key={entity.entity_id} className="anim-slide-up" style={{ animationDelay: `${Math.min(i * 30, 120)}ms` }}>
                   {domain === 'light' && <LightCard entity={entity} compact />}
                   {domain === 'climate' && <ClimateCard entity={entity} />}
                   {domain === 'media_player' && <MediaCard entity={entity} />}
@@ -251,8 +253,8 @@ export function HomePage() {
           <div className="text-caption on-wall-dim" style={{ marginBottom: 10 }}>{t('Ambienti')}</div>
           <div className="grid-fluid stagger-grid">
             {areaTemps.map((a, i) => (
-              <motion.div key={a.id} className="anim-scale-in" style={{ animationDelay: `${i * 60}ms`, minWidth: 0 }}>
-                <AreaTempCard name={a.name} avg={a.avg} sensorId={a.sensorId} onClick={() => setShowClimate(true)} />
+              <motion.div key={a.id} className="anim-scale-in" style={{ animationDelay: `${Math.min(i * 30, 120)}ms`, minWidth: 0 }}>
+                <AreaTempCard name={a.name} avg={a.avg} sensorId={a.sensorId} onClick={() => openSub('climate')} />
               </motion.div>
             ))}
           </div>
@@ -276,8 +278,8 @@ export function HomePage() {
       </MasonryColumns>
 
       {createPortal(
-        <AnimatePresence>
-          {showClimate && <ClimatePage onBack={() => setShowClimate(false)} />}
+        <AnimatePresence initial={false}>
+          {showClimate && <ClimatePage onBack={closeChild} />}
         </AnimatePresence>,
         document.body
       )}

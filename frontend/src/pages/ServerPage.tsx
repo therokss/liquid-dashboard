@@ -11,6 +11,7 @@ import { MasonryColumns } from '../components/MasonryColumns'
 import { useT } from '../i18n'
 import { getDomain } from '../types/ha'
 import type { HassEntity } from '../types/ha'
+import { useScrollMemory } from '../lib/navState'
 
 interface EntReg { entity_id: string; platform: string; disabled_by: string | null }
 
@@ -131,10 +132,12 @@ export function ServerPage({ onBack }: { onBack: () => void }) {
     return { cpu, mem, disk, temp }
   }, [sysmonIds, entities])
 
+  const scrollRef = useScrollMemory('server')
   const hasSysmon = sysmonIds.length > 0
 
   return createPortal(
     <motion.div
+      ref={scrollRef}
       data-theme="dark"
       initial={{ x: '100%' }}
       animate={{ x: 0 }}

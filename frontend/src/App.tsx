@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CloudOff } from 'lucide-react'
 import { useStore } from './store'
@@ -8,19 +8,38 @@ import { setKiosk, fitToHostFrame } from './lib/kiosk'
 import { loadPrefs, applyHouse, extractHouse, savePrefs, startHouseSync } from './lib/permissions'
 import { loadUserConfig, applyUserConfig, startUserConfigSync } from './lib/userConfig'
 import { startLiveSync } from './lib/liveSync'
-import { CustomDashboardView } from './lib/dashboards/CustomDashboardView'
 import { loadDashboards } from './lib/dashboards/store'
 import { getScreenId } from './lib/dashboards/deviceId'
 import type { CustomDashboard } from './lib/dashboards/types'
 import { SetupWizard } from './setup/SetupWizard'
 import { OnboardingWizard } from './pages/OnboardingWizard'
-import { TabBar, type Tab } from './components/nav/TabBar'
+import { TabBar } from './components/nav/TabBar'
 import { TopHeader } from './components/nav/TopHeader'
 import { HomePage } from './pages/HomePage'
 import { RoomsPage } from './pages/RoomsPage'
 import { SecurityPage } from './pages/SecurityPage'
 import { MediaPage } from './pages/MediaPage'
-import { SettingsPage } from './pages/SettingsPage'
+import { useNav, openTab, startNavHistory } from './lib/navState'
+
+// Caricate a richiesta: Impostazioni (con le sue sottopagine) e la dashboard
+// custom (che si porta dietro react-grid-layout) non servono al primo avvio.
+// Se il modulo è già stato precaricato, il primo render non sospende affatto
+// (thenable sincrono): niente pagina vuota né attesa dello Suspense.
+function lazyPreload<P extends object>(load: () => Promise<ComponentType<P>>) {
+  let loaded: ComponentType<P> | undefined
+  const preload = () => load().then((c) => (loaded = c))
+  const Lazy = lazy(() => loaded
+    ? ({ then: (ok: (m: { default: ComponentType<P> }) => void) => ok({ default: loaded! }) } as Promise<{ default: ComponentType<P> }>)
+    : preload().then((c) => ({ default: c })))
+  return [Lazy, preload] as const
+}
+const [SettingsPage, loadSettings] = lazyPreload(() => import('./pages/SettingsPage').then((m) => m.SettingsPage))
+const [CustomDashboardView, loadCustomDash] = lazyPreload(() => import('./lib/dashboards/CustomDashboardView').then((m) => m.CustomDashboardView))
+
+// Cambio scheda: dissolvenza incrociata breve. La nuova pagina entra sopra; la
+// vecchia resta piena quasi fino alla fine e poi sparisce, così non c'è mai un
+// fotogramma vuoto tra una scheda e l'altra (prima: mode="wait", 250+250ms).
+const TAB_FADE_S = 0.15
 
 function ThemeApplier() {
   const theme = useStore((s) => s.theme)
@@ -67,14 +86,13 @@ function LoadingScreen() {
 
 function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
   const { reconnect } = useHA()
-  useWallpaper()
   useAccentFromWallpaper()
 
   const loading = useStore((s) => s.loading)
   const connected = useStore((s) => s.connected)
   const hassUrl = useStore((s) => s.hassUrl)
   const [everConnected, setEverConnected] = useState(false)
-  const [activeTab, setActiveTab] = useState<Tab>('home')
+  const activeTab = useNav().tab
   const [retries, setRetries] = useState(0)
   const [assignedDash, setAssignedDash] = useState<CustomDashboard | null>(null)
   const [showDefault, setShowDefault] = useState(false)
@@ -87,10 +105,27 @@ function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
   // Questo schermo ha una dashboard custom assegnata? La mostra di default.
   useEffect(() => {
     if (!connected) return
-    void loadDashboards().then(({ dashboards, deviceMap }) => {
+    void loadDashboards().then(async ({ dashboards, deviceMap }) => {
       const id = deviceMap[getScreenId()]
-      setAssignedDash(id ? dashboards.find((d) => d.id === id) ?? null : null)
+      const dash = id ? dashboards.find((d) => d.id === id) ?? null : null
+      // Scarica il codice prima di mostrarla: niente schermo vuoto durante il caricamento
+      if (dash) await loadCustomDash().catch(() => {})
+      setAssignedDash(dash)
     })
+  }, [connected])
+
+  // Tasto Indietro / cronologia: attivo solo con la dashboard predefinita a schermo.
+  const showingCustom = Boolean(assignedDash && !showDefault)
+  useEffect(() => {
+    if (connected && !showingCustom) startNavHistory()
+  }, [connected, showingCustom])
+
+  // Precarica le Impostazioni quando il browser è libero: il primo tocco sulla
+  // scheda non deve aspettare la rete.
+  useEffect(() => {
+    if (!connected) return
+    const t = setTimeout(() => { void loadSettings().catch(() => {}) }, 1500)
+    return () => clearTimeout(t)
   }, [connected])
 
   // Auto-retry al primo avvio (es. mentre Home Assistant si sta riavviando):
@@ -134,32 +169,42 @@ function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
   }
 
   // Schermo con dashboard custom assegnata: la mostra di default (tasto per la predefinita).
+  // La scelta "predefinita" NON viene ricordata: al rientro lo schermo torna alla
+  // sua dashboard assegnata (è la configurazione voluta per quello schermo).
   if (assignedDash && !showDefault) {
-    return <CustomDashboardView dashboard={assignedDash} onDefault={() => setShowDefault(true)} />
+    return (
+      <Suspense fallback={null}>
+        <CustomDashboardView dashboard={assignedDash} onDefault={() => setShowDefault(true)} />
+      </Suspense>
+    )
   }
 
   return (
     <div className="app-content">
       <TopHeader />
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false}>
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            style={{ position: 'absolute', inset: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, zIndex: 0, pointerEvents: 'none', transition: { duration: TAB_FADE_S, ease: [1, 0, 1, 0] } }}
+            transition={{ duration: TAB_FADE_S, ease: 'easeOut' }}
+            style={{ position: 'absolute', inset: 0, zIndex: 1 }}
           >
             {activeTab === 'home' && <HomePage />}
             {activeTab === 'rooms' && <RoomsPage />}
             {activeTab === 'security' && <SecurityPage />}
             {activeTab === 'media' && <MediaPage />}
-            {activeTab === 'settings' && <SettingsPage />}
+            {activeTab === 'settings' && (
+              <Suspense fallback={null}>
+                <SettingsPage />
+              </Suspense>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
-      <TabBar active={activeTab} onChange={setActiveTab} />
+      <TabBar active={activeTab} onChange={openTab} />
     </div>
   )
 }
@@ -240,6 +285,7 @@ export default function App() {
   const [initialized, setInitialized] = useState(false)
   const [showDashboard, setShowDashboard] = useState(false)
 
+  // Unico punto per lo sfondo: App resta montata sia col wizard sia con la dashboard
   useWallpaper()
 
   useEffect(() => {

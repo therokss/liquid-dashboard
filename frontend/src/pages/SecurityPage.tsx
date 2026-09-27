@@ -10,6 +10,7 @@ import { CamerasSection } from '../components/cards/CamerasSection'
 import { MasonryColumns } from '../components/MasonryColumns'
 import { useT } from '../i18n'
 import type { HassEntity } from '../types/ha'
+import { useScrollMemory } from '../lib/navState'
 
 const dom = (id: string) => id.split('.')[0]
 const dc = (e: HassEntity) => (e.attributes as Record<string, unknown>).device_class as string | undefined
@@ -117,6 +118,7 @@ function LockRow({ e, last }: { e: HassEntity; last: boolean }) {
 
 export function SecurityPage() {
   const t = useT()
+  const scrollRef = useScrollMemory('security')
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const areas = useStore((s) => s.areas)
@@ -194,7 +196,7 @@ export function SecurityPage() {
   const hasAny = alarms.length || cams.length || openables.length || motionSensors.length || locks.length || detectors.length
 
   return (
-    <div className="page">
+    <div ref={scrollRef} className="page">
       <div style={{ marginBottom: 'var(--space-xl)' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 34, fontWeight: 800, color: 'var(--on-wallpaper)', letterSpacing: '-0.04em' }}>
           {t('Sicurezza')}
