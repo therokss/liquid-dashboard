@@ -3,6 +3,51 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.47.0] — 2026-09-27
+### Aggiunto
+- **Riapre la schermata in cui eri**: uscendo e rientrando la dashboard torna alla stessa
+  scheda, alla stanza aperta, alla sottopagina (Clima, Server, Aggiornamenti, Dashboard) e
+  allo stesso punto di scorrimento. Il ricordo è per dispositivo: il tablet a muro e il
+  telefono riaprono ciascuno la propria schermata. I popup (dettaglio luce, telecomando…)
+  non vengono riaperti.
+- **Tasto Indietro** (Android / browser): da una stanza torna alle Stanze, da una
+  sottopagina alla sua pagina, da una scheda a Casa; da Casa esce come prima.
+
+### Migliorato
+- **Molto più reattiva**: ogni aggiornamento di Home Assistant riscriveva gli sfondi (diversi
+  MB) nella memoria del browser e ridisegnava tutta la pagina, bloccando l'app più volte al
+  secondo. Ora gli sfondi hanno un salvataggio a parte (quelli esistenti vengono spostati da
+  soli, senza perderli) e si ridisegna solo ciò che cambia: con 50 aggiornamenti di fila i
+  blocchi passano da 49 a 0.
+- **Cambio scheda immediato**: dissolvenza breve al posto di uscita + entrata, niente più
+  lampo vuoto tra una scheda e l'altra; le card entrano senza lunghe attese in cascata.
+- **Slider e comandi**: luminosità, volume e valori seguono il dito e non tornano indietro;
+  durante il trascinamento i comandi a Home Assistant sono diradati (niente più luci che
+  "inseguono" il dito). Tendine, serrature, tapparelle e play/pausa rispondono subito.
+- **Casa si apre più in fretta**: storici, meteo, calendario ed energia restano in memoria
+  per qualche minuto invece di essere riscaricati a ogni ritorno; su tablet le colonne sono
+  giuste dal primo istante.
+- **Telecamere**: nella griglia immagini aggiornate periodicamente, video dal vivo quando
+  apri la telecamera a schermo intero.
+- **Effetto vetro più leggero su telefoni e tablet**, scorrimento più fluido.
+- **Avvio più rapido**: parti usate di rado (scanner QR, editor dashboard, telecomando TV,
+  Impostazioni) si caricano solo quando servono; i caratteri non bloccano più la prima
+  schermata.
+
+### Corretto
+- **Tema scuro**: titoli e didascalie sullo sfondo (saluto, Meteo, Stanze…) erano scuri su
+  scuro e quasi illeggibili durante il giorno.
+- **Tema chiaro di notte**: didascalie e messaggi "vuoti" sparivano sullo sfondo notturno.
+- **Avvio senza lampi**: niente più schermo bianco né colori del tema sbagliato all'apertura.
+- Wizard, caricamento e "Impossibile connettersi" non sono più velati dallo sfondo.
+- Impostazioni: lingua e indirizzo non escono più dalla card sui telefoni stretti.
+- Stanze: i nomi lunghi non escono più dalla card; griglia più adatta a schermi piccoli e grandi.
+- Tema chiaro: testo scuro sui pulsanti ciano e sulla chip delle luci accese, leggibile.
+- I pannelli (luce, dispositivo, telecomando, scanner) si chiudono con l'animazione invece di sparire di scatto.
+- Codice QR e wizard utilizzabili anche col telefono in orizzontale.
+- Pannelli dal basso della giusta altezza su iPhone; titolo non più sotto il notch.
+- Barra delle schede leggibile anche sui dispositivi senza effetto vetro; header allineato al contenuto su desktop.
+
 ## [1.46.24] — 2026-08-02
 ### Corretto
 - **Telecomando TV, pad direzionale ovale**: sugli schermi dove il telecomando è più alto
