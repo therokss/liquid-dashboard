@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { memo, useEffect, useState, useMemo, useRef } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, Home, BedDouble, Utensils, Sofa, Bath, Car, TreePine, PackageOpen, Thermometer, Droplets, DoorOpen, DoorClosed, Zap, Blinds, Warehouse, Fan, ChevronRight, Play, Bell, Sparkles, MoreHorizontal, WashingMachine, Microwave, Refrigerator, AirVent, Boxes } from 'lucide-react'
 import { useStore } from '../store'
@@ -12,6 +13,8 @@ import { HueSyncSection } from '../components/cards/HueSyncCard'
 import { MediaDevicesSection } from '../components/cards/TVCard'
 import { DeviceDetailModal, useDeviceGroup } from '../components/DeviceDetailModal'
 import { useT } from '../i18n'
+import { sameProps } from '../lib/sameProps'
+import { PendingSelect } from '../components/PendingSelect'
 import { useNav, openArea, closeChild, useScrollMemory } from '../lib/navState'
 import { getDomain } from '../types/ha'
 import type { HassArea, HassEntity } from '../types/ha'
@@ -57,110 +60,118 @@ interface AreaDetailProps {
 
 function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   const t = useT()
-  const entities = useStore((s) => s.entities)
-  const entityAreas = useStore((s) => s.entityAreas)
   const entityDevices = useStore((s) => s.entityDevices)
-  const hiddenEntities = useStore((s) => s.hiddenEntities)
-  const userHidden = useStore((s) => s.userHiddenEntities)
   const powerSel = useStore((s) => s.energyPowerEntity)
   const { callService } = useHA()
   const [openBadge, setOpenBadge] = useState<string | null>(null)
   const [detailEntity, setDetailEntity] = useState<string | null>(null)
   const scrollRef = useScrollMemory('room')
 
-  const areaEntities = useMemo(
-    () =>
-      Object.values(entities).filter(
-        (e) =>
-          entityAreas[e.entity_id] === area.area_id &&
-          !hiddenEntities[e.entity_id] &&
-          !userHidden[e.entity_id]
-      ),
-    [entities, entityAreas, hiddenEntities, userHidden, area.area_id]
-  )
+  // Solo le entità di questa stanza (useShallow): l'overlay non si ri-renderizza per gli
+  // eventi delle altre stanze.
+  const areaEntities = useStore(useShallow((s) =>
+    Object.values(s.entities).filter(
+      (e) =>
+        s.entityAreas[e.entity_id] === area.area_id &&
+        !s.hiddenEntities[e.entity_id] &&
+        !s.userHiddenEntities[e.entity_id]
+    )
+  ))
+  // Sensore potenza della casa (badge "Corrente casa"): quello scelto o il primo trovato
+  const houseEnt = useStore((s) => (powerSel && s.entities[powerSel])
+    ? s.entities[powerSel]
+    : Object.values(s.entities).find((e) => getDomain(e.entity_id) === 'sensor' && (e.attributes as Record<string, unknown>).device_class === 'power'))
 
-  // Device gestiti da schermate dedicate (videocamera → Sicurezza; ingresso HDMI dei media).
-  const managedDevices = new Set<string>()
-  for (const e of areaEntities) {
-    const d = entityDevices[e.entity_id]
-    if (!d) continue
-    if (e.entity_id.startsWith('camera.')) managedDevices.add(d)
-    if (e.entity_id.startsWith('select.') && e.entity_id.endsWith('_hdmi_input')) managedDevices.add(d)
-  }
-
-  // Elettrodomestici SmartThings/Samsung (con sensor._machine_state): li mostra già
-  // AppliancesSection con la sua card (stato/tempo/progresso). Tutte le altre entità del
-  // device (Start/Pause/Cancel, programma…) vanno quindi ESCLUSE dalle sezioni generiche;
-  // sono raggiungibili toccando la card, che apre il dettaglio.
-  const applianceDevices = new Set<string>()
-  for (const e of areaEntities) {
-    if (e.entity_id.startsWith('sensor.') && e.entity_id.endsWith('_machine_state')) {
+  // Raggruppamenti per dispositivo/dominio: ricalcolati solo quando cambiano le entità
+  // della stanza o il registro dispositivi.
+  const {
+    managedDevices, deviceRepr, lights, climates, fans, vacuums, switches, actions,
+    automations, selects, numbers, deviceCards,
+  } = useMemo(() => {
+    // Device gestiti da schermate dedicate (videocamera → Sicurezza; ingresso HDMI dei media).
+    const managedDevices = new Set<string>()
+    for (const e of areaEntities) {
       const d = entityDevices[e.entity_id]
-      if (d) applianceDevices.add(d)
+      if (!d) continue
+      if (e.entity_id.startsWith('camera.')) managedDevices.add(d)
+      if (e.entity_id.startsWith('select.') && e.entity_id.endsWith('_hdmi_input')) managedDevices.add(d)
     }
-  }
 
-  // Device con un media_player (TV, box, altoparlante): gestiti da MediaDevicesSection
-  // (TV → telecomando; altoparlanti → card media). Esclusi dal raggruppamento generico.
-  const mediaDevices = new Set<string>()
-  for (const e of areaEntities) {
-    if (getDomain(e.entity_id) === 'media_player') {
+    // Elettrodomestici SmartThings/Samsung (con sensor._machine_state): li mostra già
+    // AppliancesSection con la sua card (stato/tempo/progresso). Tutte le altre entità del
+    // device (Start/Pause/Cancel, programma…) vanno quindi ESCLUSE dalle sezioni generiche;
+    // sono raggiungibili toccando la card, che apre il dettaglio.
+    const applianceDevices = new Set<string>()
+    for (const e of areaEntities) {
+      if (e.entity_id.startsWith('sensor.') && e.entity_id.endsWith('_machine_state')) {
+        const d = entityDevices[e.entity_id]
+        if (d) applianceDevices.add(d)
+      }
+    }
+
+    // Device con un media_player (TV, box, altoparlante): gestiti da MediaDevicesSection
+    // (TV → telecomando; altoparlanti → card media). Esclusi dal raggruppamento generico.
+    const mediaDevices = new Set<string>()
+    for (const e of areaEntities) {
+      if (getDomain(e.entity_id) === 'media_player') {
+        const d = entityDevices[e.entity_id]
+        if (d) mediaDevices.add(d)
+      }
+    }
+
+    // Raggruppamento per dispositivo — generale, per QUALSIASI elettrodomestico/integrazione
+    // (usa il device del registro HA). Un device con più controlli è rappresentato da UNA sola
+    // card che apre il dettaglio con tutto; gli altri controlli non compaiono sparsi.
+    // Rappresentazione: ventola/luce/clima → la loro card ricca; un solo pulsante (es. apri-
+    // porta) → pulsante con long-press; altrimenti → card "dispositivo" generica (lavatrice…).
+    const GROUP_CTRL = new Set(['light', 'switch', 'fan', 'cover', 'lock', 'climate', 'media_player', 'vacuum', 'humidifier', 'number', 'input_number', 'select', 'input_select', 'button', 'input_button', 'siren', 'input_boolean'])
+    const devCtrls: Record<string, HassEntity[]> = {}
+    for (const e of areaEntities) {
       const d = entityDevices[e.entity_id]
-      if (d) mediaDevices.add(d)
+      if (d && !applianceDevices.has(d) && !managedDevices.has(d) && !mediaDevices.has(d) && GROUP_CTRL.has(getDomain(e.entity_id))) (devCtrls[d] ||= []).push(e)
     }
-  }
+    const deviceRepr: Record<string, { kind: 'fan' | 'light' | 'climate' | 'vacuum' | 'button' | 'device'; id: string }> = {}
+    for (const d in devCtrls) {
+      const list = devCtrls[d]
+      if (list.length < 2) continue // un solo controllo: niente da raggruppare
+      const byDom = (dom: string) => list.find((e) => getDomain(e.entity_id) === dom)
+      const buttons = list.filter((e) => ['button', 'input_button'].includes(getDomain(e.entity_id)))
+      const fan = byDom('fan'), light = byDom('light'), climate = byDom('climate'), vacuum = byDom('vacuum'), sw = byDom('switch')
+      if (fan) deviceRepr[d] = { kind: 'fan', id: fan.entity_id }
+      else if (light) deviceRepr[d] = { kind: 'light', id: light.entity_id }
+      else if (climate) deviceRepr[d] = { kind: 'climate', id: climate.entity_id }
+      else if (vacuum) deviceRepr[d] = { kind: 'vacuum', id: vacuum.entity_id }
+      else if (buttons.length === 1 && !sw) deviceRepr[d] = { kind: 'button', id: buttons[0].entity_id }
+      else deviceRepr[d] = { kind: 'device', id: list[0].entity_id } // card dispositivo generica
+    }
+    // Nascondi dalle sezioni generiche: entità di un elettrodomestico, oppure entità raccolte
+    // in un device (tranne il suo rappresentante; per i device generici, TUTTE → nella card).
+    const hidden = (e: HassEntity) => {
+      const d = entityDevices[e.entity_id]
+      if (!d) return false
+      if (applianceDevices.has(d)) return true
+      if (managedDevices.has(d)) return true
+      const r = deviceRepr[d]
+      if (!r) return false
+      return r.kind === 'device' ? true : r.id !== e.entity_id
+    }
 
-  // Raggruppamento per dispositivo — generale, per QUALSIASI elettrodomestico/integrazione
-  // (usa il device del registro HA). Un device con più controlli è rappresentato da UNA sola
-  // card che apre il dettaglio con tutto; gli altri controlli non compaiono sparsi.
-  // Rappresentazione: ventola/luce/clima → la loro card ricca; un solo pulsante (es. apri-
-  // porta) → pulsante con long-press; altrimenti → card "dispositivo" generica (lavatrice…).
-  const GROUP_CTRL = new Set(['light', 'switch', 'fan', 'cover', 'lock', 'climate', 'media_player', 'vacuum', 'humidifier', 'number', 'input_number', 'select', 'input_select', 'button', 'input_button', 'siren', 'input_boolean'])
-  const devCtrls: Record<string, HassEntity[]> = {}
-  for (const e of areaEntities) {
-    const d = entityDevices[e.entity_id]
-    if (d && !applianceDevices.has(d) && !managedDevices.has(d) && !mediaDevices.has(d) && GROUP_CTRL.has(getDomain(e.entity_id))) (devCtrls[d] ||= []).push(e)
-  }
-  const deviceRepr: Record<string, { kind: 'fan' | 'light' | 'climate' | 'vacuum' | 'button' | 'device'; id: string }> = {}
-  for (const d in devCtrls) {
-    const list = devCtrls[d]
-    if (list.length < 2) continue // un solo controllo: niente da raggruppare
-    const byDom = (dom: string) => list.find((e) => getDomain(e.entity_id) === dom)
-    const buttons = list.filter((e) => ['button', 'input_button'].includes(getDomain(e.entity_id)))
-    const fan = byDom('fan'), light = byDom('light'), climate = byDom('climate'), vacuum = byDom('vacuum'), sw = byDom('switch')
-    if (fan) deviceRepr[d] = { kind: 'fan', id: fan.entity_id }
-    else if (light) deviceRepr[d] = { kind: 'light', id: light.entity_id }
-    else if (climate) deviceRepr[d] = { kind: 'climate', id: climate.entity_id }
-    else if (vacuum) deviceRepr[d] = { kind: 'vacuum', id: vacuum.entity_id }
-    else if (buttons.length === 1 && !sw) deviceRepr[d] = { kind: 'button', id: buttons[0].entity_id }
-    else deviceRepr[d] = { kind: 'device', id: list[0].entity_id } // card dispositivo generica
-  }
-  // Nascondi dalle sezioni generiche: entità di un elettrodomestico, oppure entità raccolte
-  // in un device (tranne il suo rappresentante; per i device generici, TUTTE → nella card).
-  const hidden = (e: HassEntity) => {
-    const d = entityDevices[e.entity_id]
-    if (!d) return false
-    if (applianceDevices.has(d)) return true
-    if (managedDevices.has(d)) return true
-    const r = deviceRepr[d]
-    if (!r) return false
-    return r.kind === 'device' ? true : r.id !== e.entity_id
-  }
+    const lights = areaEntities.filter((e) => getDomain(e.entity_id) === 'light' && !hidden(e))
+    const climates = areaEntities.filter((e) => getDomain(e.entity_id) === 'climate' && !hidden(e))
+    const fans = areaEntities.filter((e) => getDomain(e.entity_id) === 'fan' && !hidden(e))
+    const vacuums = areaEntities.filter((e) => getDomain(e.entity_id) === 'vacuum' && !hidden(e))
+    const switches = areaEntities.filter((e) => getDomain(e.entity_id) === 'switch' && !managedDevices.has(entityDevices[e.entity_id]) && !hidden(e))
+    const actions = areaEntities.filter((e) => ['button', 'input_button', 'scene', 'script'].includes(getDomain(e.entity_id)) && !hidden(e))
+    const automations = areaEntities.filter((e) => getDomain(e.entity_id) === 'automation')
+    const selects = areaEntities.filter((e) => ['select', 'input_select'].includes(getDomain(e.entity_id)) && !e.entity_id.endsWith('_hdmi_input') && !managedDevices.has(entityDevices[e.entity_id]) && !hidden(e))
+    const numbers = areaEntities.filter((e) => ['number', 'input_number'].includes(getDomain(e.entity_id)) && !hidden(e))
+    const deviceCards = Object.values(deviceRepr).filter((r) => r.kind === 'device')
+    return { managedDevices, deviceRepr, lights, climates, fans, vacuums, switches, actions, automations, selects, numbers, deviceCards }
+  }, [areaEntities, entityDevices])
   const isReprButton = (e: HassEntity) => {
     const r = deviceRepr[entityDevices[e.entity_id] ?? '']
     return r?.kind === 'button' && r.id === e.entity_id
   }
-
-  const lights = areaEntities.filter((e) => getDomain(e.entity_id) === 'light' && !hidden(e))
-  const climates = areaEntities.filter((e) => getDomain(e.entity_id) === 'climate' && !hidden(e))
-  const fans = areaEntities.filter((e) => getDomain(e.entity_id) === 'fan' && !hidden(e))
-  const vacuums = areaEntities.filter((e) => getDomain(e.entity_id) === 'vacuum' && !hidden(e))
-  const switches = areaEntities.filter((e) => getDomain(e.entity_id) === 'switch' && !managedDevices.has(entityDevices[e.entity_id]) && !hidden(e))
-  const actions = areaEntities.filter((e) => ['button', 'input_button', 'scene', 'script'].includes(getDomain(e.entity_id)) && !hidden(e))
-  const automations = areaEntities.filter((e) => getDomain(e.entity_id) === 'automation')
-  const selects = areaEntities.filter((e) => ['select', 'input_select'].includes(getDomain(e.entity_id)) && !e.entity_id.endsWith('_hdmi_input') && !managedDevices.has(entityDevices[e.entity_id]) && !hidden(e))
-  const numbers = areaEntities.filter((e) => ['number', 'input_number'].includes(getDomain(e.entity_id)) && !hidden(e))
-  const deviceCards = Object.values(deviceRepr).filter((r) => r.kind === 'device')
   const pressAction = (e: HassEntity) => {
     const d = getDomain(e.entity_id)
     if (d === 'scene') return callService('scene', 'turn_on', { entity_id: e.entity_id })
@@ -187,7 +198,6 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   const garages = areaEntities.filter((e) => getDomain(e.entity_id) === 'binary_sensor' && dc(e) === 'garage_door')
   const areaPowerSensors = areaEntities.filter((e) => getDomain(e.entity_id) === 'sensor' && dc(e) === 'power')
   const areaW = areaPowerSensors.reduce((s, e) => s + toW(e), 0)
-  const houseEnt = (powerSel && entities[powerSel]) ? entities[powerSel] : Object.values(entities).find((e) => getDomain(e.entity_id) === 'sensor' && dc(e) === 'power')
   const houseW = houseEnt ? toW(houseEnt) : null
 
   type BadgeItem = { name: string; value: string }
@@ -248,7 +258,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
         backdropFilter: 'blur(32px) saturate(1.4)',
         WebkitBackdropFilter: 'blur(32px) saturate(1.4)',
       }}
-      className="page"
+      className="page ld-blur-overlay ld-no-inner-blur"
     >
       {/* Header area */}
       <div
@@ -519,7 +529,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   )
 }
 
-function SwitchCard({ entity, onToggle, labels, onDetail }: { entity: { entity_id: string; state: string; attributes: Record<string, unknown> }; onToggle: () => void; labels?: [string, string]; onDetail?: () => void }) {
+const SwitchCard = memo(function SwitchCard({ entity, onToggle, labels, onDetail }: { entity: { entity_id: string; state: string; attributes: Record<string, unknown> }; onToggle: () => void; labels?: [string, string]; onDetail?: () => void }) {
   const t = useT()
   const isOn = entity.state === 'on'
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
@@ -540,9 +550,9 @@ function SwitchCard({ entity, onToggle, labels, onDetail }: { entity: { entity_i
       {onDetail && <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />}
     </div>
   )
-}
+}, sameProps)
 
-function FanCard({ entity, onToggle }: { entity: HassEntity; onToggle: () => void }) {
+const FanCard = memo(function FanCard({ entity, onToggle }: { entity: HassEntity; onToggle: () => void }) {
   const t = useT()
   const [detail, setDetail] = useState(false)
   const isOn = entity.state === 'on'
@@ -568,7 +578,7 @@ function FanCard({ entity, onToggle }: { entity: HassEntity; onToggle: () => voi
       <AnimatePresence>{detail && <DeviceDetailModal entityId={entity.entity_id} onClose={() => setDetail(false)} />}</AnimatePresence>
     </>
   )
-}
+}, sameProps)
 
 // Icona per la card dispositivo, dedotta dal nome (elettrodomestico).
 function applianceIcon(title: string) {
@@ -582,7 +592,7 @@ function applianceIcon(title: string) {
 
 // Card "dispositivo" generica: rappresenta un device con più controlli (lavatrice, forno
 // smart, ecc.) col nome pulito del dispositivo; tocca per aprire il dettaglio con tutto.
-function DeviceCard({ entityId, onOpen }: { entityId: string; onOpen: () => void }) {
+const DeviceCard = memo(function DeviceCard({ entityId, onOpen }: { entityId: string; onOpen: () => void }) {
   const t = useT()
   const { title } = useDeviceGroup(entityId)
   const lp = useLongPress(onOpen)
@@ -598,7 +608,7 @@ function DeviceCard({ entityId, onOpen }: { entityId: string; onOpen: () => void
       <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
     </motion.div>
   )
-}
+}, sameProps)
 
 // Icona robot aspirapolvere (vista dall'alto): corpo circolare, torretta LIDAR centrale e
 // paraurti frontale. lucide non ne ha una dedicata, quindi la disegniamo in stile lucide.
@@ -623,7 +633,7 @@ const VACUUM_STATE: Record<string, string> = {
 
 // Card aspirapolvere/robot: stato + batteria, con Avvia/Pausa e Rientra alla base.
 // Tocca per il dettaglio completo (modalità, potenza di aspirazione, ecc.).
-function VacuumCard({ entity, onOpen, onCommand }: { entity: HassEntity; onOpen: () => void; onCommand: (svc: string) => void }) {
+const VacuumCard = memo(function VacuumCard({ entity, onOpen, onCommand }: { entity: HassEntity; onOpen: () => void; onCommand: (svc: string) => void }) {
   const t = useT()
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
   const state = entity.state
@@ -652,7 +662,7 @@ function VacuumCard({ entity, onOpen, onCommand }: { entity: HassEntity; onOpen:
       </div>
     </div>
   )
-}
+}, sameProps)
 
 function pressIcon(domain: string) {
   if (domain === 'scene') return <Sparkles size={20} />
@@ -662,7 +672,7 @@ function pressIcon(domain: string) {
 
 // Card "premi": button/input_button/scene/script → un tocco esegue l'azione. Se il
 // dispositivo ha altri controlli (hasMore), un long-press apre il dettaglio con tutto.
-function PressCard({ entity, onPress, onLongPress, hasMore }: { entity: HassEntity; onPress: () => void; onLongPress?: () => void; hasMore?: boolean }) {
+const PressCard = memo(function PressCard({ entity, onPress, onLongPress, hasMore }: { entity: HassEntity; onPress: () => void; onLongPress?: () => void; hasMore?: boolean }) {
   const t = useT()
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
   const d = getDomain(entity.entity_id)
@@ -697,25 +707,23 @@ function PressCard({ entity, onPress, onLongPress, hasMore }: { entity: HassEnti
       {hasMore && <MoreHorizontal size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />}
     </motion.button>
   )
-}
+}, sameProps)
 
 // Card selettore: select/input_select → menu a tendina con le opzioni.
-function SelectCard({ entity, onChange }: { entity: HassEntity; onChange: (opt: string) => void }) {
+const SelectCard = memo(function SelectCard({ entity, onChange }: { entity: HassEntity; onChange: (opt: string) => void }) {
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
   const options = (entity.attributes.options as string[]) ?? []
   return (
     <div className="glass-card" style={{ padding: 'var(--space-md)', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0, color: 'var(--text-primary)', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
-      <select className="ld-select" value={entity.state} onChange={(ev) => onChange(ev.target.value)}>
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
+      <PendingSelect value={entity.state} options={options} onSelect={onChange} />
     </div>
   )
-}
+}, sameProps)
 
 // Card regolazione: number/input_number → slider. Invia il valore al rilascio (non a
 // ogni pixel), col valore mostrato in tempo reale mentre trascini.
-function NumberCard({ entity, onChange }: { entity: HassEntity; onChange: (v: number) => void }) {
+const NumberCard = memo(function NumberCard({ entity, onChange }: { entity: HassEntity; onChange: (v: number) => void }) {
   const [drag, setDrag] = useState<number | null>(null)
   const name = (entity.attributes.friendly_name as string) ?? entity.entity_id
   const min = Number(entity.attributes.min ?? 0)
@@ -724,7 +732,16 @@ function NumberCard({ entity, onChange }: { entity: HassEntity; onChange: (v: nu
   const unit = (entity.attributes.unit_of_measurement as string) ?? ''
   const stateVal = parseFloat(entity.state)
   const value = drag ?? (isNaN(stateVal) ? min : stateVal)
-  const commit = () => { if (drag !== null) { onChange(drag); setDrag(null) } }
+  const [sent, setSent] = useState(false)
+  const commit = () => { if (drag !== null && !sent) { onChange(drag); setSent(true) } }
+  // Dopo l'invio tiene il valore scelto finché HA non conferma (max 3 s): prima il
+  // cursore tornava al valore vecchio in attesa dell'evento.
+  useEffect(() => {
+    if (!sent) return
+    if (drag === null || stateVal === drag) { setDrag(null); setSent(false); return }
+    const t = setTimeout(() => { setDrag(null); setSent(false) }, 3000)
+    return () => clearTimeout(t)
+  }, [sent, drag, stateVal])
   return (
     <div className="glass-card" style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -738,17 +755,19 @@ function NumberCard({ entity, onChange }: { entity: HassEntity; onChange: (v: nu
         max={max}
         step={step}
         value={value}
-        onChange={(ev) => setDrag(parseFloat(ev.target.value))}
+        onChange={(ev) => { setDrag(parseFloat(ev.target.value)); setSent(false) }}
         onPointerUp={commit}
         onTouchEnd={commit}
+        onMouseUp={commit}
+        onKeyUp={commit}
       />
     </div>
   )
-}
+}, sameProps)
 
 interface AreaStat { devices: number; total: number; lightsOn: number; windowsOpen: number }
 
-function RoomCard({ area, gradient, stat, onClick, index }: {
+const RoomCard = memo(function RoomCard({ area, gradient, stat, onClick, index }: {
   area: HassArea
   gradient: string[]
   stat: AreaStat | undefined
@@ -846,7 +865,7 @@ function RoomCard({ area, gradient, stat, onClick, index }: {
       </div>
     </motion.button>
   )
-}
+}, sameProps)
 
 export function RoomsPage() {
   const t = useT()

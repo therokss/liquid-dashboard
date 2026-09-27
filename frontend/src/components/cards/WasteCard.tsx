@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { AlertCircle, Trash2 } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
 import { useStore } from '../../store'
@@ -7,7 +8,7 @@ import type { WasteType } from '../../lib/waste'
 
 interface Upcoming { type: WasteType; diff: number }
 
-export function WasteCard() {
+export const WasteCard = memo(function WasteCard() {
   const t = useT()
   const schedule = useStore((s) => s.wasteSchedule)
   const intervals = useStore((s) => s.wasteInterval)
@@ -104,4 +105,4 @@ export function WasteCard() {
       </div>
     </GlassCard>
   )
-}
+})

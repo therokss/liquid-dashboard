@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { TrendingUp, TrendingDown, Minus, Thermometer, Droplets, Wind, Zap, Eye } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
 import { useT } from '../../i18n'
@@ -77,7 +77,7 @@ function parseTrend(values: number[]): 'up' | 'down' | 'flat' {
   return diff > 0 ? 'up' : 'down'
 }
 
-export function SensorCard({ entity, compact }: SensorCardProps) {
+export const SensorCard = memo(function SensorCard({ entity, compact }: SensorCardProps) {
   const t = useT()
   const attrs = entity.attributes as SensorAttributes
   const name = attrs.friendly_name ?? entity.entity_id
@@ -203,4 +203,4 @@ export function SensorCard({ entity, compact }: SensorCardProps) {
       )}
     </GlassCard>
   )
-}
+})

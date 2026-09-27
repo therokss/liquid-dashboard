@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X } from 'lucide-react'
@@ -7,6 +8,8 @@ import { useHA } from '../hooks/useHA'
 import { useT } from '../i18n'
 import type { HassEntity } from '../types/ha'
 import { FanDirectionControl } from './FanDirectionControl'
+import { PendingSelect } from './PendingSelect'
+import { useThrottledSlider } from '../hooks/useThrottledSlider'
 
 const dom = (id: string) => id.split('.')[0]
 
@@ -32,14 +35,16 @@ function commonPrefix(names: string[]): string {
 // controlli e sensori (con etichette ripulite dal prefisso comune del dispositivo).
 export function useDeviceGroup(entityId: string, excludeIds?: Set<string>) {
   const t = useT()
-  const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
-  return useMemo(() => {
+  const ids = useMemo(() => {
     const devId = entityDevices[entityId]
-    let ids: string[]
-    if (devId) ids = Object.entries(entityDevices).filter(([, d]) => d === devId).map(([e]) => e)
-    else ids = [entityId]
-    const list = ids.map((id) => entities[id]).filter(Boolean) as HassEntity[]
+    return devId ? Object.entries(entityDevices).filter(([, d]) => d === devId).map(([e]) => e) : [entityId]
+  }, [entityDevices, entityId])
+  // Solo le entità del dispositivo (useShallow): niente render a ogni evento di altre entità.
+  const devEntities = useStore(useShallow((s) => ids.map((id) => s.entities[id])))
+  const self = useStore((s) => s.entities[entityId])
+  return useMemo(() => {
+    const list = devEntities.filter(Boolean) as HassEntity[]
     const usable = list.filter((e) => !IGNORE.has(dom(e.entity_id)) && !(excludeIds && excludeIds.has(e.entity_id)))
     const nm = (e: HassEntity) => (e.attributes.friendly_name as string) || e.entity_id
     const prefix = commonPrefix(usable.map(nm))
@@ -54,8 +59,8 @@ export function useDeviceGroup(entityId: string, excludeIds?: Set<string>) {
     const sensors = usable.filter((e) => SENSOR_DOMAINS.has(dom(e.entity_id)))
       .map((e) => ({ e, label: strip(e) }))
       .sort((a, b) => a.label.localeCompare(b.label))
-    return { title: prefix || nm(entities[entityId] ?? ({} as HassEntity)) || t('Dispositivo'), controls, sensors }
-  }, [entityId, entities, entityDevices, excludeIds, t])
+    return { title: prefix || nm(self ?? ({} as HassEntity)) || t('Dispositivo'), controls, sensors }
+  }, [devEntities, self, excludeIds, t])
 }
 
 // Pannelli Controlli + Sensori riusabili (usati sia dal bottom-sheet del dispositivo
@@ -122,6 +127,7 @@ export function DeviceDetailModal({ entityId, onClose }: { entityId: string; onC
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 320, damping: 32 }}
         onClick={(ev) => ev.stopPropagation()}
+        className="ld-no-inner-blur"
         style={{ background: '#08192b', borderTop: '1px solid var(--glass-border)', borderTopLeftRadius: 22, borderTopRightRadius: 22, maxWidth: 640, width: '100%', margin: '0 auto', maxHeight: 'calc(85 * var(--dvh))', display: 'flex', flexDirection: 'column', padding: 'var(--space-lg) var(--space-lg) calc(env(safe-area-inset-bottom, 0px) + var(--space-lg))' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -177,13 +183,10 @@ function ControlRow({ e, label, callService, last }: { e: HassEntity; label: str
     const a = e.attributes as Record<string, unknown>
     const min = (a.min as number) ?? 0, max = (a.max as number) ?? 100, step = (a.step as number) ?? 1
     const val = Number(e.state)
-    const pct = max > min ? ((val - min) / (max - min)) * 100 : 0
     return (
       <Row label={label} last={last}>
-        <input type="range" className="glass-slider" min={min} max={max} step={step} defaultValue={Number.isFinite(val) ? val : min}
-          onChange={(ev) => callService(domain, 'set_value', { entity_id: e.entity_id, value: Number(ev.target.value) })}
-          style={{ width: 130, background: `linear-gradient(to right, var(--accent) ${pct}%, rgba(255,255,255,0.18) ${pct}%)` }} />
-        <span style={{ width: 34, textAlign: 'right', fontSize: 13, color: 'var(--text-secondary)', flexShrink: 0 }}>{Number.isFinite(val) ? val : '—'}</span>
+        <RangeControl remote={Number.isFinite(val) ? val : min} min={min} max={max} step={step} width={130} showValue unknown={!Number.isFinite(val)}
+          send={(v) => callService(domain, 'set_value', { entity_id: e.entity_id, value: v })} />
       </Row>
     )
   }
@@ -191,9 +194,7 @@ function ControlRow({ e, label, callService, last }: { e: HassEntity; label: str
     const opts = (e.attributes.options as string[] | undefined) ?? []
     return (
       <Row label={label} last={last}>
-        <select className="ld-select" value={e.state} onChange={(ev) => callService(domain, 'select_option', { entity_id: e.entity_id, option: ev.target.value })}>
-          {opts.map((o) => <option key={o} value={o}>{o}</option>)}
-        </select>
+        <PendingSelect value={e.state} options={opts} onSelect={(o) => callService(domain, 'select_option', { entity_id: e.entity_id, option: o })} />
       </Row>
     )
   }
@@ -223,9 +224,8 @@ function ControlRow({ e, label, callService, last }: { e: HassEntity; label: str
     return (
       <Row label={label} last={last}>
         {on && pct !== null && (
-          <input type="range" className="glass-slider" min={0} max={100} step={(e.attributes.percentage_step as number) ?? 1} defaultValue={pct}
-            onChange={(ev) => callService('fan', 'set_percentage', { entity_id: e.entity_id, percentage: Number(ev.target.value) })}
-            style={{ width: 110, background: `linear-gradient(to right, var(--accent) ${pct}%, rgba(255,255,255,0.18) ${pct}%)` }} />
+          <RangeControl remote={pct} min={0} max={100} step={(e.attributes.percentage_step as number) ?? 1} width={110}
+            send={(v) => callService('fan', 'set_percentage', { entity_id: e.entity_id, percentage: v })} />
         )}
         <Toggle on={on} onToggle={() => callService('homeassistant', on ? 'turn_off' : 'turn_on', { entity_id: e.entity_id })} />
       </Row>
@@ -237,9 +237,8 @@ function ControlRow({ e, label, callService, last }: { e: HassEntity; label: str
     return (
       <Row label={label} last={last}>
         {on && briPct !== null && (
-          <input type="range" className="glass-slider" min={1} max={100} defaultValue={briPct}
-            onChange={(ev) => callService('light', 'turn_on', { entity_id: e.entity_id, brightness_pct: Number(ev.target.value) })}
-            style={{ width: 110, background: `linear-gradient(to right, var(--accent) ${briPct}%, rgba(255,255,255,0.18) ${briPct}%)` }} />
+          <RangeControl remote={briPct} min={1} max={100} step={1} width={110} tolerance={1}
+            send={(v) => callService('light', 'turn_on', { entity_id: e.entity_id, brightness_pct: v })} />
         )}
         <Toggle on={on} onToggle={() => callService('homeassistant', on ? 'turn_off' : 'turn_on', { entity_id: e.entity_id })} />
       </Row>
@@ -247,4 +246,22 @@ function ControlRow({ e, label, callService, last }: { e: HassEntity; label: str
   }
   // switch, input_boolean, siren, humidifier → toggle on/off
   return <Row label={label} last={last}><Toggle on={on} onToggle={() => callService('homeassistant', on ? 'turn_off' : 'turn_on', { entity_id: e.entity_id })} /></Row>
+}
+
+// Slider controllato: segue il dito, invia a HA al massimo ogni ~200 ms e al rilascio
+// (prima era non controllato con defaultValue e mandava una chiamata per ogni pixel).
+function RangeControl({ remote, min, max, step, width, send, tolerance = 0, showValue, unknown }: {
+  remote: number; min: number; max: number; step: number; width: number
+  send: (v: number) => void; tolerance?: number; showValue?: boolean; unknown?: boolean
+}) {
+  const s = useThrottledSlider(remote, send, { tolerance })
+  const pct = max > min ? ((s.value - min) / (max - min)) * 100 : 0
+  return (
+    <>
+      <input type="range" className="glass-slider" min={min} max={max} step={step} value={s.value}
+        onChange={(ev) => s.onChange(Number(ev.target.value))} {...s.inputProps}
+        style={{ width, background: `linear-gradient(to right, var(--accent) ${pct}%, rgba(255,255,255,0.18) ${pct}%)` }} />
+      {showValue && <span style={{ width: 34, textAlign: 'right', fontSize: 13, color: 'var(--text-secondary)', flexShrink: 0 }}>{unknown ? '—' : s.value}</span>}
+    </>
+  )
 }

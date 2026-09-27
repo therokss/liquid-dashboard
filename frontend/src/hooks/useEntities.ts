@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useStore } from '../store'
 import { getDomain } from '../types/ha'
 import type { HassEntity, EntityDomain } from '../types/ha'
@@ -68,10 +69,6 @@ export function useSensors(areaId?: string): HassEntity[] {
 }
 
 export function usePinnedEntities(): HassEntity[] {
-  const entities = useStore((s) => s.entities)
-  const pinnedIds = useStore((s) => s.pinnedEntities)
-  return useMemo(
-    () => pinnedIds.map((id) => entities[id]).filter(Boolean),
-    [entities, pinnedIds]
-  )
+  // useShallow: nuovo array solo se cambia una delle entità fissate (non a ogni evento di HA)
+  return useStore(useShallow((s) => s.pinnedEntities.map((id) => s.entities[id]).filter(Boolean)))
 }

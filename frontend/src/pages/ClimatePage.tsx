@@ -60,7 +60,7 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
         // Overlay a tutto schermo: sopra al notch (come EnergyCard)
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + var(--space-lg))',
       }}
-      className="page"
+      className="page ld-blur-overlay ld-no-inner-blur"
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'var(--space-lg)' }}>

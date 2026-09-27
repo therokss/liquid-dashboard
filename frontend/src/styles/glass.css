@@ -618,3 +618,54 @@ body {
 .ld-empty-wall,
 .ld-empty-wall * { color: var(--on-wallpaper-dim) !important; }
 .ld-empty-wall { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRESTAZIONI (blocco aggiunto per la reattività: tenerlo in fondo al file)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Rilascio dei tasti più rapido (era 480 ms): stesso rimbalzo, meno attesa. */
+:root {
+  --press-out: 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Thumb del toggle: prima "transform 0.42s var(--press-out)" veniva letto come durata
+   0.42s + RITARDO 480ms (la variabile contiene già una durata) → il pallino partiva
+   in ritardo. Ora parte subito. */
+.glass-toggle-thumb {
+  transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Card premuta: il feedback di scala basta (whileTap/transform); il filter:brightness
+   su un elemento con backdrop-filter costringe a ricomporre il vetro a ogni tocco. */
+.glass-card:active {
+  filter: none;
+}
+
+/* Niente blur annidato: dentro overlay già sfocati o fogli opachi (dettaglio stanza,
+   clima, energia, modali) il vetro delle card sfocherebbe uno sfondo già sfocato —
+   stesso aspetto, doppio costo GPU. */
+.ld-no-inner-blur .glass-card,
+.ld-no-inner-blur .glass-panel,
+.ld-no-inner-blur .glass-btn {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Dispositivi touch (tablet/telefono, GPU più deboli): blur e saturazione più leggeri. */
+@media (hover: none) {
+  :root {
+    --glass-blur: calc(8px + var(--glass-intensity) * 8px); /* ~12–16 px (era 14–36) */
+    --glass-saturation: 1.3;                                  /* era 2 */
+    --tabbar-blur: 24px;                                      /* era 44 */
+  }
+  .glass-btn {
+    backdrop-filter: blur(14px) saturate(var(--glass-saturation));
+    -webkit-backdrop-filter: blur(14px) saturate(var(--glass-saturation));
+  }
+  /* Overlay a tutto schermo (inline blur 32px): stesso effetto con metà raggio. */
+  .ld-blur-overlay {
+    backdrop-filter: blur(16px) saturate(1.2) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(1.2) !important;
+  }
+}
+/* ═══ fine blocco prestazioni ═══ */

@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sun, Minus, Plus } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
 import { useHA } from '../../hooks/useHA'
 import { useT } from '../../i18n'
+import { useThrottledSlider } from '../../hooks/useThrottledSlider'
 import { LightDetailModal } from '../LightDetailModal'
 import type { HassEntity, LightAttributes } from '../../types/ha'
 
@@ -38,7 +39,7 @@ function percentToBrightness(p: number): number {
   return Math.round((p / 100) * 255)
 }
 
-export function LightCard({ entity, compact }: LightCardProps) {
+export const LightCard = memo(function LightCard({ entity, compact }: LightCardProps) {
   const t = useT()
   const { callService } = useHA()
   const attrs = entity.attributes as LightAttributes
@@ -70,6 +71,9 @@ export function LightCard({ entity, compact }: LightCardProps) {
     },
     [callService, entity.entity_id]
   )
+
+  // Valore locale che segue il dito; invio a HA throttled (~200 ms) + finale al rilascio.
+  const bri = useThrottledSlider(brightness, setBrightness, { tolerance: 1 })
 
   const setHue = useCallback(
     (hue: number) => {
@@ -148,7 +152,7 @@ export function LightCard({ entity, compact }: LightCardProps) {
             {name}
           </div>
           <div style={{ color: 'var(--text-secondary)', fontSize: 12, marginTop: 2 }}>
-            {isOn ? t('Accesa · {{brightness}}%', { brightness }) : t('Spenta')}
+            {isOn ? t('Accesa · {{brightness}}%', { brightness: bri.value }) : t('Spenta')}
           </div>
         </div>
         <ToggleSwitch isOn={isOn} onToggle={toggle} color={colorCss} />
@@ -173,10 +177,11 @@ export function LightCard({ entity, compact }: LightCardProps) {
                     className="glass-slider"
                     min={5}
                     max={100}
-                    value={brightness}
-                    onChange={(e) => setBrightness(Number(e.target.value))}
+                    value={bri.value}
+                    onChange={(e) => bri.onChange(Number(e.target.value))}
+                    {...bri.inputProps}
                     style={{
-                      background: `linear-gradient(to right, ${colorCss ?? 'var(--accent)'} 0%, ${colorCss ?? 'var(--accent)'} ${brightness}%, rgba(255,255,255,0.2) ${brightness}%, rgba(255,255,255,0.2) 100%)`,
+                      background: `linear-gradient(to right, ${colorCss ?? 'var(--accent)'} 0%, ${colorCss ?? 'var(--accent)'} ${bri.value}%, rgba(255,255,255,0.2) ${bri.value}%, rgba(255,255,255,0.2) 100%)`,
                     }}
                   />
                 </div>
@@ -228,7 +233,7 @@ export function LightCard({ entity, compact }: LightCardProps) {
     <AnimatePresence>{showDetail && <LightDetailModal entity={entity} onClose={() => setShowDetail(false)} />}</AnimatePresence>
     </>
   )
-}
+})
 
 function ToggleSwitch({ isOn, onToggle, color }: { isOn: boolean; onToggle: () => void; color: string | null }) {
   return (

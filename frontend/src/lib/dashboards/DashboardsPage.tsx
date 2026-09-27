@@ -1,13 +1,15 @@
 // Gestione delle dashboard custom: crea, modifica, elimina e assegna a QUESTO schermo.
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { ChevronLeft, Plus, Pencil, Trash2, Monitor, Check } from 'lucide-react'
 import { loadDashboards, deleteDashboard, setDeviceAssignment, saveDashboard, type DashboardsData } from './store'
-import { DashboardEditor } from './DashboardEditor'
 import { emptyDashboard, type CustomDashboard } from './types'
 import { getScreenId, getScreenName } from './deviceId'
 import { useScrollMemory } from '../navState'
+
+// Editor (react-grid-layout) caricato solo quando si modifica (code-splitting)
+const DashboardEditor = lazy(() => import('./DashboardEditor').then((m) => ({ default: m.DashboardEditor })))
 
 export function DashboardsPage({ onBack }: { onBack: () => void }) {
   const [data, setData] = useState<DashboardsData>({ dashboards: [], deviceMap: {} })
@@ -118,11 +120,13 @@ export function DashboardsPage({ onBack }: { onBack: () => void }) {
       </div>
 
       {editing && (
-        <DashboardEditor
-          dashboard={editing}
-          onSaved={() => { setEditing(null); reload() }}
-          onClose={() => setEditing(null)}
-        />
+        <Suspense fallback={null}>
+          <DashboardEditor
+            dashboard={editing}
+            onSaved={() => { setEditing(null); reload() }}
+            onClose={() => setEditing(null)}
+          />
+        </Suspense>
       )}
     </motion.div>,
     document.body,

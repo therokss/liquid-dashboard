@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Lightbulb, Moon } from 'lucide-react'
@@ -18,6 +19,7 @@ import { MyDevicesSection } from '../components/cards/MyDevicesCard'
 import { usePinnedEntities } from '../hooks/useEntities'
 import { useT } from '../i18n'
 import { getDomain } from '../types/ha'
+import type { HassEntity } from '../types/ha'
 
 function useGreeting(): string {
   const hour = new Date().getHours()
@@ -38,9 +40,6 @@ function formatDate(): string {
 export function HomePage() {
   const t = useT()
   const connected = useStore((s) => s.connected)
-  const entities = useStore((s) => s.entities)
-  const hiddenEntities = useStore((s) => s.hiddenEntities)
-  const userHidden = useStore((s) => s.userHiddenEntities)
   const areas = useStore((s) => s.areas)
   const entityAreas = useStore((s) => s.entityAreas)
   const enabledAreas = useStore((s) => s.enabledAreas)
@@ -54,26 +53,40 @@ export function HomePage() {
   const showClimate = useNav().sub === 'climate'
   const scrollRef = useScrollMemory('home')
 
+  // Selettori stretti (useShallow / valori primitivi): la Home si ri-renderizza solo quando
+  // cambia qualcosa che mostra, non a ogni evento di qualsiasi entità di HA.
+  const visible = (s: { hiddenEntities: Record<string, true>; userHiddenEntities: Record<string, true> }, id: string) =>
+    !s.hiddenEntities[id] && !s.userHiddenEntities[id]
+
   // Entità attive da mostrare nella home (luci accese, media in play, clima attivo)
-  const activeEntities = useMemo(() => {
-    return Object.values(entities).filter((e) => {
-      if (hiddenEntities[e.entity_id] || userHidden[e.entity_id]) return false
-      const domain = getDomain(e.entity_id)
-      if (domain === 'light') return e.state === 'on'
-      if (domain === 'climate') return e.state !== 'off'
-      // i media in riproduzione sono già mostrati nella sezione "In riproduzione"
-      return false
-    }).slice(0, 6)
-  }, [entities, hiddenEntities, userHidden])
+  const activeEntities = useStore(useShallow((s) => Object.values(s.entities).filter((e) => {
+    if (!visible(s, e.entity_id)) return false
+    const domain = getDomain(e.entity_id)
+    if (domain === 'light') return e.state === 'on'
+    if (domain === 'climate') return e.state !== 'off'
+    // i media in riproduzione sono già mostrati nella sezione "In riproduzione"
+    return false
+  }).slice(0, 6)))
+
+  // Sensori di temperatura assegnati a un'area (solo questi fanno ricalcolare le medie)
+  const tempSensors = useStore(useShallow((s) => {
+    const out: HassEntity[] = []
+    for (const entityId of Object.keys(s.entityAreas)) {
+      if (!visible(s, entityId)) continue
+      const e = s.entities[entityId]
+      if (!e || getDomain(entityId) !== 'sensor') continue
+      if ((e.attributes as Record<string, unknown>).device_class !== 'temperature') continue
+      out.push(e)
+    }
+    return out
+  }))
 
   // Temperatura media per ambiente (media dei sensori temperatura di ogni area)
   const areaTemps = useMemo(() => {
     const agg: Record<string, { sum: number; count: number; sensorId: string }> = {}
-    for (const [entityId, areaId] of Object.entries(entityAreas)) {
-      if (hiddenEntities[entityId] || userHidden[entityId]) continue
-      const e = entities[entityId]
-      if (!e || getDomain(entityId) !== 'sensor') continue
-      if ((e.attributes as Record<string, unknown>).device_class !== 'temperature') continue
+    for (const e of tempSensors) {
+      const entityId = e.entity_id
+      const areaId = entityAreas[entityId]
       const v = parseFloat(e.state)
       if (isNaN(v)) continue
       const g = agg[areaId] ?? (agg[areaId] = { sum: 0, count: 0, sensorId: entityId })
@@ -84,35 +97,25 @@ export function HomePage() {
       .filter((a) => agg[a.area_id]?.count && (enabledAreas.length === 0 || enabledAreas.includes(a.area_id)))
       .map((a) => ({ id: a.area_id, name: a.name, avg: agg[a.area_id].sum / agg[a.area_id].count, sensorId: agg[a.area_id].sensorId }))
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [entities, entityAreas, hiddenEntities, userHidden, areas, enabledAreas])
+  }, [tempSensors, entityAreas, areas, enabledAreas])
 
   // Media player attivo
-  const featuredMedia = useMemo(() => {
-    return Object.values(entities).find(
-      (e) => getDomain(e.entity_id) === 'media_player' && e.state === 'playing' &&
-        !hiddenEntities[e.entity_id] && !userHidden[e.entity_id]
-    )
-  }, [entities, hiddenEntities, userHidden])
+  const featuredMedia = useStore((s) => Object.values(s.entities).find(
+    (e) => getDomain(e.entity_id) === 'media_player' && e.state === 'playing' && visible(s, e.entity_id)
+  ))
 
   const enabledAreasData = useMemo(
     () => areas.filter((a) => enabledAreas.includes(a.area_id)),
     [areas, enabledAreas]
   )
 
-  const totalLightsOn = useMemo(
-    () =>
-      Object.values(entities).filter(
-        (e) =>
-          getDomain(e.entity_id) === 'light' &&
-          e.state === 'on' &&
-          !hiddenEntities[e.entity_id] &&
-          !userHidden[e.entity_id]
-      ).length,
-    [entities, hiddenEntities, userHidden]
-  )
+  const totalLightsOn = useStore((s) => Object.values(s.entities).filter(
+    (e) => getDomain(e.entity_id) === 'light' && e.state === 'on' && visible(s, e.entity_id)
+  ).length)
 
-  const hasWeather = useMemo(() => Object.keys(entities).some((id) => id.startsWith('weather.')), [entities])
-  const hasCalendar = useMemo(() => Object.keys(entities).some((id) => id.startsWith('calendar.')), [entities])
+  const hasWeather = useStore((s) => Object.keys(s.entities).some((id) => id.startsWith('weather.')))
+  const hasCalendar = useStore((s) => Object.keys(s.entities).some((id) => id.startsWith('calendar.')))
+  const openClimate = useCallback(() => openSub('climate'), [])
   const hasWaste = useMemo(() => Object.values(wasteSchedule).some((d) => d.length > 0), [wasteSchedule])
 
   return (
@@ -254,7 +257,7 @@ export function HomePage() {
           <div className="grid-fluid stagger-grid">
             {areaTemps.map((a, i) => (
               <motion.div key={a.id} className="anim-scale-in" style={{ animationDelay: `${Math.min(i * 30, 120)}ms`, minWidth: 0 }}>
-                <AreaTempCard name={a.name} avg={a.avg} sensorId={a.sensorId} onClick={() => openSub('climate')} />
+                <AreaTempCard name={a.name} avg={a.avg} sensorId={a.sensorId} onClick={openClimate} />
               </motion.div>
             ))}
           </div>

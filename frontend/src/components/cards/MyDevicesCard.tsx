@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -120,12 +121,38 @@ function timeOf(iso?: string): string | null {
   return Number.isFinite(t) ? new Date(t).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : null
 }
 
-export function MyDevicesSection() {
+export const MyDevicesSection = memo(function MyDevicesSection() {
   const t = useT()
-  const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const currentUserId = useStore((s) => s.currentUserId)
   const [selected, setSelected] = useState<MobileDevice | null>(null)
+
+  // Selettori stretti: prima si ricavano (solo dagli id, che cambiano di rado) le entità
+  // che possono servire — persone, *_battery_level e le entità collegate/dello stesso
+  // dispositivo — poi si leggono solo quelle (useShallow). Così la sezione non ricalcola
+  // tutto a ogni evento di HA di entità che non la riguardano.
+  const allIds = useStore(useShallow((s) => Object.keys(s.entities)))
+  const relevantIds = useMemo(() => {
+    const byDevice: Record<string, string[]> = {}
+    for (const [eid, dev] of Object.entries(entityDevices)) (byDevice[dev] ??= []).push(eid)
+    const rel = new Set<string>()
+    for (const id of allIds) {
+      if (id.startsWith('person.')) { rel.add(id); continue }
+      if (!id.startsWith('sensor.') || !id.endsWith('_battery_level')) continue
+      rel.add(id)
+      const base = id.slice(0, -'_battery_level'.length)
+      for (const suf of ['_battery_state', '_battery_charging', '_connection_type', '_ssid', '_storage', '_activity', '_app_version']) rel.add(`${base}${suf}`)
+      const devId = entityDevices[id]
+      if (devId && byDevice[devId]) byDevice[devId].forEach((x) => rel.add(x))
+    }
+    return [...rel]
+  }, [allIds, entityDevices])
+  const relevant = useStore(useShallow((s) => relevantIds.map((id) => s.entities[id])))
+  const entities = useMemo(() => {
+    const m: Record<string, HassEntity> = {}
+    relevantIds.forEach((id, i) => { if (relevant[i]) m[id] = relevant[i] })
+    return m
+  }, [relevantIds, relevant])
 
   const devices = useMemo<MobileDevice[]>(() => {
     if (!currentUserId) return []
@@ -210,7 +237,7 @@ export function MyDevicesSection() {
       )}
     </div>
   )
-}
+})
 
 function DeviceRow({ d, onOpen }: { d: MobileDevice; onOpen: () => void }) {
   const t = useT()

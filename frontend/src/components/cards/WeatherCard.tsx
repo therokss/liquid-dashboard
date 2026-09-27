@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import {
   Sun, Moon, Cloud, CloudFog, CloudLightning, CloudRain, CloudRainWind,
   CloudSnow, CloudSun, CloudHail, Wind, AlertTriangle, Droplets, ArrowUp, ArrowDown,
@@ -7,6 +7,7 @@ import { GlassCard } from '../glass/GlassCard'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
 import { useT } from '../../i18n'
+import { cachedFetch, peekCache } from '../../lib/fetchCache'
 import type { WeatherAttributes, WeatherForecast } from '../../types/ha'
 
 type IconType = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
@@ -34,36 +35,36 @@ function toNum(v: unknown): number | undefined {
   return isNaN(n) ? undefined : n
 }
 
-export function WeatherCard() {
+export const WeatherCard = memo(function WeatherCard() {
   const t = useT()
-  const entities = useStore((s) => s.entities)
   const weatherSel = useStore((s) => s.weatherEntity)
   const tempSource = useStore((s) => s.externalTempSource)
   const { callServiceResponse } = useHA()
-  const [forecast, setForecast] = useState<WeatherForecast[]>([])
 
-  // Entità weather effettiva: quella scelta, altrimenti la prima disponibile
-  const entityId = useMemo(() => {
-    if (weatherSel && entities[weatherSel]) return weatherSel
-    return Object.keys(entities).find((id) => id.startsWith('weather.')) ?? null
-  }, [entities, weatherSel])
+  // Entità weather effettiva: quella scelta, altrimenti la prima disponibile. Selettori
+  // stretti (id / singole entità): la card non si ri-renderizza a ogni evento di HA.
+  const entityId = useStore((s) => {
+    if (weatherSel && s.entities[weatherSel]) return weatherSel
+    return Object.keys(s.entities).find((id) => id.startsWith('weather.')) ?? null
+  })
+  const weather = useStore((s) => (entityId ? s.entities[entityId] : undefined))
+  const tempEntity = useStore((s) => (tempSource === 'weather' ? undefined : s.entities[tempSource]))
+
+  // Previsioni in cache di modulo: tornando sulla Home compaiono subito.
+  const [forecast, setForecast] = useState<WeatherForecast[]>(() => (entityId && peekCache<WeatherForecast[]>(`forecast:${entityId}`)) || [])
 
   useEffect(() => {
     if (!entityId) return
     let cancelled = false
-    callServiceResponse<Record<string, { forecast: WeatherForecast[] }>>(
+    cachedFetch(`forecast:${entityId}`, () => callServiceResponse<Record<string, { forecast: WeatherForecast[] }>>(
       'weather', 'get_forecasts', { entity_id: entityId, type: 'daily' }
-    )
-      .then((resp) => {
-        if (cancelled || !resp) return
-        setForecast(resp[entityId]?.forecast ?? [])
-      })
+    ).then((resp) => resp?.[entityId]?.forecast ?? null), { shouldCache: (v) => !!v && v.length > 0 })
+      .then((v) => { if (!cancelled && v) setForecast(v) })
       .catch(() => {})
     return () => { cancelled = true }
   }, [entityId, callServiceResponse])
 
-  if (!entityId) return null
-  const weather = entities[entityId]
+  if (!entityId || !weather) return null
   const attrs = weather.attributes as WeatherAttributes
   const meta = COND[weather.state] ?? { label: weather.state, Icon: Cloud }
   const Icon = meta.Icon
@@ -71,9 +72,9 @@ export function WeatherCard() {
   // Temperatura mostrata: dal sensore scelto, oppure dal meteo
   const displayTemp = tempSource === 'weather'
     ? attrs.temperature
-    : toNum(entities[tempSource]?.state)
+    : toNum(tempEntity?.state)
   const unit = attrs.temperature_unit ?? '°C'
-  const usingSensor = tempSource !== 'weather' && entities[tempSource] !== undefined
+  const usingSensor = tempSource !== 'weather' && tempEntity !== undefined
 
   const today = forecast[0]
   const hi = today?.temperature
@@ -131,4 +132,4 @@ export function WeatherCard() {
       )}
     </GlassCard>
   )
-}
+})

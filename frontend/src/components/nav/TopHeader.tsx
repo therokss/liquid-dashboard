@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { memo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { Maximize, Minimize } from 'lucide-react'
 import { useStore } from '../../store'
 import { artworkUrl } from '../../lib/media'
@@ -10,7 +11,7 @@ function initials(name: string): string {
   return name.split(' ').filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
 }
 
-function PersonAvatar({ entity }: { entity: HassEntity }) {
+const PersonAvatar = memo(function PersonAvatar({ entity }: { entity: HassEntity }) {
   const t = useT()
   const name = (entity.attributes.friendly_name as string) || entity.entity_id
   const home = entity.state === 'home'
@@ -44,19 +45,15 @@ function PersonAvatar({ entity }: { entity: HassEntity }) {
       </div>
     </div>
   )
-}
+})
 
 export function TopHeader() {
   const t = useT()
   const isAdmin = useStore((s) => s.isAdmin)
   const kioskMode = useStore((s) => s.kioskMode)
   const setKioskMode = useStore((s) => s.setKioskMode)
-  const entities = useStore((s) => s.entities)
-
-  const persons = useMemo(
-    () => Object.values(entities).filter((e) => e.entity_id.startsWith('person.')),
-    [entities]
-  )
+  // Solo le entità person.*: useShallow evita il render a ogni evento di altre entità.
+  const persons = useStore(useShallow((s) => Object.values(s.entities).filter((e) => e.entity_id.startsWith('person.'))))
 
   const toggleKiosk = () => {
     const next = !kioskMode

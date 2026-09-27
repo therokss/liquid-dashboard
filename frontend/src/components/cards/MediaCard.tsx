@@ -1,10 +1,11 @@
-import { useCallback, useRef, useState } from 'react'
+import { memo, useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Music } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
 import { useHA } from '../../hooks/useHA'
 import { useT } from '../../i18n'
 import { artworkUrl } from '../../lib/media'
+import { useThrottledSlider } from '../../hooks/useThrottledSlider'
 import type { HassEntity, MediaPlayerAttributes } from '../../types/ha'
 
 // Immagine cover con fallback all'icona se non carica
@@ -41,7 +42,7 @@ function hasFeature(features: number | undefined, feature: number): boolean {
   return ((features ?? 0) & feature) !== 0
 }
 
-export function MediaCard({ entity, featured }: MediaCardProps) {
+export const MediaCard = memo(function MediaCard({ entity, featured }: MediaCardProps) {
   const t = useT()
   const { callService } = useHA()
   const attrs = entity.attributes as MediaPlayerAttributes
@@ -57,8 +58,6 @@ export function MediaCard({ entity, featured }: MediaCardProps) {
   const isMuted = attrs.is_volume_muted ?? false
   const features = attrs.supported_features
 
-  const volumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   const callMedia = useCallback(
     (service: string, data: Record<string, unknown> = {}) => {
       callService('media_player', service, { entity_id: entity.entity_id, ...data })
@@ -66,15 +65,13 @@ export function MediaCard({ entity, featured }: MediaCardProps) {
     [callService, entity.entity_id]
   )
 
+  // Volume: il cursore segue il dito (valore locale), invio throttled ~200 ms + finale
+  // al rilascio. Prima era un debounce che lasciava il cursore fermo durante il drag.
   const setVolume = useCallback(
-    (val: number) => {
-      if (volumeTimerRef.current) clearTimeout(volumeTimerRef.current)
-      volumeTimerRef.current = setTimeout(() => {
-        callMedia('volume_set', { volume_level: val / 100 })
-      }, 150)
-    },
+    (val: number) => { callMedia('volume_set', { volume_level: val / 100 }) },
     [callMedia]
   )
+  const vol = useThrottledSlider(isMuted ? 0 : volume, setVolume, { tolerance: 1 })
 
   if (featured) {
     return (
@@ -206,10 +203,11 @@ export function MediaCard({ entity, featured }: MediaCardProps) {
                 className="glass-slider"
                 min={0}
                 max={100}
-                value={isMuted ? 0 : volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
+                value={vol.value}
+                onChange={(e) => vol.onChange(Number(e.target.value))}
+                {...vol.inputProps}
                 style={{
-                  background: `linear-gradient(to right, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.8) ${isMuted ? 0 : volume}%, rgba(255,255,255,0.2) ${isMuted ? 0 : volume}%, rgba(255,255,255,0.2) 100%)`,
+                  background: `linear-gradient(to right, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.8) ${vol.value}%, rgba(255,255,255,0.2) ${vol.value}%, rgba(255,255,255,0.2) 100%)`,
                 }}
               />
             </div>
@@ -270,7 +268,7 @@ export function MediaCard({ entity, featured }: MediaCardProps) {
       </div>
     </GlassCard>
   )
-}
+})
 
 function ControlBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (

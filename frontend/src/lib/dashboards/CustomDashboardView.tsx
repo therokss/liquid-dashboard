@@ -1,8 +1,11 @@
 // Vista a schermo pieno di una dashboard custom assegnata a questo schermo (tablet a
 // muro). Read-only, con un tasto per tornare alla dashboard predefinita (Home + tab).
+import { lazy, Suspense } from 'react'
 import { Home } from 'lucide-react'
-import { DashboardRenderer } from './DashboardRenderer'
 import type { CustomDashboard } from './types'
+
+// Griglia (react-grid-layout) caricata solo se c'è una dashboard da mostrare (code-splitting)
+const DashboardRenderer = lazy(() => import('./DashboardRenderer').then((m) => ({ default: m.DashboardRenderer })))
 
 export function CustomDashboardView({ dashboard, onDefault }: { dashboard: CustomDashboard; onDefault: () => void }) {
   return (
@@ -31,7 +34,7 @@ export function CustomDashboardView({ dashboard, onDefault }: { dashboard: Custo
             Questa dashboard è vuota. Aggiungi delle card dall'editor.
           </div>
         ) : (
-          <DashboardRenderer dashboard={dashboard} />
+          <Suspense fallback={null}><DashboardRenderer dashboard={dashboard} /></Suspense>
         )}
       </div>
     </div>

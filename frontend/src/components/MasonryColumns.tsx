@@ -37,8 +37,15 @@ export function MasonryColumns({
 }
 
 // 1 colonna su telefono, 2 su tablet/desktop, 3 su schermi molto ampi.
+function currentColumns(): number {
+  if (typeof window === 'undefined' || !window.matchMedia) return 1
+  return window.matchMedia('(min-width: 1600px)').matches ? 3 : window.matchMedia('(min-width: 1080px)').matches ? 2 : 1
+}
+
 export function useColumnCount(): number {
-  const [cols, setCols] = useState(1)
+  // Inizializzazione sincrona: evita il primo render a 1 colonna seguito dal ri-montaggio
+  // di tutte le card in 2/3 colonne su tablet/desktop.
+  const [cols, setCols] = useState(currentColumns)
   useEffect(() => {
     const mq2 = window.matchMedia('(min-width: 1080px)')
     const mq3 = window.matchMedia('(min-width: 1600px)')

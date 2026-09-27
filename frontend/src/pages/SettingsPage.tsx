@@ -1,7 +1,6 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sun, Moon, Sparkles, Upload, Trash2, RefreshCw, Server, ChevronRight, LayoutGrid, QrCode, Settings } from 'lucide-react'
-import { CredsQRModal } from '../components/CredsQRModal'
 import { DashboardsPage } from '../lib/dashboards/DashboardsPage'
 import { useStore } from '../store'
 import { clearToken } from '../hooks/useHA'
@@ -19,6 +18,9 @@ import { openHomeAssistantSettings } from '../lib/kiosk'
 import { useNav, openSub, closeChild, useScrollMemory, type SubPage } from '../lib/navState'
 import type { WallpaperSlot } from '../store'
 import type { HassEntity } from '../types/ha'
+
+// Generatore QR (qrcode) caricato solo all'apertura (code-splitting)
+const CredsQRModal = lazy(() => import('../components/CredsQRModal').then((m) => ({ default: m.CredsQRModal })))
 
 function entityName(e: HassEntity): string {
   return (e.attributes.friendly_name as string) ?? e.entity_id
@@ -502,7 +504,7 @@ export function SettingsPage() {
         {showDashboards && <DashboardsPage onBack={() => setShowDashboards(false)} />}
         {showServer && <ServerPage onBack={() => setShowServer(false)} />}
         {showUpdates && <UpdatesPage onBack={() => setShowUpdates(false)} />}
-        {showQR && <CredsQRModal url={hassUrl} externalUrl={hassUrlExternal} onClose={() => setShowQR(false)} />}
+        {showQR && <Suspense fallback={null}><CredsQRModal url={hassUrl} externalUrl={hassUrlExternal} onClose={() => setShowQR(false)} /></Suspense>}
       </AnimatePresence>
     </div>
   )
