@@ -235,7 +235,7 @@ export function SecurityPage() {
       {detectors.length > 0 && <Section title="Rilevatori"><StatusList items={detectors} /></Section>}
 
       {!hasAny && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-tertiary)' }}>
+        <motion.div className="ld-empty-wall" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-tertiary)' }}>
           <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
             <Shield size={40} strokeWidth={1.5} />
           </div>

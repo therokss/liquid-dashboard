@@ -125,7 +125,7 @@ export function MediaPage() {
       )}
 
       {tvs.length === 0 && playing.length === 0 && others.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-tertiary)' }}>
+        <div className="ld-empty-wall" style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-tertiary)' }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>
             <Music size={48} style={{ opacity: 0.3 }} />
           </div>

@@ -611,3 +611,10 @@ body {
     padding-right: max(var(--space-xl), calc(50% - 750px)) !important;
   }
 }
+
+/* Stati vuoti posati direttamente sul wallpaper ("Tutto spento", "Nessun media
+   player"…): seguono il colore "sul wallpaper", come titoli e didascalie, così
+   restano leggibili anche in tema chiaro con lo sfondo notturno scuro. */
+.ld-empty-wall,
+.ld-empty-wall * { color: var(--on-wallpaper-dim) !important; }
+.ld-empty-wall { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }

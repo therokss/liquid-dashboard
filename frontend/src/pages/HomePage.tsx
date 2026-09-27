@@ -263,7 +263,7 @@ export function HomePage() {
 
       {/* Placeholder quando tutto è spento */}
       {activeEntities.length === 0 && areaTemps.length === 0 && connected && (
-        <div style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-tertiary)' }}>
+        <div className="ld-empty-wall" style={{ textAlign: 'center', padding: 'var(--space-2xl)', color: 'var(--text-tertiary)' }}>
           <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center', color: 'var(--text-tertiary)' }}>
             <Moon size={40} strokeWidth={1.5} />
           </div>
