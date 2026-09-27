@@ -26,8 +26,8 @@
 }
 
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 12px var(--entity-color, var(--accent-glow)); }
-  50% { box-shadow: 0 0 28px var(--entity-color, var(--accent-glow)), 0 0 8px var(--entity-color, var(--accent-glow)); }
+  0%, 100% { box-shadow: 0 0 6px var(--entity-color, var(--accent-glow)); }
+  50% { box-shadow: 0 0 10px var(--entity-color, var(--accent-glow)); }
 }
 
 @keyframes liquidFloat {

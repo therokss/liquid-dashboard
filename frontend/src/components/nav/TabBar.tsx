@@ -32,7 +32,7 @@ export function TabBar({ active, onChange }: TabBarProps) {
         WebkitBackdropFilter: 'blur(var(--tabbar-blur)) saturate(var(--glass-saturation))',
         background: 'var(--glass-bg)',
         borderTop: '0.5px solid var(--glass-rim)',
-        boxShadow: 'inset 0 1px 0 var(--glass-rim), 0 -10px 40px rgba(0, 123, 255, 0.15)',
+        boxShadow: 'inset 0 1px 0 var(--glass-rim), 0 -4px 12px -4px rgba(0, 0, 0, 0.25)',
         paddingBottom: 'max(var(--safe-bottom), 8px)',
       }}
     >

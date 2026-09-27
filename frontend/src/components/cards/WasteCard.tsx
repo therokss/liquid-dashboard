@@ -66,7 +66,7 @@ export const WasteCard = memo(function WasteCard() {
   return (
     <GlassCard
       size="md"
-      style={highlight ? { border: '1px solid rgba(255,179,0,0.5)', boxShadow: 'var(--glass-shadow), 0 0 24px rgba(255,179,0,0.25)' } : undefined}
+      style={highlight ? { border: '1px solid rgba(255,179,0,0.5)', boxShadow: 'var(--glass-shadow), inset 0 0 22px -4px rgba(255,179,0,0.35)' } : undefined}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
         <div

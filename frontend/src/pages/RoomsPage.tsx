@@ -806,7 +806,7 @@ const RoomCard = memo(function RoomCard({ area, gradient, stat, onClick, index }
           justifyContent: 'space-between',
           padding: 'var(--space-lg)',
           position: 'relative',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+          boxShadow: '0 6px 12px -6px rgba(0,0,0,0.35)',
         }}
       >
         <div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', overflow: 'hidden' }}>

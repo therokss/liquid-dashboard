@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.47.1] — 2026-09-27
+### Corretto
+- **Ombre e bagliori che finivano sulle card vicine**: l'ombra di ogni card scendeva fino a
+  40–60 px, ma tra una card e l'altra ce ne sono 8–16, così si posava sulla card
+  successiva e il suo vetro la sfocava dentro di sé (bande scure e aloni sporchi, diversi a
+  seconda di quali luci erano accese). Anche l'alone colorato delle luci accese si
+  allargava sulle card accanto. Ora le ombre restano nello spazio tra le card e il colore
+  della luce accesa è un bordo con luce interna, tutto dentro la card. Più leggero anche il
+  riflesso blu della barra delle schede sulle card in basso.
+
 ## [1.47.0] — 2026-09-27
 ### Aggiunto
 - **Riapre la schermata in cui eri**: uscendo e rientrando la dashboard torna alla stessa

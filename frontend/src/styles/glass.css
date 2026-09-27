@@ -442,7 +442,11 @@ body {
 
 /* ─── Glow effect per entità attive ─── */
 .entity-glow {
-  box-shadow: var(--glass-shadow), var(--glass-inner-shadow), 0 0 24px var(--entity-color, var(--accent-glow));
+  /* Bagliore DENTRO la card (bordo + luce interna): un alone esterno si posava sulle card
+     vicine e il loro vetro lo sfocava, creando macchie colorate. */
+  box-shadow: var(--glass-shadow), var(--glass-inner-shadow),
+    inset 0 0 0 1px var(--entity-color, var(--accent-glow)),
+    inset 0 0 22px -4px var(--entity-color, var(--accent-glow));
 }
 
 /* ─── Layout utilities ─── */

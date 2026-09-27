@@ -20,7 +20,9 @@
   --glass-bg-active: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(0, 0, 0, 0.07);
   --glass-border-dim: rgba(0, 0, 0, 0.05);
-  --glass-shadow: 0 12px 30px rgba(15, 23, 42, 0.11), 0 3px 9px rgba(15, 23, 42, 0.06);
+  /* Ombre corte: devono restare nello spazio tra le card (8–16 px), altrimenti finiscono
+     sulla card vicina e il suo vetro le sfoca dentro di sé (bande scure/aloni). */
+  --glass-shadow: 0 6px 12px -6px rgba(15, 23, 42, 0.22), 0 1px 3px rgba(15, 23, 42, 0.08);
   /* Highlight speculare: bloom morbido in alto a sinistra (sorgente di luce) +
      riga sottile sul bordo superiore. Vetro iOS, non plastica bianca. */
   --glass-specular:
@@ -98,7 +100,7 @@
   --glass-bg-active: rgba(255, 255, 255, 0.13);
   --glass-border: rgba(255, 255, 255, 0.12);
   --glass-border-dim: rgba(255, 255, 255, 0.07);
-  --glass-shadow: 0 20px 42px rgba(0, 90, 170, 0.16), 0 9px 24px rgba(0, 0, 0, 0.48);
+  --glass-shadow: 0 6px 12px -6px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
   --glass-specular:
     radial-gradient(130% 85% at 12% -8%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 46%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 18%, rgba(255, 255, 255, 0) 46%);

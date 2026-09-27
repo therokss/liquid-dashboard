@@ -44,7 +44,7 @@ export function CamerasSection() {
       <div className="grid-fluid-lg">
         {cams.map((c) => (
           <button key={c.entity_id} onClick={() => setFull(c)}
-            style={{ position: 'relative', padding: 0, border: 'none', borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', aspectRatio: '16/9', background: '#0a1622', boxShadow: '0 6px 20px rgba(0,0,0,0.25)' }}>
+            style={{ position: 'relative', padding: 0, border: 'none', borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', aspectRatio: '16/9', background: '#0a1622', boxShadow: '0 6px 12px -6px rgba(0,0,0,0.4)' }}>
             {/* Griglia: solo snapshot periodici (niente WebRTC per ogni camera); il video
                 live parte nella vista a schermo intero. Col modal aperto la griglia si ferma. */}
             <CameraSnapshot entity={c} paused={full !== null} />
