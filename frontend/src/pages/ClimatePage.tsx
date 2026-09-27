@@ -7,6 +7,7 @@ import { GlassCard } from '../components/glass/GlassCard'
 import { MasonryColumns } from '../components/MasonryColumns'
 import { useT } from '../i18n'
 import { getDomain } from '../types/ha'
+import { useScrollMemory } from '../lib/navState'
 
 export function ClimatePage({ onBack }: { onBack: () => void }) {
   const t = useT()
@@ -15,6 +16,7 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
   const areas = useStore((s) => s.areas)
   const hiddenEntities = useStore((s) => s.hiddenEntities)
   const userHidden = useStore((s) => s.userHiddenEntities)
+  const scrollRef = useScrollMemory('climate')
 
   // Medie temperatura per area + media casa (tutti i sensori temperatura)
   const agg: Record<string, { sum: number; count: number; sensorId: string }> = {}
@@ -46,6 +48,7 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
 
   return (
     <motion.div
+      ref={scrollRef}
       initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%' }}

@@ -7,6 +7,7 @@ import { loadDashboards, deleteDashboard, setDeviceAssignment, saveDashboard, ty
 import { DashboardEditor } from './DashboardEditor'
 import { emptyDashboard, type CustomDashboard } from './types'
 import { getScreenId, getScreenName } from './deviceId'
+import { useScrollMemory } from '../navState'
 
 export function DashboardsPage({ onBack }: { onBack: () => void }) {
   const [data, setData] = useState<DashboardsData>({ dashboards: [], deviceMap: {} })
@@ -14,6 +15,7 @@ export function DashboardsPage({ onBack }: { onBack: () => void }) {
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameText, setRenameText] = useState('')
+  const scrollRef = useScrollMemory('dashboards')
   const screenId = getScreenId()
   const assigned = data.deviceMap[screenId] || null
 
@@ -30,6 +32,7 @@ export function DashboardsPage({ onBack }: { onBack: () => void }) {
 
   return createPortal(
     <motion.div
+      ref={scrollRef}
       data-theme="dark"
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}

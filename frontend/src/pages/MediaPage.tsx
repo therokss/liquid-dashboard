@@ -9,6 +9,7 @@ import { mediaKind, isTV, findPairedRemote } from '../lib/mediaDevices'
 import { useT } from '../i18n'
 import { getDomain } from '../types/ha'
 import type { HassEntity } from '../types/ha'
+import { useScrollMemory } from '../lib/navState'
 
 // Dopo la pausa, il player resta tra "In riproduzione" per questo tempo, così
 // puoi riprenderlo dai controlli completi prima che scenda tra i disponibili.
@@ -25,6 +26,7 @@ function isNowPlaying(e: HassEntity): boolean {
 
 export function MediaPage() {
   const t = useT()
+  const scrollRef = useScrollMemory('media')
   const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const entityPlatform = useStore((s) => s.entityPlatform)
@@ -71,7 +73,7 @@ export function MediaPage() {
   }, [entities, entityDevices, entityPlatform, deviceInfo, hiddenEntities, userHidden, tick])
 
   return (
-    <div className="page">
+    <div ref={scrollRef} className="page">
       <div style={{ marginBottom: 'var(--space-xl)' }}>
         <h1
           style={{

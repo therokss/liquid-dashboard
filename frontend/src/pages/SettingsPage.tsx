@@ -16,6 +16,7 @@ import { WASTE_TYPES, WEEKDAY_ORDER, WEEKDAY_INITIALS, INTERVAL_OPTIONS } from '
 import { fileToWallpaperDataUrl } from '../lib/image'
 import { useT, type Lang } from '../i18n'
 import { openHomeAssistantSettings } from '../lib/kiosk'
+import { useNav, openSub, closeChild, useScrollMemory, type SubPage } from '../lib/navState'
 import type { WallpaperSlot } from '../store'
 import type { HassEntity } from '../types/ha'
 
@@ -46,9 +47,16 @@ export function SettingsPage() {
   const resetSetup = useStore((s) => s.resetSetup)
   const entities = useStore((s) => s.entities)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
-  const [showServer, setShowServer] = useState(false)
-  const [showUpdates, setShowUpdates] = useState(false)
-  const [showDashboards, setShowDashboards] = useState(false)
+  // Sottopagine ricordate per dispositivo (lib/navState); riservate agli admin
+  const sub = useNav().sub
+  const subSetter = (p: SubPage) => (open: boolean) => { if (open) openSub(p); else closeChild() }
+  const showServer = isAdmin && sub === 'server'
+  const showUpdates = isAdmin && sub === 'updates'
+  const showDashboards = isAdmin && sub === 'dashboards'
+  const setShowServer = subSetter('server')
+  const setShowUpdates = subSetter('updates')
+  const setShowDashboards = subSetter('dashboards')
+  const scrollRef = useScrollMemory('settings')
   const [uploadingSlot, setUploadingSlot] = useState<WallpaperSlot | null>(null)
 
   async function handleWallpaperPick(slot: WallpaperSlot, file: File) {
@@ -77,7 +85,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="page">
+    <div ref={scrollRef} className="page">
       <div style={{ marginBottom: 'var(--space-xl)' }}>
         <h1
           style={{
@@ -490,7 +498,7 @@ export function SettingsPage() {
         )}
       </MasonryColumns>
 
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {showDashboards && <DashboardsPage onBack={() => setShowDashboards(false)} />}
         {showServer && <ServerPage onBack={() => setShowServer(false)} />}
         {showUpdates && <UpdatesPage onBack={() => setShowUpdates(false)} />}
