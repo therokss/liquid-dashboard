@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -15,6 +15,7 @@ import {
 } from '../../lib/energy'
 import type { EnergyPrefs, EnergyStatIds } from '../../lib/energy'
 import type { HassEntity } from '../../types/ha'
+import { cachedFetch, peekCache } from '../../lib/fetchCache'
 
 type Send = <T = unknown>(msg: { type: string } & Record<string, unknown>) => Promise<T | null>
 
@@ -31,82 +32,88 @@ function startOfToday(): Date { const d = new Date(); d.setHours(0, 0, 0, 0); re
 
 const DEVICE_COLORS = ['#00dbe7', '#4a8eff', '#66bb6a', '#ffb300', '#b56eff', '#ff7043', '#ec407a', '#26c6da', '#9ccc65', '#ffa726']
 
-export function EnergyCard() {
-  const t = useT()
-  const { sendMessage } = useHA()
-  const entities = useStore((s) => s.entities)
-  const powerSel = useStore((s) => s.energyPowerEntity)
-  const entityDevices = useStore((s) => s.entityDevices)
-  const [prefs, setPrefs] = useState<EnergyPrefs | null>(null)
-  const [today, setToday] = useState<Record<string, number>>({})
-  const [showDetail, setShowDetail] = useState(false)
-
-  const ids = useMemo(() => (prefs ? extractStatIds(prefs) : null), [prefs])
-
-  // Sensori di potenza (W) raggruppati per dispositivo
-  const powerByDevice = useMemo(() => {
-    const m: Record<string, string[]> = {}
+// Consumo istantaneo (W): 1) sensore scelto → 2) potenza sullo stesso dispositivo della
+// rete configurata in scheda energia → 3) somma potenze dei dispositivi monitorati → 4) primo.
+// Funzione pura usata DENTRO il selettore dello store: restituisce un numero, così la card
+// si ri-renderizza solo quando la potenza cambia, non a ogni evento di qualsiasi entità.
+function computeLivePowerW(
+  entities: Record<string, HassEntity>,
+  entityDevices: Record<string, string>,
+  ids: EnergyStatIds | null,
+  powerSel: string | null,
+): number | null {
+  const toW = (e?: HassEntity) => {
+    if (!e) return NaN
+    const v = parseFloat(e.state)
+    if (isNaN(v)) return NaN
+    const u = ((e.attributes as Record<string, unknown>).unit_of_measurement as string) || 'W'
+    return u === 'kW' ? v * 1000 : v
+  }
+  if (powerSel) { const w = toW(entities[powerSel]); if (!isNaN(w)) return w }
+  if (ids) {
+    // Sensori di potenza (W) raggruppati per dispositivo
+    const powerByDevice: Record<string, string[]> = {}
     for (const id of Object.keys(entities)) {
       if (!id.startsWith('sensor.')) continue
       if ((entities[id].attributes as Record<string, unknown>).device_class !== 'power') continue
       const dev = entityDevices[id]
-      if (dev) (m[dev] ??= []).push(id)
+      if (dev) (powerByDevice[dev] ??= []).push(id)
     }
-    return m
-  }, [entities, entityDevices])
+    for (const statId of ids.gridFrom) {
+      const dev = entityDevices[statId]
+      const ps = dev ? powerByDevice[dev]?.[0] : undefined
+      const w = toW(ps ? entities[ps] : undefined)
+      if (!isNaN(w)) return w
+    }
+    let sum = 0
+    let found = false
+    for (const d of ids.devices) {
+      const dev = entityDevices[d.id]
+      const ps = dev ? powerByDevice[dev]?.[0] : undefined
+      const w = toW(ps ? entities[ps] : undefined)
+      if (!isNaN(w)) { sum += w; found = true }
+    }
+    if (found) return sum
+  }
+  const first = Object.keys(entities).find(
+    (k) => k.startsWith('sensor.') && (entities[k].attributes as Record<string, unknown>).device_class === 'power'
+  )
+  if (first) { const w = toW(entities[first]); if (!isNaN(w)) return w }
+  return null
+}
 
-  // Consumo istantaneo (W): 1) sensore scelto → 2) potenza sullo stesso dispositivo della
-  // rete configurata in scheda energia → 3) somma potenze dei dispositivi monitorati → 4) primo
-  const livePowerW = useMemo<number | null>(() => {
-    const toW = (e?: HassEntity) => {
-      if (!e) return NaN
-      const v = parseFloat(e.state)
-      if (isNaN(v)) return NaN
-      const u = ((e.attributes as Record<string, unknown>).unit_of_measurement as string) || 'W'
-      return u === 'kW' ? v * 1000 : v
-    }
-    if (powerSel) { const w = toW(entities[powerSel]); if (!isNaN(w)) return w }
-    if (ids) {
-      for (const statId of ids.gridFrom) {
-        const dev = entityDevices[statId]
-        const ps = dev ? powerByDevice[dev]?.[0] : undefined
-        const w = toW(ps ? entities[ps] : undefined)
-        if (!isNaN(w)) return w
-      }
-      let sum = 0
-      let found = false
-      for (const d of ids.devices) {
-        const dev = entityDevices[d.id]
-        const ps = dev ? powerByDevice[dev]?.[0] : undefined
-        const w = toW(ps ? entities[ps] : undefined)
-        if (!isNaN(w)) { sum += w; found = true }
-      }
-      if (found) return sum
-    }
-    const first = Object.keys(entities).find(
-      (k) => k.startsWith('sensor.') && (entities[k].attributes as Record<string, unknown>).device_class === 'power'
-    )
-    if (first) { const w = toW(entities[first]); if (!isNaN(w)) return w }
-    return null
-  }, [entities, entityDevices, powerByDevice, ids, powerSel])
+export const EnergyCard = memo(function EnergyCard() {
+  const t = useT()
+  const { sendMessage } = useHA()
+  const powerSel = useStore((s) => s.energyPowerEntity)
+  // Preferenze energia e totali di oggi in cache di modulo: tornando sulla Home la card
+  // compare subito e si aggiorna in background (TTL ~5 min).
+  const todayKey = `energy:today:${startOfToday().toISOString()}`
+  const [prefs, setPrefs] = useState<EnergyPrefs | null>(() => peekCache<EnergyPrefs>('energy:prefs') ?? null)
+  const [today, setToday] = useState<Record<string, number>>(() => peekCache<Record<string, number>>(todayKey) ?? {})
+  const [showDetail, setShowDetail] = useState(false)
+
+  const ids = useMemo(() => (prefs ? extractStatIds(prefs) : null), [prefs])
+
+  const livePowerW = useStore((s) => computeLivePowerW(s.entities, s.entityDevices, ids, powerSel))
 
   useEffect(() => {
     let cancelled = false
     let attempts = 0
     const load = async () => {
       attempts += 1
-      const p = await fetchEnergyPrefs(sendMessage).catch(() => null)
+      const p = await cachedFetch('energy:prefs', () => fetchEnergyPrefs(sendMessage), { shouldCache: (v) => !!v && hasEnergyConfig(v) }).catch(() => null)
       if (cancelled) return
       if (p && hasEnergyConfig(p)) {
         setPrefs(p)
         const sid = extractStatIds(p)
-        fetchStatsSum(
+        cachedFetch(todayKey, () => fetchStatsSum(
           sendMessage,
           [...sid.gridFrom, ...sid.solar, ...sid.gridCost, ...sid.devices.map((d) => d.id)],
           startOfToday().toISOString(),
           undefined,
           (id) => kwhFactor(useStore.getState().entities[id]?.attributes.unit_of_measurement as string)
-        )
+        ))
           .then((m) => { if (!cancelled) setToday(m) })
           .catch(() => {})
       } else if (attempts < 5) {
@@ -115,7 +122,7 @@ export function EnergyCard() {
     }
     load()
     return () => { cancelled = true }
-  }, [sendMessage])
+  }, [sendMessage, todayKey])
 
   if (!prefs && livePowerW === null) return null
 
@@ -177,7 +184,7 @@ export function EnergyCard() {
       )}
     </>
   )
-}
+})
 
 function truncateLabel(name: string, width: number): string {
   const max = Math.max(2, Math.floor(width / 4.5))
@@ -389,7 +396,7 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
         backdropFilter: 'blur(32px) saturate(1.4)', WebkitBackdropFilter: 'blur(32px) saturate(1.4)',
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + var(--space-lg))',
       }}
-      className="page"
+      className="page ld-blur-overlay ld-no-inner-blur"
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'var(--space-lg)' }}>

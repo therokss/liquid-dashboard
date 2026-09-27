@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { PersistStorage, StorageValue } from 'zustand/middleware'
 import type { HassEntity, HassArea, DeviceInfo } from '../types/ha'
 import type { Lang } from '../i18n'
 
@@ -222,10 +223,103 @@ function reconcileOptimistic(
   return changed ? next : optimistic
 }
 
+// --- Persistenza ------------------------------------------------------------------
+// Il middleware persist chiama setItem a OGNI set() (anche setEntities, cioè a ogni
+// evento di HA). Due accorgimenti per non bloccare il main thread:
+//  1. lo storage custom confronta PER RIFERIMENTO i campi persistiti con l'ultima
+//     scrittura e salta il JSON.stringify+setItem se nulla è cambiato;
+//  2. gli sfondi (data URL base64 di MB) vivono in una chiave dedicata, scritta solo
+//     quando cambiano davvero.
+const CONFIG_KEY = 'liquid-dashboard-config'
+const WALLPAPERS_KEY = 'liquid-dashboard-wallpapers'
+const EMPTY_WALLPAPERS: WallpaperConfig = { morning: null, day: null, evening: null, night: null }
+
+function normalizeWallpapers(w: unknown): WallpaperConfig {
+  const o = (w && typeof w === 'object' ? w : {}) as Record<string, unknown>
+  const pick = (k: WallpaperSlot) => (typeof o[k] === 'string' ? (o[k] as string) : null)
+  return { morning: pick('morning'), day: pick('day'), evening: pick('evening'), night: pick('night') }
+}
+
+// true se la migrazione non è riuscita a spostare gli sfondi (quota piena): in quel
+// caso restano nella chiave config come prima, per non perderli.
+let wallpapersInConfig = false
+
+// Lettura SINCRONA all'avvio (niente flash dello sfondo di default). Migrazione: chi
+// ha ancora gli sfondi dentro 'liquid-dashboard-config' li ritrova nella chiave nuova.
+function loadInitialWallpapers(): WallpaperConfig {
+  try {
+    const own = localStorage.getItem(WALLPAPERS_KEY)
+    if (own) return normalizeWallpapers(JSON.parse(own))
+    const raw = localStorage.getItem(CONFIG_KEY)
+    if (!raw) return EMPTY_WALLPAPERS
+    const parsed = JSON.parse(raw) as { state?: Record<string, unknown> }
+    const legacy = parsed?.state?.wallpapers
+    if (!legacy) return EMPTY_WALLPAPERS
+    const wp = normalizeWallpapers(legacy)
+    const json = JSON.stringify(wp)
+    try {
+      localStorage.setItem(WALLPAPERS_KEY, json)
+    } catch {
+      // Quota: la copia vecchia occupa già lo spazio. Toglila dalla config e riprova;
+      // se fallisce ancora, ripristina la config originale e lascia gli sfondi lì.
+      try {
+        delete parsed.state!.wallpapers
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(parsed))
+        localStorage.setItem(WALLPAPERS_KEY, json)
+      } catch {
+        try { localStorage.setItem(CONFIG_KEY, raw) } catch { /* noop */ }
+        wallpapersInConfig = true
+      }
+    }
+    return wp
+  } catch {
+    return EMPTY_WALLPAPERS
+  }
+}
+
+const initialWallpapers = loadInitialWallpapers()
+
+let lastPersisted: Record<string, unknown> | null = null
+const configStorage: PersistStorage<Record<string, unknown>> = {
+  getItem: (name) => {
+    try {
+      const raw = localStorage.getItem(name)
+      return raw ? (JSON.parse(raw) as StorageValue<Record<string, unknown>>) : null
+    } catch {
+      return null
+    }
+  },
+  setItem: (name, value) => {
+    const st = value.state
+    const prev = lastPersisted
+    if (prev && Object.keys(st).every((k) => st[k] === prev[k])) return // nulla di nuovo
+    try {
+      localStorage.setItem(name, JSON.stringify(value))
+      lastPersisted = st
+    } catch (e) {
+      console.warn('[LD] salvataggio config fallito', e)
+    }
+  },
+  removeItem: (name) => {
+    lastPersisted = null
+    try { localStorage.removeItem(name) } catch { /* noop */ }
+  },
+}
+
+function saveWallpapers(w: WallpaperConfig): void {
+  if (wallpapersInConfig) return // restano nella config (vedi migrazione)
+  try {
+    localStorage.setItem(WALLPAPERS_KEY, JSON.stringify(w))
+  } catch (e) {
+    console.warn('[LD] salvataggio sfondi fallito (spazio esaurito?)', e)
+  }
+}
+
 export const useStore = create<AppStore>()(
   persist(
     (set) => ({
       ...DEFAULT_CONFIG,
+      wallpapers: initialWallpapers,
       entities: {},
       realEntities: {},
       optimistic: {},
@@ -379,13 +473,21 @@ export const useStore = create<AppStore>()(
       setLoading: (loading) => set({ loading }),
     }),
     {
-      name: 'liquid-dashboard-config',
+      name: CONFIG_KEY,
+      storage: configStorage,
+      // Gli sfondi hanno la loro chiave: quelli eventualmente rimasti nella config
+      // (formato vecchio) non devono sovrascrivere quelli già caricati/migrati.
+      merge: (persisted, current) => {
+        const p = { ...((persisted as Record<string, unknown>) || {}) }
+        if (!wallpapersInConfig) delete p.wallpapers
+        return { ...current, ...(p as Partial<AppStore>) }
+      },
       partialize: (state) => ({
         hassUrl: state.hassUrl,
         hassUrlExternal: state.hassUrlExternal,
         setupComplete: state.setupComplete,
         enabledAreas: state.enabledAreas,
-        wallpapers: state.wallpapers,
+        ...(wallpapersInConfig ? { wallpapers: state.wallpapers } : {}),
         theme: state.theme,
         pinnedEntities: state.pinnedEntities,
         userHiddenEntities: state.userHiddenEntities,
@@ -411,3 +513,9 @@ export const useStore = create<AppStore>()(
     }
   )
 )
+
+// Sfondi: scrive la chiave dedicata solo quando l'oggetto cambia (setWallpaper,
+// sync da un altro dispositivo, reset). Mai a ogni evento di HA.
+useStore.subscribe((state, prev) => {
+  if (state.wallpapers !== prev.wallpapers) saveWallpapers(state.wallpapers)
+})

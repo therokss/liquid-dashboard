@@ -107,7 +107,11 @@ export function startHouseSync(): void {
   if (houseSyncStarted) return
   houseSyncStarted = true
   lastHouse = JSON.stringify(extractHouse(useStore.getState() as unknown as Record<string, unknown>))
-  useStore.subscribe((state) => {
+  useStore.subscribe((state, prev) => {
+    // Uscita rapida se la config casa (e il ruolo) non sono cambiati per riferimento.
+    const cur = state as unknown as Record<string, unknown>
+    const old = prev as unknown as Record<string, unknown>
+    if (state.isAdmin === prev.isAdmin && HOUSE_KEYS.every((k) => cur[k] === old[k])) return
     if (!useStore.getState().isAdmin) return
     const house = extractHouse(state as unknown as Record<string, unknown>)
     const s = JSON.stringify(house)

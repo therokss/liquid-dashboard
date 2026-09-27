@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { CalendarDays, Clock } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
 import { useT } from '../../i18n'
+import { cachedFetch, peekCache } from '../../lib/fetchCache'
 import type { CalendarEvent } from '../../types/ha'
 
 interface EventItem extends CalendarEvent {
@@ -25,40 +27,42 @@ function fmtWhen(t: (key: string, vars?: Record<string, string | number>) => str
   return `${dayLabel} · ${time}`
 }
 
-export function CalendarCard() {
+export const CalendarCard = memo(function CalendarCard() {
   const t = useT()
-  const entities = useStore((s) => s.entities)
   const selected = useStore((s) => s.calendarEntities)
   const { callServiceResponse } = useHA()
-  const [events, setEvents] = useState<EventItem[]>([])
 
-  const calendarIds = useMemo(() => {
-    const all = Object.keys(entities).filter((id) => id.startsWith('calendar.'))
+  // Solo gli id dei calendari (useShallow): niente render a ogni evento di altre entità.
+  const calendarIds = useStore(useShallow((s) => {
+    const all = Object.keys(s.entities).filter((id) => id.startsWith('calendar.'))
     return selected.length > 0 ? selected.filter((id) => all.includes(id)) : all
-  }, [entities, selected])
+  }))
 
   // Chiave primitiva per non rifare la fetch a ogni aggiornamento di stato
   const calKey = calendarIds.join(',')
+  // Eventi in cache di modulo: tornando sulla Home compaiono subito (aggiornati in background).
+  const [events, setEvents] = useState<EventItem[]>(() => peekCache<EventItem[]>(`cal:${calKey}`) ?? [])
 
   useEffect(() => {
     const ids = calKey ? calKey.split(',') : []
     if (ids.length === 0) { setEvents([]); return }
     let cancelled = false
-    const start = new Date()
-    const end = new Date(start.getTime() + 7 * 86400000)
-    callServiceResponse<Record<string, { events: CalendarEvent[] }>>(
-      'calendar', 'get_events',
-      { entity_id: ids, start_date_time: start.toISOString(), end_date_time: end.toISOString() }
-    )
-      .then((resp) => {
-        if (cancelled || !resp) return
-        const merged: EventItem[] = []
-        for (const [cal, val] of Object.entries(resp)) {
-          for (const ev of val.events ?? []) merged.push({ ...ev, calendar: cal })
-        }
-        merged.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-        setEvents(merged.slice(0, 5))
-      })
+    cachedFetch<EventItem[] | null>(`cal:${calKey}`, async () => {
+      const start = new Date()
+      const end = new Date(start.getTime() + 7 * 86400000)
+      const resp = await callServiceResponse<Record<string, { events: CalendarEvent[] }>>(
+        'calendar', 'get_events',
+        { entity_id: ids, start_date_time: start.toISOString(), end_date_time: end.toISOString() }
+      )
+      if (!resp) return null
+      const merged: EventItem[] = []
+      for (const [cal, val] of Object.entries(resp)) {
+        for (const ev of val.events ?? []) merged.push({ ...ev, calendar: cal })
+      }
+      merged.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+      return merged.slice(0, 5)
+    }, { shouldCache: (v) => v !== null })
+      .then((v) => { if (!cancelled && v) setEvents(v) })
       .catch(() => {})
     return () => { cancelled = true }
   }, [calKey, callServiceResponse])
@@ -104,4 +108,4 @@ export function CalendarCard() {
       </div>
     </GlassCard>
   )
-}
+})

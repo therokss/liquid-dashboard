@@ -1,26 +1,30 @@
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { Thermometer } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
 import { MiniChart } from '../charts/MiniChart'
 import { useHA } from '../../hooks/useHA'
+import { cachedFetch, peekCache } from '../../lib/fetchCache'
 
-export function AreaTempCard({ name, avg, sensorId, onClick }: {
+export const AreaTempCard = memo(function AreaTempCard({ name, avg, sensorId, onClick }: {
   name: string
   avg: number
   sensorId?: string
   onClick?: () => void
 }) {
   const { getHistoryForEntity } = useHA()
-  const [values, setValues] = useState<number[]>([])
+  // Storico in cache di modulo: tornando sulla Home il grafico compare subito.
+  const cacheKey = `hist24:${sensorId}`
+  const [values, setValues] = useState<number[]>(() => (sensorId && peekCache<number[]>(cacheKey)) || [])
 
   useEffect(() => {
     if (!sensorId) return
     let cancelled = false
-    getHistoryForEntity(sensorId, 24)
-      .then((h) => { if (!cancelled) setValues(h.map((x) => parseFloat(x.state)).filter((v) => !isNaN(v))) })
+    cachedFetch(cacheKey, () => getHistoryForEntity(sensorId, 24)
+      .then((h) => h.map((x) => parseFloat(x.state)).filter((v) => !isNaN(v))), { shouldCache: (v) => v.length > 0 })
+      .then((v) => { if (!cancelled) setValues(v) })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [sensorId, getHistoryForEntity])
+  }, [sensorId, cacheKey, getHistoryForEntity])
 
   const r1 = (n: number) => Math.round(n * 10) / 10
 
@@ -44,4 +48,4 @@ export function AreaTempCard({ name, avg, sensorId, onClick }: {
       </div>
     </GlassCard>
   )
-}
+})

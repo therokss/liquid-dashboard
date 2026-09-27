@@ -55,7 +55,7 @@ export function ClimatePage({ onBack }: { onBack: () => void }) {
         background: 'var(--overlay-scrim)',
         backdropFilter: 'blur(32px) saturate(1.4)', WebkitBackdropFilter: 'blur(32px) saturate(1.4)',
       }}
-      className="page"
+      className="page ld-blur-overlay ld-no-inner-blur"
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 'var(--space-lg)' }}>

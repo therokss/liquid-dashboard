@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Video, X } from 'lucide-react'
+import { useShallow } from 'zustand/react/shallow'
 import { useStore } from '../../store'
+import { artworkUrl } from '../../lib/media'
 import { DeviceControls } from '../DeviceDetailModal'
 import { WebRTCPlayer } from '../WebRTCPlayer'
 import { useT } from '../../i18n'
@@ -28,14 +30,12 @@ function streamType(e: HassEntity): string | undefined {
 
 export function CamerasSection() {
   const t = useT()
-  const entities = useStore((s) => s.entities)
-  const hidden = useStore((s) => s.hiddenEntities)
-  const userHidden = useStore((s) => s.userHiddenEntities)
   const [full, setFull] = useState<HassEntity | null>(null)
 
-  const cams = Object.values(entities).filter(
-    (e) => e.entity_id.startsWith('camera.') && e.state !== 'unavailable' && !hidden[e.entity_id] && !userHidden[e.entity_id],
-  )
+  // Solo le videocamere (useShallow): niente render a ogni evento di altre entità.
+  const cams = useStore(useShallow((s) => Object.values(s.entities).filter(
+    (e) => e.entity_id.startsWith('camera.') && e.state !== 'unavailable' && !s.hiddenEntities[e.entity_id] && !s.userHiddenEntities[e.entity_id],
+  )))
   if (cams.length === 0) return null
 
   return (
@@ -45,7 +45,9 @@ export function CamerasSection() {
         {cams.map((c) => (
           <button key={c.entity_id} onClick={() => setFull(c)}
             style={{ position: 'relative', padding: 0, border: 'none', borderRadius: 'var(--radius-lg)', overflow: 'hidden', cursor: 'pointer', aspectRatio: '16/9', background: '#0a1622', boxShadow: '0 6px 20px rgba(0,0,0,0.25)' }}>
-            <CameraView entityId={c.entity_id} streamType={streamType(c)} />
+            {/* Griglia: solo snapshot periodici (niente WebRTC per ogni camera); il video
+                live parte nella vista a schermo intero. Col modal aperto la griglia si ferma. */}
+            <CameraSnapshot entity={c} paused={full !== null} />
             <div style={{ position: 'absolute', top: 8, left: 8, display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(0,0,0,0.45)', borderRadius: 'var(--radius-pill)', padding: '3px 8px' }}>
               <span className="ld-live-dot" />
               <span style={{ color: 'white', fontSize: 10, fontWeight: 800, letterSpacing: '0.06em' }}>LIVE</span>
@@ -66,6 +68,42 @@ export function CamerasSection() {
       )}
     </div>
   )
+}
+
+const SNAPSHOT_MS = 10000
+
+// Anteprima leggera per la griglia: un'immagine statica ricaricata ogni SNAPSHOT_MS
+// (in pausa a scheda nascosta o col modal aperto). In add-on passa dal proxy; in app
+// usa entity_picture (URL firmato con token) di HA.
+function CameraSnapshot({ entity, paused }: { entity: HassEntity; paused: boolean }) {
+  const t = useT()
+  const [tick, setTick] = useState(() => Date.now())
+  const [err, setErr] = useState(false)
+
+  useEffect(() => {
+    if (paused) return
+    const i = setInterval(() => {
+      if (document.hidden) return
+      setErr(false) // riprova al giro successivo anche dopo un errore
+      setTick(Date.now())
+    }, SNAPSHOT_MS)
+    return () => clearInterval(i)
+  }, [paused])
+
+  const pic = entity.attributes.entity_picture as string | undefined
+  const proxied = localStorage.getItem('ha-ll-use-proxy') === '1'
+  const base = proxied ? snapUrl(entity.entity_id, tick) : artworkUrl(pic)
+  const src = base && !proxied ? `${base}${base.includes('?') ? '&' : '?'}_t=${tick}` : base
+
+  if (!src || err) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, color: 'var(--text-tertiary)' }}>
+        <Video size={26} strokeWidth={1.5} />
+        <span style={{ fontSize: 12 }}>{t('Anteprima non disponibile')}</span>
+      </div>
+    )
+  }
+  return <img src={src} alt="" decoding="async" onError={() => setErr(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
 }
 
 // Cascata: WebRTC (video fluido, P2P) → stream MJPEG (via proxy) → snapshot → placeholder.

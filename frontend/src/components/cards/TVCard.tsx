@@ -1,21 +1,24 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { Tv, ChevronRight } from 'lucide-react'
+import { useShallow } from 'zustand/react/shallow'
 import { useStore } from '../../store'
 import { getDomain } from '../../types/ha'
 import { mediaKind, isTV, findPairedRemote } from '../../lib/mediaDevices'
 import type { MediaKind } from '../../lib/mediaDevices'
-import { TVRemoteModal } from '../TVRemoteModal'
 import { MediaCard } from './MediaCard'
 import { useT } from '../../i18n'
 import type { HassEntity } from '../../types/ha'
 
+// Caricato solo all'apertura del telecomando (code-splitting)
+const TVRemoteModal = lazy(() => import('../TVRemoteModal').then((m) => ({ default: m.TVRemoteModal })))
+
 // Determina il tipo di media player (TV LG/Apple/Android/generica o altoparlante).
 export function useMediaKind(entity: HassEntity): MediaKind {
-  const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const entityPlatform = useStore((s) => s.entityPlatform)
   const deviceInfo = useStore((s) => s.deviceInfo)
-  const paired = findPairedRemote(entity.entity_id, entities, entityDevices)
+  // Selettore con risultato primitivo: nessun render a ogni evento di altre entità
+  const paired = useStore((s) => findPairedRemote(entity.entity_id, s.entities, entityDevices))
   const model = deviceInfo[entityDevices[entity.entity_id] ?? '']?.model
   return mediaKind(entity, entityPlatform[entity.entity_id], Boolean(paired), model)
 }
@@ -43,7 +46,7 @@ export function TVCard({ entity }: { entity: HassEntity }) {
         </div>
         <ChevronRight size={18} color="var(--text-tertiary)" style={{ flexShrink: 0 }} />
       </div>
-      {open && <TVRemoteModal entityId={entity.entity_id} kind={kind} onClose={() => setOpen(false)} />}
+      {open && <Suspense fallback={null}><TVRemoteModal entityId={entity.entity_id} kind={kind} onClose={() => setOpen(false)} /></Suspense>}
     </>
   )
 }
@@ -51,14 +54,16 @@ export function TVCard({ entity }: { entity: HassEntity }) {
 // Sezione media di una stanza: TV (con telecomando) e altoparlanti.
 export function MediaDevicesSection({ areaEntities }: { areaEntities: HassEntity[] }) {
   const t = useT()
-  const entities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
   const entityPlatform = useStore((s) => s.entityPlatform)
   const deviceInfo = useStore((s) => s.deviceInfo)
 
   const players = areaEntities.filter((e) => getDomain(e.entity_id) === 'media_player')
+  // Telecomando abbinato per ogni player (useShallow su un array di id): niente render
+  // a ogni evento di altre entità.
+  const pairedIds = useStore(useShallow((s) => players.map((e) => findPairedRemote(e.entity_id, s.entities, entityDevices))))
   const kindOf = (e: HassEntity) => {
-    const paired = findPairedRemote(e.entity_id, entities, entityDevices)
+    const paired = pairedIds[players.indexOf(e)]
     const model = deviceInfo[entityDevices[e.entity_id] ?? '']?.model
     return mediaKind(e, entityPlatform[e.entity_id], Boolean(paired), model)
   }

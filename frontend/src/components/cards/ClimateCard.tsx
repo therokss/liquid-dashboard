@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo } from 'react'
+import { memo, useCallback, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Thermometer, Wind, ChevronUp, ChevronDown, Flame, Snowflake, Minus } from 'lucide-react'
 import { GlassCard } from '../glass/GlassCard'
@@ -6,8 +6,36 @@ import { MiniChart } from '../charts/MiniChart'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
 import { useT } from '../../i18n'
+import { cachedFetch, peekCache } from '../../lib/fetchCache'
 import { getDomain } from '../../types/ha'
 import type { HassEntity, ClimateAttributes } from '../../types/ha'
+
+type ClimateHistory = { current: number[]; target: number[] }
+
+// Media dei sensori temperatura della stanza del clima. È calcolata DENTRO il selettore
+// dello store e restituisce un numero: la card si ri-renderizza solo se la media cambia,
+// non a ogni evento di qualsiasi entità.
+function roomAverage(
+  entities: Record<string, HassEntity>,
+  entityAreas: Record<string, string>,
+  entityId: string,
+): number | null {
+  const areaId = entityAreas[entityId]
+  if (!areaId) return null
+  let sum = 0
+  let count = 0
+  for (const [id, aId] of Object.entries(entityAreas)) {
+    if (aId !== areaId) continue
+    const e = entities[id]
+    if (!e || getDomain(id) !== 'sensor') continue
+    if ((e.attributes as Record<string, unknown>).device_class !== 'temperature') continue
+    const v = parseFloat(e.state)
+    if (isNaN(v)) continue
+    sum += v
+    count += 1
+  }
+  return count ? sum / count : null
+}
 
 interface ClimateCardProps {
   entity: HassEntity
@@ -43,11 +71,9 @@ const MODE_LABELS: Record<string, string> = {
   fan_only: 'Ventola',
 }
 
-export function ClimateCard({ entity }: ClimateCardProps) {
+export const ClimateCard = memo(function ClimateCard({ entity }: ClimateCardProps) {
   const t = useT()
   const { callService, getEntityHistory } = useHA()
-  const entities = useStore((s) => s.entities)
-  const entityAreas = useStore((s) => s.entityAreas)
   const attrs = entity.attributes as ClimateAttributes
   const isOff = entity.state === 'off'
   const name = attrs.friendly_name ?? entity.entity_id
@@ -61,43 +87,29 @@ export function ClimateCard({ entity }: ClimateCardProps) {
   const displayTarget = localTarget ?? targetTemp
 
   // Media temperatura della stanza in cui si trova il clima
-  const roomAvg = useMemo(() => {
-    const areaId = entityAreas[entity.entity_id]
-    if (!areaId) return null
-    let sum = 0
-    let count = 0
-    for (const [id, aId] of Object.entries(entityAreas)) {
-      if (aId !== areaId) continue
-      const e = entities[id]
-      if (!e || getDomain(id) !== 'sensor') continue
-      if ((e.attributes as Record<string, unknown>).device_class !== 'temperature') continue
-      const v = parseFloat(e.state)
-      if (isNaN(v)) continue
-      sum += v
-      count += 1
-    }
-    return count ? sum / count : null
-  }, [entities, entityAreas, entity.entity_id])
+  const roomAvg = useStore((s) => roomAverage(s.entities, s.entityAreas, entity.entity_id))
 
-  // Storico: temperatura stanza (current) vs impostata (target)
-  const [history, setHistory] = useState<{ current: number[]; target: number[] }>({ current: [], target: [] })
+  // Storico: temperatura stanza (current) vs impostata (target). Servono gli attributi
+  // (current_temperature/temperature), quindi niente minimal_response. In cache di
+  // modulo: tornando sulla Home il grafico compare subito e si aggiorna in background.
+  const histKey = `climate24:${entity.entity_id}`
+  const [history, setHistory] = useState<ClimateHistory>(() => peekCache<ClimateHistory>(histKey) ?? { current: [], target: [] })
   useEffect(() => {
     let cancelled = false
-    getEntityHistory(entity.entity_id, 24)
-      .then((h) => {
-        if (cancelled) return
-        const current: number[] = []
-        const target: number[] = []
-        for (const item of h) {
-          const c = parseFloat(String((item.attributes as Record<string, unknown>).current_temperature ?? ''))
-          const t = parseFloat(String((item.attributes as Record<string, unknown>).temperature ?? ''))
-          if (!isNaN(c) && !isNaN(t)) { current.push(c); target.push(t) }
-        }
-        setHistory({ current, target })
-      })
+    cachedFetch(histKey, () => getEntityHistory(entity.entity_id, 24).then((h) => {
+      const current: number[] = []
+      const target: number[] = []
+      for (const item of h) {
+        const c = parseFloat(String((item.attributes as Record<string, unknown>).current_temperature ?? ''))
+        const t = parseFloat(String((item.attributes as Record<string, unknown>).temperature ?? ''))
+        if (!isNaN(c) && !isNaN(t)) { current.push(c); target.push(t) }
+      }
+      return { current, target }
+    }), { shouldCache: (v) => v.current.length > 0 })
+      .then((v) => { if (!cancelled) setHistory(v) })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [entity.entity_id, getEntityHistory])
+  }, [entity.entity_id, histKey, getEntityHistory])
 
   const r1 = (n: number) => Math.round(n * 10) / 10
 
@@ -274,4 +286,4 @@ export function ClimateCard({ entity }: ClimateCardProps) {
       )}
     </GlassCard>
   )
-}
+})

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Tv, Sparkles, Sun } from 'lucide-react'
+import { useShallow } from 'zustand/react/shallow'
 import { useStore } from '../../store'
 import { useHA } from '../../hooks/useHA'
 import { useT } from '../../i18n'
@@ -17,20 +18,17 @@ function num(e?: HassEntity): number | null {
 
 export function HueSyncSection({ areaEntities }: { areaEntities: HassEntity[] }) {
   const t = useT()
-  const entities = useStore((s) => s.entities)
+  const hdmi = areaEntities.find((e) => e.entity_id.startsWith('select.') && e.entity_id.endsWith('_hdmi_input'))
+  const base = hdmi ? hdmi.entity_id.slice('select.'.length, -'_hdmi_input'.length) : '' // es. sync_box
+  // Solo le 3 entità collegate (useShallow): niente render a ogni evento di altre entità.
+  const [power, lightSync, brightness] = useStore(useShallow((s) => base
+    ? [s.entities[`switch.${base}_power`], s.entities[`switch.${base}_light_sync`], s.entities[`number.${base}_brightness`]]
+    : []))
 
   const box = useMemo(() => {
-    const hdmi = areaEntities.find((e) => e.entity_id.startsWith('select.') && e.entity_id.endsWith('_hdmi_input'))
     if (!hdmi) return null
-    const base = hdmi.entity_id.slice('select.'.length, -'_hdmi_input'.length) // es. sync_box
-    return {
-      hdmi,
-      power: entities[`switch.${base}_power`],
-      lightSync: entities[`switch.${base}_light_sync`],
-      brightness: entities[`number.${base}_brightness`],
-      base,
-    }
-  }, [areaEntities, entities])
+    return { hdmi, power, lightSync, brightness, base }
+  }, [hdmi, power, lightSync, brightness, base])
 
   if (!box) return null
 

@@ -1,10 +1,12 @@
-import { useMemo } from 'react'
+import { useCallback } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { X, Sun, Palette, Thermometer, Clapperboard } from 'lucide-react'
 import { useStore } from '../store'
 import { useHA } from '../hooks/useHA'
 import { useT } from '../i18n'
+import { useThrottledSlider } from '../hooks/useThrottledSlider'
 import type { HassEntity, LightAttributes } from '../types/ha'
 
 const PRESETS: Array<{ c: string; rgb: [number, number, number] }> = [
@@ -28,7 +30,6 @@ function hexToRgb(hex: string): [number, number, number] {
 export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onClose: () => void }) {
   const t = useT()
   const { callService } = useHA()
-  const entities = useStore((s) => s.entities)
   const attrs = entity.attributes as LightAttributes
   const isOn = entity.state === 'on'
   const name = attrs.friendly_name ?? entity.entity_id
@@ -41,16 +42,20 @@ export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onCl
   const maxK = attrs.max_color_temp_kelvin ?? 6500
   const curK = (attrs as Record<string, unknown>).color_temp_kelvin as number | undefined
 
-  // Scene collegate: scene che includono questa luce
-  const scenes = useMemo(
-    () => Object.values(entities).filter(
-      (e) => e.entity_id.startsWith('scene.') && Array.isArray(e.attributes.entity_id) &&
-        (e.attributes.entity_id as string[]).includes(entity.entity_id)
-    ),
-    [entities, entity.entity_id],
-  )
+  // Scene collegate: scene che includono questa luce (useShallow: niente render a ogni
+  // evento di altre entità)
+  const scenes = useStore(useShallow((s) => Object.values(s.entities).filter(
+    (e) => e.entity_id.startsWith('scene.') && Array.isArray(e.attributes.entity_id) &&
+      (e.attributes.entity_id as string[]).includes(entity.entity_id)
+  )))
 
-  const call = (data: Record<string, unknown>) => callService('light', 'turn_on', { entity_id: entity.entity_id, ...data })
+  const call = useCallback(
+    (data: Record<string, unknown>) => callService('light', 'turn_on', { entity_id: entity.entity_id, ...data }),
+    [callService, entity.entity_id],
+  )
+  // Slider controllati: il valore segue il dito, invio throttled (~200 ms) + finale al rilascio.
+  const bri = useThrottledSlider(briPct, useCallback((v: number) => { void call({ brightness_pct: v }) }, [call]), { tolerance: 1 })
+  const temp = useThrottledSlider(curK ?? Math.round((minK + maxK) / 2), useCallback((v: number) => { void call({ color_temp_kelvin: v }) }, [call]), { tolerance: 60 })
 
   return createPortal(
     <motion.div
@@ -63,6 +68,7 @@ export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onCl
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 320, damping: 32 }}
         onClick={(ev) => ev.stopPropagation()}
+        className="ld-no-inner-blur"
         style={{ background: '#08192b', borderTop: '1px solid var(--glass-border)', borderTopLeftRadius: 22, borderTopRightRadius: 22, maxWidth: 640, width: '100%', margin: '0 auto', maxHeight: '85vh', overflowY: 'auto', padding: 'var(--space-lg) var(--space-lg) calc(env(safe-area-inset-bottom, 0px) + var(--space-lg))' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
@@ -84,9 +90,9 @@ export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onCl
           <>
             {/* Luminosità */}
             <Section icon={<Sun size={15} />} title={t('Luminosità')}>
-              <input type="range" className="glass-slider" min={1} max={100} defaultValue={briPct}
-                onChange={(e) => call({ brightness_pct: Number(e.target.value) })}
-                style={{ width: '100%', background: `linear-gradient(to right, var(--accent) ${briPct}%, rgba(255,255,255,0.18) ${briPct}%)` }} />
+              <input type="range" className="glass-slider" min={1} max={100} value={bri.value}
+                onChange={(e) => bri.onChange(Number(e.target.value))} {...bri.inputProps}
+                style={{ width: '100%', background: `linear-gradient(to right, var(--accent) ${bri.value}%, rgba(255,255,255,0.18) ${bri.value}%)` }} />
             </Section>
 
             {/* Colori */}
@@ -107,8 +113,8 @@ export function LightDetailModal({ entity, onClose }: { entity: HassEntity; onCl
             {/* Temperatura colore */}
             {supportsTemp && (
               <Section icon={<Thermometer size={15} />} title={t('Temperatura')}>
-                <input type="range" className="glass-slider" min={minK} max={maxK} step={50} defaultValue={curK ?? Math.round((minK + maxK) / 2)}
-                  onChange={(e) => call({ color_temp_kelvin: Number(e.target.value) })}
+                <input type="range" className="glass-slider" min={minK} max={maxK} step={50} value={temp.value}
+                  onChange={(e) => temp.onChange(Number(e.target.value))} {...temp.inputProps}
                   style={{ width: '100%', background: 'linear-gradient(to right, #ffb46b, #fff4e0, #cfe6ff)' }} />
               </Section>
             )}

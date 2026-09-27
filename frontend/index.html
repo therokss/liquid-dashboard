@@ -9,7 +9,10 @@
     <meta name="theme-color" content="#051424" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Font non bloccante: il CSS di Google Fonts non ferma il primo render (fallback di sistema, poi swap) -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" /></noscript>
     <title>Liquid Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="/local/liquid-dashboard/icon.svg" />
   </head>

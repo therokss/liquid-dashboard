@@ -76,8 +76,13 @@ export function startUserConfigSync(): void {
   if (syncStarted) return
   syncStarted = true
   lastSerialized = JSON.stringify(extractSyncConfig(useStore.getState() as unknown as Record<string, unknown>))
-  useStore.subscribe((state) => {
-    const cfg = extractSyncConfig(state as unknown as Record<string, unknown>)
+  useStore.subscribe((state, prev) => {
+    // Esce subito se nessuna preferenza è cambiata (confronto per riferimento): lo
+    // store cambia a ogni evento di HA e il JSON include gli sfondi (MB).
+    const cur = state as unknown as Record<string, unknown>
+    const old = prev as unknown as Record<string, unknown>
+    if (SYNC_KEYS.every((k) => cur[k] === old[k])) return
+    const cfg = extractSyncConfig(cur)
     const s = JSON.stringify(cfg)
     if (s === lastSerialized) return
     lastSerialized = s

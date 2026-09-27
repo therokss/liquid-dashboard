@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useStore } from '../store'
 import it from './it'
 import en from './en'
@@ -17,5 +18,6 @@ export function t(lang: Lang, key: string, vars?: Record<string, string | number
 
 export function useT(): (key: string, vars?: Record<string, string | number>) => string {
   const lang = useStore((s) => s.language)
-  return (key, vars) => t(lang, key, vars)
+  // Funzione stabile finché non cambia la lingua: non rompe memo/useMemo dei consumer.
+  return useCallback((key: string, vars?: Record<string, string | number>) => t(lang, key, vars), [lang])
 }

@@ -7,7 +7,7 @@ import {
   ERR_HASS_HOST_REQUIRED,
 } from 'home-assistant-js-websocket'
 import type { Connection } from 'home-assistant-js-websocket'
-import type { HassArea, DeviceInfo } from '../types/ha'
+import type { HassArea, DeviceInfo, HassEntity } from '../types/ha'
 import { useStore } from '../store'
 
 async function fetchAreas(connection: Connection): Promise<HassArea[]> {
@@ -156,6 +156,28 @@ async function establishConnection(): Promise<Connection> {
 let sharedConnection: Connection | null = null
 let connectStarted = false
 
+// Gli eventi di HA possono arrivare a raffica (decine al secondo): si tiene solo
+// l'ultimo snapshot e si aggiorna lo store al massimo una volta per frame. A scheda
+// nascosta rAF non scatta: il timeout di riserva evita che lo stato resti fermo.
+let pendingEntities: Record<string, HassEntity> | null = null
+let flushRaf = 0
+let flushTimer: ReturnType<typeof setTimeout> | null = null
+
+function flushEntities(): void {
+  if (flushRaf) { cancelAnimationFrame(flushRaf); flushRaf = 0 }
+  if (flushTimer) { clearTimeout(flushTimer); flushTimer = null }
+  const next = pendingEntities
+  pendingEntities = null
+  if (next) useStore.getState().setEntities(next)
+}
+
+function scheduleEntities(entities: Record<string, HassEntity>): void {
+  pendingEntities = entities
+  if (flushRaf || flushTimer) return
+  flushRaf = requestAnimationFrame(flushEntities)
+  flushTimer = setTimeout(flushEntities, 250)
+}
+
 async function ensureConnection(): Promise<void> {
   if (connectStarted) return
   connectStarted = true
@@ -193,7 +215,7 @@ async function ensureConnection(): Promise<void> {
     s.completeSetup()
 
     subscribeEntities(connection, (entities) => {
-      useStore.getState().setEntities(entities)
+      scheduleEntities(entities)
     })
 
     try {
@@ -242,11 +264,49 @@ function reconnect() {
   ensureConnection()
 }
 
-// Optimistic UI: per i comandi on/off/toggle su entità con stato on/off, mostra subito
-// il nuovo stato nell'interfaccia. Lo store rimuove l'override quando arriva la conferma
-// reale o fa il rollback se il dispositivo non risponde entro il TTL.
-function applyOptimisticForCall(service: string, data: Record<string, unknown>): void {
-  if (service !== 'turn_on' && service !== 'turn_off' && service !== 'toggle') return
+// Optimistic UI: per i comandi con esito prevedibile mostra subito il nuovo stato
+// nell'interfaccia. Lo store rimuove l'override quando arriva la conferma reale
+// (last_changed cambia, anche verso uno stato intermedio come "locking"/"opening")
+// o fa il rollback se il dispositivo non risponde entro il TTL.
+//  - turn_on/turn_off/toggle su entità on/off (con luminosità se indicata)
+//  - lock/unlock, open_cover/close_cover
+//  - select_option (select/input_select)
+//  - media_play/media_pause/media_play_pause
+function optimisticTarget(domain: string, service: string, data: Record<string, unknown>, cur: HassEntity): string | null {
+  const st = cur.state
+  switch (service) {
+    case 'turn_on':
+    case 'turn_off':
+    case 'toggle':
+      if (st !== 'on' && st !== 'off') return null // solo entità on/off
+      return service === 'turn_on' ? 'on' : service === 'turn_off' ? 'off' : st === 'on' ? 'off' : 'on'
+    case 'lock':
+    case 'unlock':
+      if (domain !== 'lock' || st === 'unavailable' || st === 'jammed') return null
+      return service === 'lock' ? 'locked' : 'unlocked'
+    case 'open_cover':
+    case 'close_cover':
+      if (domain !== 'cover' || st === 'unavailable') return null
+      return service === 'open_cover' ? 'open' : 'closed'
+    case 'select_option': {
+      if (domain !== 'select' && domain !== 'input_select') return null
+      const opt = data.option
+      const opts = cur.attributes.options
+      return typeof opt === 'string' && (!Array.isArray(opts) || opts.includes(opt)) ? opt : null
+    }
+    case 'media_play':
+    case 'media_pause':
+    case 'media_play_pause':
+      if (domain !== 'media_player' || (st !== 'playing' && st !== 'paused' && st !== 'idle')) return null
+      if (service === 'media_play') return 'playing'
+      if (service === 'media_pause') return 'paused'
+      return st === 'playing' ? 'paused' : 'playing'
+    default:
+      return null
+  }
+}
+
+function applyOptimisticForCall(domain: string, service: string, data: Record<string, unknown>): void {
   const raw = (data || {}).entity_id
   const ids = Array.isArray(raw)
     ? raw.filter((x): x is string => typeof x === 'string')
@@ -255,8 +315,9 @@ function applyOptimisticForCall(service: string, data: Record<string, unknown>):
   const st = useStore.getState()
   for (const id of ids) {
     const cur = st.realEntities[id]
-    if (!cur || (cur.state !== 'on' && cur.state !== 'off')) continue // solo entità on/off
-    const target = service === 'turn_on' ? 'on' : service === 'turn_off' ? 'off' : cur.state === 'on' ? 'off' : 'on'
+    if (!cur) continue
+    const target = optimisticTarget(domain, service, data || {}, cur)
+    if (target === null) continue
     const patch: { state: string; attributes?: Record<string, unknown> } = { state: target }
     if (target === 'on') {
       const attrs: Record<string, unknown> = {}
@@ -279,7 +340,7 @@ export function useHA() {
   const callService = useCallback(
     async (domain: string, service: string, serviceData: Record<string, unknown>) => {
       if (!sharedConnection) return
-      applyOptimisticForCall(service, serviceData) // aggiorna subito l'UI (rollback se non conferma)
+      applyOptimisticForCall(domain, service, serviceData) // aggiorna subito l'UI (rollback se non conferma)
       await sharedConnection.sendMessagePromise({
         type: 'call_service',
         domain,

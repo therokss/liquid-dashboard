@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { Wifi, Check, AlertCircle, ChevronDown, QrCode } from 'lucide-react'
 import { createLongLivedTokenAuth, createConnection } from 'home-assistant-js-websocket'
 import { useStore } from '../../store'
 import { saveToken } from '../../hooks/useHA'
-import { QRScanner } from '../../components/QRScanner'
 import { parseCredsQR } from '../../lib/credsQR'
 import { useT } from '../../i18n'
+
+// Scanner (jsqr) caricato solo quando serve (code-splitting)
+const QRScanner = lazy(() => import('../../components/QRScanner').then((m) => ({ default: m.QRScanner })))
 
 interface ConnectStepProps {
   onNext: () => void
@@ -231,7 +233,7 @@ export function ConnectStep({ onNext }: ConnectStepProps) {
         {status === 'testing' ? t('Connessione in corso…') : status === 'success' ? t('Connesso!') : t('Connetti')}
       </motion.button>
 
-      {showScanner && <QRScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
+      {showScanner && <Suspense fallback={null}><QRScanner onScan={handleScan} onClose={() => setShowScanner(false)} /></Suspense>}
     </motion.div>
   )
 }
