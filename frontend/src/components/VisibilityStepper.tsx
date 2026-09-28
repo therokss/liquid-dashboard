@@ -21,6 +21,21 @@ const DOMAIN_LABEL: Record<string, string> = {
   light: 'Luce', switch: 'Interruttore', sensor: 'Sensore', binary_sensor: 'Sensore',
   climate: 'Clima', media_player: 'Media', cover: 'Tapparella', fan: 'Ventola', lock: 'Serratura',
 }
+// Filtro per tipo: sensor e binary_sensor finiscono insieme in "Sensori".
+const DOMAIN_GROUPS: Array<{ id: string; label: string; icon: LucideIcon; domains: string[] }> = [
+  { id: 'light', label: 'Luci', icon: Lightbulb, domains: ['light'] },
+  { id: 'switch', label: 'Interruttori', icon: Power, domains: ['switch'] },
+  { id: 'sensor', label: 'Sensori', icon: Gauge, domains: ['sensor', 'binary_sensor'] },
+  { id: 'climate', label: 'Clima', icon: Thermometer, domains: ['climate'] },
+  { id: 'media_player', label: 'Media', icon: Speaker, domains: ['media_player'] },
+  { id: 'cover', label: 'Tapparelle', icon: Blinds, domains: ['cover'] },
+  { id: 'fan', label: 'Ventole', icon: Fan, domains: ['fan'] },
+  { id: 'lock', label: 'Serrature', icon: Lock, domains: ['lock'] },
+]
+const GROUP_OF: Record<string, string> = Object.fromEntries(
+  DOMAIN_GROUPS.flatMap((g) => g.domains.map((d) => [d, g.id])),
+)
+
 const STATE_LABEL: Record<string, string> = {
   on: 'Acceso', off: 'Spento', open: 'Aperto', closed: 'Chiuso', home: 'A casa', not_home: 'Fuori',
   locked: 'Bloccato', unlocked: 'Sbloccato', playing: 'In riproduzione', paused: 'In pausa',
@@ -60,6 +75,7 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
   const clearReviewed = useStore((s) => s.clearReviewed)
 
   const [areaFilter, setAreaFilter] = useState<string>('all')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
   const [queue, setQueue] = useState<HassEntity[]>([])
   const [index, setIndex] = useState(0)
   const [dir, setDir] = useState(1)
@@ -87,14 +103,31 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
 
   const entitiesReady = Object.keys(entities).length > 20
 
-  const listFor = (filter: string): HassEntity[] => {
+  const inAreaFilter = (e: HassEntity, filter: string): boolean => {
+    const a = entityAreas[e.entity_id]
+    if (filter === 'all') return true
+    if (filter === 'none') return !a
+    return a === filter
+  }
+
+  // Tipi presenti nella stanza scelta, con il numero di dispositivi (per i chip del filtro)
+  const typeCounts = useMemo(() => {
+    const c: Record<string, number> = {}
+    for (const e of buildManageable(entities, autoHidden)) {
+      if (!inAreaFilter(e, areaFilter)) continue
+      const g = GROUP_OF[getDomain(e.entity_id)]
+      if (g) c[g] = (c[g] ?? 0) + 1
+    }
+    return c
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entities, autoHidden, entityAreas, areaFilter])
+  // Se il tipo scelto non esiste nella nuova stanza si torna a "Tutti"
+  const activeType = typeFilter !== 'all' && typeCounts[typeFilter] ? typeFilter : 'all'
+
+  const listFor = (filter: string, type: string = activeType): HassEntity[] => {
     const all = buildManageable(useStore.getState().entities, useStore.getState().hiddenEntities)
-    const inArea = all.filter((e) => {
-      const a = entityAreas[e.entity_id]
-      if (filter === 'all') return true
-      if (filter === 'none') return !a
-      return a === filter
-    })
+    const inArea = all.filter((e) =>
+      inAreaFilter(e, filter) && (type === 'all' || GROUP_OF[getDomain(e.entity_id)] === type))
     inArea.sort((a, b) => {
       const aa = areaName[entityAreas[a.entity_id]] ?? '￿'
       const ba = areaName[entityAreas[b.entity_id]] ?? '￿'
@@ -119,7 +152,7 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
   useEffect(() => {
     if (entitiesReady) rebuild()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [areaFilter, entitiesReady, reviewAll])
+  }, [areaFilter, activeType, entitiesReady, reviewAll])
 
   const total = queue.length
   const hiddenCount = Object.keys(userHidden).length
@@ -176,6 +209,33 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
           >
             {viewMode === 'list' ? <LayoutGrid size={17} /> : <List size={17} />}
           </button>
+        </div>
+        {/* Filtro per tipo di dispositivo */}
+        <div role="group" aria-label={t('Tipo di dispositivo')} className="glass-scroll ld-type-chips" style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto', paddingBottom: 2 }}>
+          {[{ id: 'all', label: 'Tutti', icon: null as LucideIcon | null, n: Object.values(typeCounts).reduce((a, b) => a + b, 0) },
+            ...DOMAIN_GROUPS.filter((g) => typeCounts[g.id]).map((g) => ({ id: g.id, label: g.label, icon: g.icon as LucideIcon | null, n: typeCounts[g.id] }))]
+            .map((g) => {
+              const on = activeType === g.id
+              const GIcon = g.icon
+              return (
+                <button
+                  key={g.id}
+                  onClick={() => { setReviewAll(false); setTypeFilter(g.id) }}
+                  aria-pressed={on}
+                  style={{
+                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999,
+                    fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+                    background: on ? 'var(--accent)' : 'var(--glass-bg)',
+                    border: on ? '1px solid transparent' : '1px solid var(--glass-border)',
+                    color: on ? '#04121e' : 'var(--text-secondary)',
+                  }}
+                >
+                  {GIcon && <GIcon size={14} />}
+                  {t(g.label)}
+                  <span style={{ opacity: 0.65, fontWeight: 700 }}>{g.n}</span>
+                </button>
+              )
+            })}
         </div>
       </div>
 
@@ -274,10 +334,12 @@ export function VisibilityStepper({ onDone }: { onDone?: () => void }) {
             </div>
             <div>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 800, color: 'var(--text-primary)' }}>
-                {areaFilter === 'all' ? t('Tutto configurato') : t('Stanza configurata')}
+                {areaFilter === 'all' && activeType === 'all' ? t('Tutto configurato') : t('Gruppo configurato')}
               </h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: 13.5, marginTop: 6 }}>
-                {t('Hai già deciso tutti i dispositivi{{suffix}}. Cambia stanza dal menù in alto.', { suffix: areaFilter !== 'all' ? t(' di questa stanza') : '' })}
+                {activeType !== 'all'
+                  ? t('Hai già deciso tutti i dispositivi di questo tipo. Cambia stanza o tipo dai filtri in alto.')
+                  : t('Hai già deciso tutti i dispositivi{{suffix}}. Cambia stanza dal menù in alto.', { suffix: areaFilter !== 'all' ? t(' di questa stanza') : '' })}
               </p>
             </div>
             <button

@@ -391,5 +391,12 @@ const en: Record<string, string> = {
   "opzionale": "optional",
   "rete locale": "local network",
   "✓ Registrato": "✓ Registered",
+  "Tapparelle": "Blinds",
+  "Ventole": "Fans",
+  "Serrature": "Locks",
+  "Tutti": "All",
+  "Tipo di dispositivo": "Device type",
+  "Gruppo configurato": "Group configured",
+  "Hai già deciso tutti i dispositivi di questo tipo. Cambia stanza o tipo dai filtri in alto.": "You have already decided all devices of this type. Change room or type with the filters above.",
 }
 export default en

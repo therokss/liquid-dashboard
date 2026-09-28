@@ -391,5 +391,12 @@ const it: Record<string, string> = {
   "opzionale": "opzionale",
   "rete locale": "rete locale",
   "✓ Registrato": "✓ Registrato",
+  "Tapparelle": "Tapparelle",
+  "Ventole": "Ventole",
+  "Serrature": "Serrature",
+  "Tutti": "Tutti",
+  "Tipo di dispositivo": "Tipo di dispositivo",
+  "Gruppo configurato": "Gruppo configurato",
+  "Hai già deciso tutti i dispositivi di questo tipo. Cambia stanza o tipo dai filtri in alto.": "Hai già deciso tutti i dispositivi di questo tipo. Cambia stanza o tipo dai filtri in alto.",
 }
 export default it

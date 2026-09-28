@@ -3,6 +3,15 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.48.0] — 2026-09-28
+### Aggiunto
+- **Visibilità dispositivi, filtro per tipo**: sotto la scelta della stanza ci sono i filtri
+  Tutti, Luci, Interruttori, Sensori, Clima, Media, Tapparelle, Ventole e Serrature, ognuno
+  col numero di dispositivi. Valgono sia nella scheda "uno alla volta" sia nella lista, e si
+  combinano con la stanza (es. solo le luci della cucina). Compaiono solo i tipi presenti
+  nella stanza scelta; se cambi stanza e quel tipo lì non c'è, si torna a "Tutti". Su
+  telefono i filtri scorrono col dito, su computer vanno a capo.
+
 ## [1.47.1] — 2026-09-27
 ### Corretto
 - **Ombre e bagliori che finivano sulle card vicine**: l'ombra di ogni card scendeva fino a

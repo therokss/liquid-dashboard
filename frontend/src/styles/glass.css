@@ -673,3 +673,9 @@ body {
   }
 }
 /* ═══ fine blocco prestazioni ═══ */
+
+/* Filtro per tipo in "Visibilità dispositivi": col dito si scorre in orizzontale, col
+   mouse (dove non si può trascinare) i chip vanno a capo invece di restare tagliati. */
+@media (hover: hover) {
+  .ld-type-chips { flex-wrap: wrap; overflow-x: visible !important; }
+}

@@ -391,5 +391,12 @@ const es: Record<string, string> = {
   "opzionale": "opcional",
   "rete locale": "red local",
   "✓ Registrato": "✓ Registrado",
+  "Tapparelle": "Persianas",
+  "Ventole": "Ventiladores",
+  "Serrature": "Cerraduras",
+  "Tutti": "Todos",
+  "Tipo di dispositivo": "Tipo de dispositivo",
+  "Gruppo configurato": "Grupo configurado",
+  "Hai già deciso tutti i dispositivi di questo tipo. Cambia stanza o tipo dai filtri in alto.": "Ya has decidido todos los dispositivos de este tipo. Cambia de habitación o de tipo con los filtros de arriba.",
 }
 export default es
