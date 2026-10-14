@@ -133,3 +133,13 @@ Preferenze, permessi e visibilità si gestiscono dalla scheda **Impostazioni** n
 ---
 
 
+
+---
+
+## 🤖 Add-on "Assistente Claude"
+
+Nello stesso repository c'è un secondo add-on, **Assistente Claude**: chatta con Claude
+(Anthropic), crea automazioni con un tap, ne suggerisce di nuove analizzando gli storici e
+verifica quelle esistenti. Si installa dallo stesso store degli add-on dopo aver aggiunto
+questo repository; serve una chiave API Anthropic. Dettagli in
+[`claude_assistant/DOCS.md`](claude_assistant/DOCS.md).

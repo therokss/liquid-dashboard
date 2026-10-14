@@ -1,0 +1,25 @@
+configuration:
+  anthropic_api_key:
+    name: Anthropic API key
+    description: Key created at console.anthropic.com (pay-as-you-go API account, not the Claude subscription). It never leaves the add-on.
+  chat_model:
+    name: Chat model
+    description: Claude model used in the chat (default claude-sonnet-5-5).
+  chat_effort:
+    name: Chat effort
+    description: How much the model reasons in chat. Higher = better answers, slower and more expensive.
+  analysis_model:
+    name: Analysis model
+    description: Model used by "Suggest", "Review" and device research (default claude-opus-5-5).
+  suggest_effort:
+    name: "\"Suggest\" effort"
+    description: Effort for the history analysis that proposes new automations.
+  verify_effort:
+    name: "\"Review\" effort"
+    description: Effort for the in-depth review of existing automations.
+  monthly_budget_warn_usd:
+    name: Monthly budget, warning threshold (USD)
+    description: Above this estimated monthly spend the add-on shows a warning.
+  monthly_budget_block_usd:
+    name: Monthly budget, hard limit (USD)
+    description: Above this estimated monthly spend the add-on stops calling Claude until next month.

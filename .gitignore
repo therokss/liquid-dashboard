@@ -2,3 +2,7 @@ node_modules/
 frontend/dist/
 *.log
 .DS_Store
+assistant/server/dist/
+assistant/web/dist/
+.env.local
+assistant/.env.local
