@@ -17179,15 +17179,15 @@ async function generateToolResponse(params, runnable, available, lastMessage, re
       const sequence = sequences.get(family) ?? { tail: Promise.resolve(), failed: false };
       sequences.set(family, sequence);
       const registered = params.tools.some((t) => isRunnableToolset(t) && toolsetFamily(t) === family);
-      const run2 = started ?? sequence.tail.then(() => sequence.failed ? toolsetResultBlock(toolUse, notExecutedText(family), true) : runToolsetCall(params, family, toolUse, requestOptions));
-      sequence.tail = run2.then(({ is_error }) => {
+      const run3 = started ?? sequence.tail.then(() => sequence.failed ? toolsetResultBlock(toolUse, notExecutedText(family), true) : runToolsetCall(params, family, toolUse, requestOptions));
+      sequence.tail = run3.then(({ is_error }) => {
         if (is_error && registered)
           sequence.failed = true;
       }, () => {
         sequence.failed = true;
       });
-      calls?.set(toolUse.id, { status: "started", result: run2 });
-      return run2;
+      calls?.set(toolUse.id, { status: "started", result: run3 });
+      return run3;
     }
     if (started) {
       return started;
@@ -28945,7 +28945,7 @@ function publicOptions(o) {
 }
 
 // src/version.ts
-var VERSION2 = true ? "0.3.0" : "dev";
+var VERSION2 = true ? "0.3.1" : "dev";
 
 // src/routes.ts
 function buildRoutes(deps) {
@@ -49047,7 +49047,7 @@ function visit(schema2, fnOrHandlers) {
     return h ? h(node2, rewritten) : node2;
   };
   const cache = /* @__PURE__ */ new Map();
-  function run2(s) {
+  function run3(s) {
     const cached2 = cache.get(s);
     if (cached2 === RESOLVING) {
       return new $ZodLazy({
@@ -49073,21 +49073,21 @@ function visit(schema2, fnOrHandlers) {
         let changed = false;
         const newShape = {};
         for (const k of keys) {
-          const mapped = run2(oldShape[k]);
+          const mapped = run3(oldShape[k]);
           if (mapped !== oldShape[k])
             changed = true;
           newShape[k] = mapped;
         }
         let newCatchall = def.catchall;
         if (def.catchall) {
-          newCatchall = run2(def.catchall);
+          newCatchall = run3(def.catchall);
           if (newCatchall !== def.catchall)
             changed = true;
         }
         return changed ? clone(s, { ...def, shape: newShape, catchall: newCatchall }) : s;
       }
       case "array": {
-        const mapped = run2(def.element);
+        const mapped = run3(def.element);
         return mapped === def.element ? s : clone(s, { ...def, element: mapped });
       }
       case "tuple": {
@@ -49095,14 +49095,14 @@ function visit(schema2, fnOrHandlers) {
         let changed = false;
         const newItems = [];
         for (const item of oldItems) {
-          const mapped = run2(item);
+          const mapped = run3(item);
           if (mapped !== item)
             changed = true;
           newItems.push(mapped);
         }
         let newRest = def.rest;
         if (def.rest) {
-          newRest = run2(def.rest);
+          newRest = run3(def.rest);
           if (newRest !== def.rest)
             changed = true;
         }
@@ -49110,12 +49110,12 @@ function visit(schema2, fnOrHandlers) {
       }
       case "record":
       case "map": {
-        const newKey = run2(def.keyType);
-        const newVal = run2(def.valueType);
+        const newKey = run3(def.keyType);
+        const newVal = run3(def.valueType);
         return newKey === def.keyType && newVal === def.valueType ? s : clone(s, { ...def, keyType: newKey, valueType: newVal });
       }
       case "set": {
-        const newVal = run2(def.valueType);
+        const newVal = run3(def.valueType);
         return newVal === def.valueType ? s : clone(s, { ...def, valueType: newVal });
       }
       case "union": {
@@ -49123,7 +49123,7 @@ function visit(schema2, fnOrHandlers) {
         let changed = false;
         const newOptions = [];
         for (const opt of oldOptions) {
-          const mapped = run2(opt);
+          const mapped = run3(opt);
           if (mapped !== opt)
             changed = true;
           newOptions.push(mapped);
@@ -49131,8 +49131,8 @@ function visit(schema2, fnOrHandlers) {
         return changed ? clone(s, { ...def, options: newOptions }) : s;
       }
       case "intersection": {
-        const newLeft = run2(def.left);
-        const newRight = run2(def.right);
+        const newLeft = run3(def.left);
+        const newRight = run3(def.right);
         return newLeft === def.left && newRight === def.right ? s : clone(s, { ...def, left: newLeft, right: newRight });
       }
       case "optional":
@@ -49144,23 +49144,23 @@ function visit(schema2, fnOrHandlers) {
       case "nonoptional":
       case "promise":
       case "success": {
-        const newInner = run2(def.innerType);
+        const newInner = run3(def.innerType);
         return newInner === def.innerType ? s : clone(s, { ...def, innerType: newInner });
       }
       case "pipe": {
-        const newIn = run2(def.in);
-        const newOut = run2(def.out);
+        const newIn = run3(def.in);
+        const newOut = run3(def.out);
         return newIn === def.in && newOut === def.out ? s : clone(s, { ...def, in: newIn, out: newOut });
       }
       case "function": {
-        const newInput = run2(def.input);
-        const newOutput = run2(def.output);
+        const newInput = run3(def.input);
+        const newOutput = run3(def.output);
         return newInput === def.input && newOutput === def.output ? s : clone(s, { ...def, input: newInput, output: newOutput });
       }
       case "lazy": {
         const original = def.getter;
         const { _cachedInner, ...rest } = def;
-        return clone(s, { ...rest, getter: () => run2(original()) });
+        return clone(s, { ...rest, getter: () => run3(original()) });
       }
       // A leaf by choice: `parts` are regex fragments, not data positions.
       case "template_literal":
@@ -49191,7 +49191,7 @@ function visit(schema2, fnOrHandlers) {
       }
     }
   }
-  return run2(schema2);
+  return run3(schema2);
 }
 
 // ../node_modules/zod/v4/classic/deep-partial.js
@@ -50809,6 +50809,9 @@ var HAWriter = class {
     if (!entityId.startsWith("automation.")) throw new WriteError(400, "Solo le automazioni possono ricevere la categoria");
     await this.conn.sendMessage({ type: "config/entity_registry/update", entity_id: entityId, categories: { automation: categoryId } });
   }
+  async createInputBoolean(name, icon) {
+    return this.conn.sendMessage({ type: "input_boolean/create", name, icon });
+  }
   async setEnabled(entityId, enabled) {
     if (!entityId.startsWith("automation.")) throw new WriteError(400, "Si possono attivare o disattivare solo automazioni");
     await this.conn.sendMessage({ type: "call_service", domain: "automation", service: enabled ? "turn_on" : "turn_off", target: { entity_id: entityId } });
@@ -51874,7 +51877,8 @@ var SettingsStore = class {
     this.current = {
       consents: parseConsents(raw.consents),
       consentsChangedBy: typeof raw.consentsChangedBy === "string" ? raw.consentsChangedBy : void 0,
-      consentsChangedAt: typeof raw.consentsChangedAt === "string" ? raw.consentsChangedAt : void 0
+      consentsChangedAt: typeof raw.consentsChangedAt === "string" ? raw.consentsChangedAt : void 0,
+      testHelper: raw.testHelper && typeof raw.testHelper === "object" ? raw.testHelper : void 0
     };
   }
   get() {
@@ -51882,6 +51886,10 @@ var SettingsStore = class {
   }
   consents() {
     return this.current.consents;
+  }
+  async setTestHelper(status) {
+    this.current = { ...this.current, testHelper: { status, at: (/* @__PURE__ */ new Date()).toISOString() } };
+    await writeJsonAtomic(this.file, this.current);
   }
   async setConsents(consents, by) {
     this.current = { ...this.current, consents, consentsChangedBy: by, consentsChangedAt: (/* @__PURE__ */ new Date()).toISOString() };
@@ -52020,6 +52028,35 @@ function draftRoutes(deps) {
       }
     }
   ];
+}
+
+// src/setup/testHelper.ts
+var TEST_HELPER_ID = "input_boolean.test_claude";
+var NAME = "Test Claude";
+var ICON = "mdi:robot-outline";
+var inFlight = null;
+function ensureTestHelper(deps) {
+  inFlight ??= run2(deps).finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
+async function run2(deps) {
+  if (deps.settings.get().testHelper) return "gia_gestito";
+  try {
+    const [states, registries] = await Promise.all([deps.ha.states(), deps.ha.registries()]);
+    if (states.has(TEST_HELPER_ID) || registries.entities.some((e) => e.entity_id === TEST_HELPER_ID)) {
+      await deps.settings.setTestHelper("esistente");
+      return "esistente";
+    }
+    await deps.writer.createInputBoolean(NAME, ICON);
+    await deps.settings.setTestHelper("creato");
+    log.info(`Creato l'interruttore di prova ${TEST_HELPER_ID} (Impostazioni \u2192 Dispositivi e servizi \u2192 Aiutanti)`);
+    return "creato";
+  } catch (err) {
+    log.warn(`Interruttore di prova ${TEST_HELPER_ID} non creato`, err instanceof Error ? err.message : err);
+    return "errore";
+  }
 }
 
 // src/ha/env.ts
@@ -52391,7 +52428,11 @@ async function main() {
   await store.load();
   const draftStore = new DraftStore(DATA_DIR);
   await draftStore.load();
-  const drafts = conn && ha ? new DraftService({ store: draftStore, ha, writer: new HAWriter(rest, conn), conversations: store }) : null;
+  const writer = conn ? new HAWriter(rest, conn) : null;
+  const drafts = writer && ha ? new DraftService({ store: draftStore, ha, writer, conversations: store }) : null;
+  conn?.onState((s) => {
+    if (s === "connected" && ha && writer) setTimeout(() => void ensureTestHelper({ ha, writer, settings }), 3e3).unref();
+  });
   const client = createClaudeClient(options);
   const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? void 0 });
   const server = createApp({

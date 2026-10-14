@@ -67,6 +67,11 @@ ammessi (comandi di shell, script Python, chiamate REST, riavvio di Home Assista
 del recorder, aggiornamenti). Le automazioni definite in YAML/packages o create da una
 blueprint non si modificano da qui: Claude ti propone lo YAML da copiare.
 
+Per fare prove senza toccare dispositivi veri c'è l'interruttore **Test Claude**
+(`input_boolean.test_claude`), creato dall'add-on al primo avvio della 0.3.1: ad esempio
+"crea un'automazione che quando accendo Test Claude mi manda una notifica persistente". Se
+non ti serve eliminalo dagli Aiutanti: non verrà ricreato.
+
 > Consiglio: prima del primo utilizzo fai un backup di Home Assistant. L'editor riscrive
 > `automations.yaml` a ogni salvataggio (anche quello di HA lo fa), quindi eventuali
 > commenti nel file vengono persi.

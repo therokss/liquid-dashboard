@@ -3,6 +3,14 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.3.1] — 2026-10-14
+### Aggiunto
+- **Interruttore di prova `input_boolean.test_claude`** ("Test Claude"), creato
+  automaticamente al primo avvio dopo l'aggiornamento: serve a provare le bozze di
+  automazione senza toccare dispositivi veri. È un normale aiutante (Impostazioni →
+  Dispositivi e servizi → Aiutanti): se esiste già non viene toccato, e se lo elimini non
+  viene ricreato.
+
 ## [0.3.0] — 2026-10-14
 ### Aggiunto
 - **Automazioni create con un tocco.** Quando chiedi un'automazione (nuova o la modifica di

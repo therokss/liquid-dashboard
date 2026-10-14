@@ -25,12 +25,17 @@ export interface AutomationWriter {
   setEnabled(entityId: string, enabled: boolean): Promise<void>
 }
 
+/** Creazione dell'interruttore di prova per i collaudi (una sola volta, vedi setup/testHelper.ts). */
+export interface HelperWriter {
+  createInputBoolean(name: string, icon: string): Promise<{ id: string }>
+}
+
 function message(data: unknown, fallback: string): string {
   if (data && typeof data === 'object' && typeof (data as { message?: unknown }).message === 'string') return (data as { message: string }).message
   return typeof data === 'string' && data ? data : fallback
 }
 
-export class HAWriter implements AutomationWriter {
+export class HAWriter implements AutomationWriter, HelperWriter {
   constructor(
     private readonly rest: HARest,
     private readonly conn: Pick<HAConnection, 'sendMessage'>,
@@ -83,6 +88,10 @@ export class HAWriter implements AutomationWriter {
   async setCategory(entityId: string, categoryId: string): Promise<void> {
     if (!entityId.startsWith('automation.')) throw new WriteError(400, 'Solo le automazioni possono ricevere la categoria')
     await this.conn.sendMessage({ type: 'config/entity_registry/update', entity_id: entityId, categories: { automation: categoryId } })
+  }
+
+  async createInputBoolean(name: string, icon: string): Promise<{ id: string }> {
+    return this.conn.sendMessage<{ id: string }>({ type: 'input_boolean/create', name, icon })
   }
 
   async setEnabled(entityId: string, enabled: boolean): Promise<void> {

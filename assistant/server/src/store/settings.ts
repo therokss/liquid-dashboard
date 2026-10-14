@@ -9,6 +9,8 @@ export interface Settings {
   /** Chi ha cambiato i consensi e quando: utile se più admin usano l'add-on. */
   consentsChangedBy?: string
   consentsChangedAt?: string
+  /** Interruttore di prova input_boolean.test_claude: creato dall'add-on o già presente. */
+  testHelper?: { status: 'creato' | 'esistente'; at: string }
 }
 
 export class SettingsStore {
@@ -25,6 +27,7 @@ export class SettingsStore {
       consents: parseConsents(raw.consents),
       consentsChangedBy: typeof raw.consentsChangedBy === 'string' ? raw.consentsChangedBy : undefined,
       consentsChangedAt: typeof raw.consentsChangedAt === 'string' ? raw.consentsChangedAt : undefined,
+      testHelper: raw.testHelper && typeof raw.testHelper === 'object' ? (raw.testHelper as Settings['testHelper']) : undefined,
     }
   }
 
@@ -34,6 +37,11 @@ export class SettingsStore {
 
   consents(): Consents {
     return this.current.consents
+  }
+
+  async setTestHelper(status: 'creato' | 'esistente'): Promise<void> {
+    this.current = { ...this.current, testHelper: { status, at: new Date().toISOString() } }
+    await writeJsonAtomic(this.file, this.current)
   }
 
   async setConsents(consents: Consents, by: string): Promise<Settings> {

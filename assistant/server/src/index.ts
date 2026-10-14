@@ -16,6 +16,7 @@ import { DraftStore } from './drafts/store.ts'
 import { DraftService } from './drafts/service.ts'
 import { draftRoutes } from './drafts/routes.ts'
 import { HAWriter } from './ha/writer.ts'
+import { ensureTestHelper } from './setup/testHelper.ts'
 import { resolveEndpoints } from './ha/env.ts'
 import { HAConnection } from './ha/connection.ts'
 import { HARest, supervisorSelfInfo } from './ha/rest.ts'
@@ -60,7 +61,12 @@ async function main(): Promise<void> {
   await store.load()
   const draftStore = new DraftStore(DATA_DIR)
   await draftStore.load()
-  const drafts = conn && ha ? new DraftService({ store: draftStore, ha, writer: new HAWriter(rest, conn), conversations: store }) : null
+  const writer = conn ? new HAWriter(rest, conn) : null
+  const drafts = writer && ha ? new DraftService({ store: draftStore, ha, writer, conversations: store }) : null
+  // Interruttore di prova per i collaudi: creato una sola volta, a connessione avvenuta.
+  conn?.onState((s) => {
+    if (s === 'connected' && ha && writer) setTimeout(() => void ensureTestHelper({ ha, writer, settings }), 3_000).unref()
+  })
   const client = createClaudeClient(options)
   const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? undefined })
 
