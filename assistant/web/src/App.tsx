@@ -1,24 +1,27 @@
 import { useCallback, useEffect, useState } from 'react'
-import { MessageCircle, Sparkles, ShieldCheck, Cpu, Stethoscope, RefreshCw } from 'lucide-react'
+import { MessageCircle, Sparkles, ShieldCheck, Cpu, Settings, RefreshCw } from 'lucide-react'
 import { api, ApiError, type Session } from './api'
 import { ComingSoonPage } from './pages/ComingSoonPage'
 import { DiagnosticsPage } from './pages/DiagnosticsPage'
+import { ChatPage } from './pages/ChatPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { GlassCard } from './components/Glass'
 import { t } from './i18n/it'
 
-type Tab = 'chat' | 'suggest' | 'verify' | 'devices' | 'diagnostics'
+type Tab = 'chat' | 'suggest' | 'verify' | 'devices' | 'settings' | 'diagnostics'
 
+// La Diagnostica non ha una scheda propria: si apre dalle Impostazioni (e da #diagnostica).
 const TABS: Array<{ id: Tab; label: string; icon: typeof MessageCircle }> = [
   { id: 'chat', label: t('tabChat'), icon: MessageCircle },
   { id: 'suggest', label: t('tabSuggest'), icon: Sparkles },
   { id: 'verify', label: t('tabVerify'), icon: ShieldCheck },
   { id: 'devices', label: t('tabDevices'), icon: Cpu },
-  { id: 'diagnostics', label: t('tabDiagnostics'), icon: Stethoscope },
+  { id: 'settings', label: t('tabSettings'), icon: Settings },
 ]
 
 // Navigazione con l'hash (#diagnostica): con base './' i percorsi annidati romperebbero gli asset.
-const HASH: Record<Tab, string> = { chat: 'chat', suggest: 'suggerisci', verify: 'verifica', devices: 'dispositivi', diagnostics: 'diagnostica' }
-const fromHash = (): Tab => (Object.entries(HASH).find(([, h]) => `#${h}` === location.hash)?.[0] as Tab | undefined) ?? 'diagnostics'
+const HASH: Record<Tab, string> = { chat: 'chat', suggest: 'suggerisci', verify: 'verifica', devices: 'dispositivi', settings: 'impostazioni', diagnostics: 'diagnostica' }
+const fromHash = (): Tab => (Object.entries(HASH).find(([, h]) => `#${h}` === location.hash)?.[0] as Tab | undefined) ?? 'chat'
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -57,7 +60,7 @@ export function App() {
           {session && <span className="as-version">v{session.version}</span>}
         </header>
 
-        <main className="as-main glass-scroll">
+        <main className={`as-main ${tab === 'chat' && session ? 'as-main-chat' : 'glass-scroll'}`}>
           {!session && !error && <p className="text-body as-center">{t('loading')}</p>}
           {error && (
             <GlassCard className="as-center-card">
@@ -73,19 +76,23 @@ export function App() {
             </p>
           )}
           {session && tab === 'diagnostics' && <DiagnosticsPage session={session} />}
-          {session && tab === 'chat' && <ComingSoonPage icon={MessageCircle} title={t('tabChat')} text={t('comingChat')} version="0.2" />}
+          {session && tab === 'chat' && <ChatPage session={session} />}
+          {session && tab === 'settings' && <SettingsPage onOpenDiagnostics={() => go('diagnostics')} />}
           {session && tab === 'suggest' && <ComingSoonPage icon={Sparkles} title={t('tabSuggest')} text={t('comingSuggest')} version="0.4" />}
           {session && tab === 'verify' && <ComingSoonPage icon={ShieldCheck} title={t('tabVerify')} text={t('comingVerify')} version="0.5" />}
           {session && tab === 'devices' && <ComingSoonPage icon={Cpu} title={t('tabDevices')} text={t('comingDevices')} version="0.6" />}
         </main>
 
         <nav className="as-tabbar glass-panel" aria-label="Sezioni">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button key={id} type="button" className={`as-tab ${tab === id ? 'active' : ''}`} onClick={() => go(id)} aria-current={tab === id ? 'page' : undefined}>
+          {TABS.map(({ id, label, icon: Icon }) => {
+            const active = tab === id || (id === 'settings' && tab === 'diagnostics')
+            return (
+            <button key={id} type="button" className={`as-tab ${active ? 'active' : ''}`} onClick={() => go(id)} aria-current={active ? 'page' : undefined}>
               <Icon size={20} aria-hidden />
               <span>{label}</span>
             </button>
-          ))}
+            )
+          })}
         </nav>
       </div>
     </div>

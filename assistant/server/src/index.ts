@@ -3,6 +3,15 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createApp } from './http/server.ts'
 import { buildRoutes } from './routes.ts'
+import { chatRoutes } from './chat/routes.ts'
+import { ChatService } from './chat/service.ts'
+import { ConversationStore } from './chat/store.ts'
+import { HAData } from './ha/data.ts'
+import { UsageLedger } from './claude/usage.ts'
+import { createClaudeClient } from './claude/client.ts'
+import { sdkStreamer } from './claude/loop.ts'
+import { SettingsStore } from './store/settings.ts'
+import { DATA_DIR } from './store/paths.ts'
 import { resolveEndpoints } from './ha/env.ts'
 import { HAConnection } from './ha/connection.ts'
 import { HARest, supervisorSelfInfo } from './ha/rest.ts'
@@ -33,8 +42,26 @@ async function main(): Promise<void> {
   const admins = new AdminDirectory(conn)
   const addon = endpoints.mode === 'addon' ? await supervisorSelfInfo(endpoints.token) : null
 
+  const ha = conn ? new HAData(conn) : null
+  ha?.watch()
+  const settings = new SettingsStore(DATA_DIR)
+  await settings.load()
+  let tz = process.env.TZ || 'UTC'
+  const usage = new UsageLedger(DATA_DIR, () => tz)
+  conn?.onState((s) => {
+    if (s === 'connected') ha?.config().then((c) => (tz = c.time_zone)).catch(() => undefined)
+  })
+  await usage.load()
+  const store = new ConversationStore(DATA_DIR)
+  await store.load()
+  const client = createClaudeClient(options)
+  const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null })
+
   const server = createApp({
-    routes: buildRoutes({ mode: endpoints.mode, conn, rest, options, addon }),
+    routes: [
+      ...buildRoutes({ mode: endpoints.mode, conn, rest, options, addon, usage }),
+      ...chatRoutes({ chat, store, settings, usage, options, ha }),
+    ],
     wwwDir: findWwwDir(),
     access: { mode: endpoints.mode, isAdmin: (id) => admins.isAdmin(id) },
   })

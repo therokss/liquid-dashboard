@@ -10,8 +10,9 @@ Un assistente per Home Assistant basato su Claude (Anthropic) che:
   raggiunte, oscillazioni, conflitti) e propone correzioni;
 - **studia i dispositivi** che non conosce cercando la documentazione sul web.
 
-> Versione 0.1.0: per ora c'è la **Diagnostica**, che verifica che tutto il necessario
-> funzioni sulla tua installazione. Le altre funzioni arrivano nelle versioni successive.
+> Versione 0.2.0: c'è la **Chat in sola lettura** (Claude conosce la casa, legge stati,
+> storici e automazioni e prepara lo YAML da incollare) e la **Diagnostica**. Creazione con
+> un tap, Suggerisci, Verifica e studio dei dispositivi arrivano nelle versioni successive.
 
 ## Cosa serve
 
@@ -31,9 +32,34 @@ Un assistente per Home Assistant basato su Claude (Anthropic) che:
 | `suggest_effort` / `verify_effort` | Livello di ragionamento delle due analisi (`high` e `medium`). |
 | `monthly_budget_warn_usd` / `monthly_budget_block_usd` | Spesa mensile stimata oltre la quale l'add-on avvisa e poi smette di chiamare Claude. |
 
+## Chat
+
+Apri il pannello **Assistente** → **Chat** e fai una domanda, per esempio:
+
+- "Quali luci sono accese?" · "Com'è andata la temperatura in soggiorno nelle ultime 24 ore?"
+- "Perché l'automazione *Luci sera* non è scattata ieri?"
+- "Quali automazioni usano il sensore di presenza della cucina?"
+- "Preparami un'automazione che spenga le luci quando esco di casa."
+
+Sotto la risposta vedi quali letture ha fatto Claude (etichette) e il costo stimato. In
+questa versione l'assistente **non modifica nulla**: lo YAML proposto si copia con
+**Copia** e si incolla in *Impostazioni → Automazioni e scene → Crea automazione → ⋮ →
+Modifica in YAML*.
+
+Ogni chat "fotografa" la casa all'apertura: se aggiungi dispositivi o cambi i modelli
+nelle opzioni, apri una **Nuova chat**. Lo storico degli stati copre i giorni conservati
+dal recorder (10 per impostazione predefinita); oltre, per i sensori numerici, si usano le
+statistiche giornaliere.
+
+## Impostazioni
+
+- **Privacy**: tre categorie escluse di default, riattivabili a tuo rischio (vedi sotto).
+- **Cosa vede Claude**: l'inventario esatto che apre ogni nuova chat.
+- **Modelli** e **spesa del mese** rispetto alle soglie di budget.
+
 ## Diagnostica
 
-Apri il pannello **Assistente** → scheda **Diagnostica**:
+Apri **Impostazioni** → **Diagnostica**:
 
 1. **Esegui le verifiche**: deve risultare tutto verde. Le verifiche sono solo letture.
 2. **Prova lo streaming**: i 20 puntini devono riempirsi uno al secondo.
@@ -42,8 +68,20 @@ Apri il pannello **Assistente** → scheda **Diagnostica**:
 ## Privacy
 
 A Claude vengono inviati solo i dati necessari alla richiesta. Per impostazione predefinita
-sono esclusi posizioni GPS, telecamere e citofono, dati delle app companion e di salute;
-potrai riattivarli dalle impostazioni dell'assistente, a tuo rischio.
+sono esclusi:
+
+- **posizione e GPS**: tracker, coordinate, luogo delle persone (che risultano solo "a casa"
+  o "fuori casa");
+- **telecamere e citofono**: telecamere, campanelli/citofoni e tutte le entità dei dispositivi
+  con una telecamera (le immagini non vengono mai inviate in nessun caso);
+- **app mobile e salute**: sensori dell'app Home Assistant sui telefoni e integrazioni di
+  salute e fitness.
+
+Si riattivano da **Impostazioni → Privacy**, a tuo rischio. Sempre esclusi, qualunque
+scelta: token, password, chiavi, indirizzi IP e MAC, URL, numeri di serie. Gli entity_id di
+entità escluse possono comparire nelle configurazioni delle automazioni che li usano, ma
+stati e storici restano esclusi. Le conversazioni sono salvate solo nell'add-on (cartella
+`/data`, inclusa nei backup di Home Assistant).
 
 ## Permessi
 

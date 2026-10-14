@@ -17,6 +17,66 @@ export interface Session {
     monthlyBudgetBlockUsd: number
     anthropicConfigured: boolean
   }
+  budget: Budget | null
+}
+
+export interface Budget {
+  month: string
+  spentUsd: number
+  warnUsd: number
+  blockUsd: number
+  level: 'ok' | 'avviso' | 'bloccato'
+}
+
+export interface ConversationSummary {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  model: string
+  costUsd: number
+  turns: number
+}
+
+export type ViewPart =
+  | { type: 'text'; text: string }
+  | { type: 'tool'; id: string; name: string; label: string; ok: boolean | null }
+  | { type: 'note'; text: string; tone: 'info' | 'warning' | 'error' }
+
+export type ViewItem =
+  | { kind: 'user'; text: string; ts: string }
+  | { kind: 'assistant'; parts: ViewPart[]; ts: string; costUsd?: number; cacheRead?: number; fallback?: boolean }
+
+export interface InventoryStats {
+  totalEntities: number
+  included: number
+  forcedByAutomations: number
+  excludedPrivacy: Record<ConsentKey, number>
+  byDomain: Record<string, number>
+  automations: number
+}
+
+export interface ConversationDetail {
+  summary: ConversationSummary
+  model: string
+  effort: string
+  inventoryStats: InventoryStats
+  readOnly: boolean
+  running: boolean
+  items: ViewItem[]
+}
+
+export type ConsentKey = 'posizione' | 'telecamere' | 'appMobile'
+export type Consents = Record<ConsentKey, boolean>
+
+export interface SettingsData {
+  consents: Consents
+  consentsDefault: Consents
+  consentLabels: Record<ConsentKey, string>
+  consentsChangedBy: string | null
+  consentsChangedAt: string | null
+  models: { chat: string; chatEffort: string; analysis: string }
+  budget: Budget
 }
 
 export type ProbeStatus = 'ok' | 'avviso' | 'errore' | 'saltata'
@@ -48,18 +108,47 @@ export class ApiError extends Error {
   }
 }
 
-async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(path, { headers: { Accept: 'application/json' }, cache: 'no-store' })
+export class ApiCallError extends ApiError {
+  constructor(status: number, readonly code: string, message: string) {
+    super(status, message)
+  }
+}
+
+async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+      // Le richieste che modificano qualcosa portano questo header: il server rifiuta le altre.
+      ...(method === 'GET' ? {} : { 'X-Assistente': '1' }),
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
-    throw new ApiError(res.status, body.error ?? `HTTP ${res.status}`)
+    const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+    throw new ApiCallError(res.status, data.error ?? `HTTP ${res.status}`, data.message ?? data.error ?? `HTTP ${res.status}`)
   }
   return (await res.json()) as T
 }
+
+const getJson = <T,>(path: string) => call<T>('GET', path)
 
 export const api = {
   session: () => getJson<Session>('api/session'),
   runProbes: () => getJson<ProbeRun>('api/diag/probes'),
   pingAnthropic: () => getJson<AnthropicPing>('api/diag/anthropic'),
   sseTestUrl: (seconds: number) => `api/diag/sse-test?seconds=${seconds}`,
+  conversations: () => getJson<{ conversations: ConversationSummary[]; budget: Budget }>('api/chat/conversations'),
+  createConversation: () => call<{ id: string; summary: ConversationSummary }>('POST', 'api/chat/conversations'),
+  conversation: (id: string) => getJson<ConversationDetail>(`api/chat/conversations/${id}`),
+  deleteConversation: (id: string) => call<{ ok: boolean }>('DELETE', `api/chat/conversations/${id}`),
+  send: (id: string, text: string) => call<{ turnId: string }>('POST', `api/chat/conversations/${id}/messages`, { text }),
+  stop: (id: string) => call<{ stopped: boolean }>('POST', `api/chat/conversations/${id}/stop`),
+  eventsUrl: (id: string) => `api/chat/conversations/${id}/events`,
+  payload: (id: string) => getJson<{ model: string; system: string; tools: Array<{ name: string; description: string }> }>(`api/chat/conversations/${id}/payload`),
+  settings: () => getJson<SettingsData>('api/settings'),
+  setPrivacy: (consents: Consents) => call<{ consents: Consents }>('PUT', 'api/settings/privacy', { consents }),
+  inventoryPreview: () => getJson<{ stats: InventoryStats; text: string; chars: number }>('api/inventory/preview'),
 }

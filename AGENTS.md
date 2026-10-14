@@ -38,3 +38,10 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
   versioni di Liquid Dashboard. Commit e rilascio come sopra.
 - **CHANGELOG** solo in `claude_assistant/CHANGELOG.md` (quello in radice è di Liquid Dashboard).
 - Il repo è pubblico: nei test e negli esempi solo dati sintetici, mai dati della casa reale.
+- **Anteprima senza HA né chiave API**: `npm run preview` in `assistant/` (casa sintetica di
+  `test/fakeHome.ts` e un Claude simulato) dopo `npx vite build` in `web/`, oppure con
+  `npm run dev:web` per l'hot reload.
+- Chat: prompt di sistema e tool sono congelati nell'intestazione di ogni conversazione
+  (`/data/conversations/<id>.jsonl`, solo in aggiunta). Se cambi nomi o parametri dei tool
+  incrementa `TOOLSET_VERSION` (`server/src/claude/tools/registry.ts`); se cambi il testo
+  del prompt incrementa `PROMPT_VERSION`.

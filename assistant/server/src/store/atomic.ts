@@ -42,10 +42,34 @@ export async function readJson<T>(file: string, fallback: T): Promise<T> {
   }
 }
 
+const checkedTails = new Set<string>()
+
+/** Se un crash ha lasciato l'ultima riga a metà, la chiude: la riga nuova non si fonde con quella rotta. */
+async function ensureNewlineTail(file: string): Promise<void> {
+  if (checkedTails.has(file)) return
+  checkedTails.add(file)
+  let handle
+  try {
+    handle = await fs.open(file, 'r')
+  } catch {
+    return
+  }
+  try {
+    const { size } = await handle.stat()
+    if (size === 0) return
+    const buf = Buffer.alloc(1)
+    await handle.read(buf, 0, 1, size - 1)
+    if (buf[0] !== 0x0a) await fs.appendFile(file, '\n', 'utf8')
+  } finally {
+    await handle.close()
+  }
+}
+
 /** Una riga JSON in coda al file (registri append-only: conversazioni, consumi, audit). */
 export function appendJsonl(file: string, record: unknown): Promise<void> {
   return enqueue(file, async () => {
     await fs.mkdir(dirname(file), { recursive: true })
+    await ensureNewlineTail(file)
     await fs.appendFile(file, JSON.stringify(record) + '\n', 'utf8')
   })
 }

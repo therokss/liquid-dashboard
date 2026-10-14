@@ -11,6 +11,7 @@
     "check": "npm run typecheck -w server && npm run typecheck -w web",
     "test": "npm test -w server",
     "dev:server": "npm run dev -w server",
-    "dev:web": "npm run dev -w web"
+    "dev:web": "npm run dev -w web",
+    "preview": "npm run preview -w server"
   }
 }

@@ -9,10 +9,13 @@ export interface RouteContext {
   res: ServerResponse
   url: URL
   user: AccessUser | null
+  /** Segmenti `:nome` del percorso della route. */
+  params: Record<string, string>
 }
 
 export interface Route {
-  method: 'GET' | 'POST'
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  /** Percorso esatto, con eventuali segmenti `:nome` (es. /api/chat/:id). */
   path: string
   /** false solo per /healthz (watchdog del Supervisor). */
   auth: boolean
@@ -39,6 +42,47 @@ export function sendJson(res: ServerResponse, status: number, body: unknown): vo
     'Content-Length': Buffer.byteLength(text),
   })
   res.end(text)
+}
+
+export class HttpError extends Error {
+  constructor(readonly status: number, readonly code: string) {
+    super(code)
+  }
+}
+
+/** Corpo JSON della richiesta, con limite di dimensione. */
+export async function readJsonBody<T = unknown>(req: IncomingMessage, limitBytes = 64 * 1024): Promise<T> {
+  const type = String(req.headers['content-type'] ?? '')
+  if (!type.startsWith('application/json')) throw new HttpError(415, 'serve_json')
+  const chunks: Buffer[] = []
+  let size = 0
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length
+    if (size > limitBytes) throw new HttpError(413, 'corpo_troppo_grande')
+    chunks.push(chunk as Buffer)
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as T
+  } catch {
+    throw new HttpError(400, 'json_non_valido')
+  }
+}
+
+function matchPath(pattern: string, pathname: string): Record<string, string> | null {
+  const a = pattern.split('/')
+  const b = pathname.split('/')
+  if (a.length !== b.length) return null
+  const params: Record<string, string> = {}
+  for (let i = 0; i < a.length; i++) {
+    const seg = a[i]!
+    if (seg.startsWith(':')) {
+      if (!b[i]) return null
+      params[seg.slice(1)] = decodeURIComponent(b[i]!)
+    } else if (seg !== b[i]) {
+      return null
+    }
+  }
+  return params
 }
 
 async function serveStatic(wwwDir: string, pathname: string, res: ServerResponse): Promise<void> {
@@ -77,8 +121,15 @@ export function createApp(opts: { routes: Route[]; wwwDir: string; access: Acces
     res.setHeader('Referrer-Policy', 'no-referrer')
     try {
       const url = new URL(req.url ?? '/', 'http://localhost')
-      const route = routes.find((r) => r.path === url.pathname && r.method === req.method)
+      let params: Record<string, string> | null = null
+      const route = routes.find((r) => r.method === req.method && (params = matchPath(r.path, url.pathname)) !== null)
       if (route) {
+        // Le richieste che cambiano qualcosa devono portare un header personalizzato: un sito
+        // esterno non può aggiungerlo senza preflight CORS (che qui non viene mai concesso).
+        if (req.method !== 'GET' && req.headers['x-assistente'] !== '1') {
+          sendJson(res, 403, { error: 'header_mancante' })
+          return
+        }
         let user: AccessUser | null = null
         if (route.auth) {
           const result = await checkAccess({ remoteAddress: req.socket.remoteAddress, headers: req.headers }, access)
@@ -88,7 +139,12 @@ export function createApp(opts: { routes: Route[]; wwwDir: string; access: Acces
           }
           user = result.user
         }
-        await route.handler({ req, res, url, user })
+        try {
+          await route.handler({ req, res, url, user, params: params ?? {} })
+        } catch (err) {
+          if (!(err instanceof HttpError)) throw err
+          if (!res.headersSent) sendJson(res, err.status, { error: err.code })
+        }
         return
       }
       if (url.pathname.startsWith('/api/')) {

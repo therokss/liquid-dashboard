@@ -9,10 +9,12 @@
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
-    "dev": "node --env-file-if-exists=../.env.local --import tsx src/index.ts"
+    "dev": "node --env-file-if-exists=../.env.local --import tsx src/index.ts",
+    "preview": "node --import tsx test/preview.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.133.0"
+    "@anthropic-ai/sdk": "0.133.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",

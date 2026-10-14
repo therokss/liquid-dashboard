@@ -8,6 +8,7 @@ import type { HAConnection } from './ha/connection.ts'
 import type { HARest } from './ha/rest.ts'
 import type { Mode } from './ha/env.ts'
 import { VERSION } from './version.ts'
+import type { UsageLedger } from './claude/usage.ts'
 
 export interface AppDeps {
   mode: Mode
@@ -15,6 +16,7 @@ export interface AppDeps {
   rest: HARest
   options: Options
   addon: { slug: string } | null
+  usage?: UsageLedger
 }
 
 export function buildRoutes(deps: AppDeps): Route[] {
@@ -39,6 +41,7 @@ export function buildRoutes(deps: AppDeps): Route[] {
           user,
           ha: { state: deps.conn?.state ?? 'idle', version: deps.conn?.haVersion ?? null, error: deps.conn?.lastError ?? null },
           options: publicOptions(deps.options),
+          budget: deps.usage?.status(deps.options) ?? null,
         }),
     },
     {

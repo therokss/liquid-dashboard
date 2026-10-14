@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
@@ -97,4 +97,57 @@ test('diagnostica Anthropic senza chiave: risposta chiara, nessuna chiamata di r
   const { pingAnthropic } = await import('../src/claude/client.ts')
   const r = await pingAnthropic({ ...DEFAULT_OPTIONS, anthropicApiKey: '' })
   assert.deepEqual(r, { configured: false, models: [] })
+})
+
+test('API della chat via HTTP: header anti-CSRF, parametri, JSON, SSE a riposo', async () => {
+  const { ChatService } = await import('../src/chat/service.ts')
+  const { ConversationStore } = await import('../src/chat/store.ts')
+  const { chatRoutes } = await import('../src/chat/routes.ts')
+  const { SettingsStore } = await import('../src/store/settings.ts')
+  const { UsageLedger } = await import('../src/claude/usage.ts')
+  const { fakeHA } = await import('./fakeHome.ts')
+  const { fakeStream, msg, text } = await import('./fakeClaude.ts')
+  const dir = await mkdtemp(join(tmpdir(), 'assistente-http-'))
+  const store = new ConversationStore(dir)
+  await store.load()
+  const settings = new SettingsStore(dir)
+  await settings.load()
+  const usage = new UsageLedger(dir, () => 'Europe/Rome')
+  const options = { ...DEFAULT_OPTIONS, anthropicApiKey: 'sk-ant-segreta-di-test' }
+  const ha = fakeHA()
+  const chat = new ChatService({ store, ha, settings, usage, options, stream: fakeStream([msg([text('Ciao!')], 'end_turn')]) })
+  const server = createApp({
+    routes: chatRoutes({ chat, store, settings, usage, options, ha }),
+    wwwDir: dir,
+    access: { mode: 'dev', isAdmin: async () => true },
+  })
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()))
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+  const H = { 'Content-Type': 'application/json', 'X-Assistente': '1' }
+  try {
+    assert.equal((await fetch(`${base}/api/chat/conversations`, { method: 'POST' })).status, 403, 'senza header personalizzato')
+    const created = await fetch(`${base}/api/chat/conversations`, { method: 'POST', headers: H })
+    assert.equal(created.status, 201)
+    const { id } = (await created.json()) as { id: string }
+    assert.equal((await fetch(`${base}/api/chat/conversations/..%2f..%2fetc`)).status, 400)
+    const wrongType = await fetch(`${base}/api/chat/conversations/${id}/messages`, { method: 'POST', headers: { 'X-Assistente': '1', 'Content-Type': 'text/plain' }, body: 'x' })
+    assert.equal(wrongType.status, 415)
+    const sent = await fetch(`${base}/api/chat/conversations/${id}/messages`, { method: 'POST', headers: H, body: JSON.stringify({ text: 'Ciao' }) })
+    assert.equal(sent.status, 202)
+    const sse = await (await fetch(`${base}/api/chat/conversations/${id}/events`)).text()
+    assert.match(sse, /event: text\ndata: \{"delta":"Ciao!"\}/)
+    assert.match(sse, /event: done/)
+    const view = (await (await fetch(`${base}/api/chat/conversations/${id}`)).json()) as { items: Array<{ kind: string }> }
+    assert.deepEqual(view.items.map((i) => i.kind), ['user', 'assistant'])
+    const payload = await (await fetch(`${base}/api/chat/conversations/${id}/payload`)).text()
+    assert.ok(!payload.includes('sk-ant-segreta-di-test') && !payload.includes('SN-DA-NON-INVIARE'))
+    const privacy = await fetch(`${base}/api/settings/privacy`, { method: 'PUT', headers: H, body: JSON.stringify({ consents: { telecamere: true, extra: 1 } }) })
+    assert.deepEqual(((await privacy.json()) as { consents: unknown }).consents, { posizione: false, telecamere: true, appMobile: false })
+    const del = await fetch(`${base}/api/chat/conversations/${id}`, { method: 'DELETE', headers: { 'X-Assistente': '1' } })
+    assert.equal(del.status, 200)
+    assert.equal((await fetch(`${base}/api/chat/conversations/${id}`)).status, 404)
+  } finally {
+    await new Promise<void>((r) => server.close(() => r()))
+    await rm(dir, { recursive: true, force: true })
+  }
 })
