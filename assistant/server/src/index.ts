@@ -12,6 +12,10 @@ import { createClaudeClient } from './claude/client.ts'
 import { sdkStreamer } from './claude/loop.ts'
 import { SettingsStore } from './store/settings.ts'
 import { DATA_DIR } from './store/paths.ts'
+import { DraftStore } from './drafts/store.ts'
+import { DraftService } from './drafts/service.ts'
+import { draftRoutes } from './drafts/routes.ts'
+import { HAWriter } from './ha/writer.ts'
 import { resolveEndpoints } from './ha/env.ts'
 import { HAConnection } from './ha/connection.ts'
 import { HARest, supervisorSelfInfo } from './ha/rest.ts'
@@ -54,13 +58,17 @@ async function main(): Promise<void> {
   await usage.load()
   const store = new ConversationStore(DATA_DIR)
   await store.load()
+  const draftStore = new DraftStore(DATA_DIR)
+  await draftStore.load()
+  const drafts = conn && ha ? new DraftService({ store: draftStore, ha, writer: new HAWriter(rest, conn), conversations: store }) : null
   const client = createClaudeClient(options)
-  const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null })
+  const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? undefined })
 
   const server = createApp({
     routes: [
       ...buildRoutes({ mode: endpoints.mode, conn, rest, options, addon, usage }),
-      ...chatRoutes({ chat, store, settings, usage, options, ha }),
+      ...chatRoutes({ chat, store, settings, usage, options, ha, drafts: draftStore }),
+      ...(drafts ? draftRoutes({ service: drafts, store: draftStore }) : []),
     ],
     wwwDir: findWwwDir(),
     access: { mode: endpoints.mode, isAdmin: (id) => admins.isAdmin(id) },

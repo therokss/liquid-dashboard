@@ -305,14 +305,29 @@ export function renderInventory(inv: Inventory, registries: Registries, consents
 
 // --- R6: entità usate da automazioni, script e scene ------------------------------------
 
-const ENTITY_ID_RE = /\b([a-z_][a-z0-9_]*\.[a-z0-9_]+)\b/g
+/**
+ * entity_id candidati in un testo, anche dentro i template: "states.sensor.x.state" e
+ * "states('sensor.x')" danno entrambi sensor.x. Un candidato vale solo se il dominio è noto.
+ */
+export function entityCandidates(text: string, domains: Set<string>): string[] {
+  const out: string[] = []
+  for (const token of text.toLowerCase().split(/[^a-z0-9_.]+/)) {
+    if (!token.includes('.')) continue
+    const parts = token.split('.')
+    for (let i = 0; i + 1 < parts.length; i++) {
+      if (parts[i] && parts[i + 1] && domains.has(parts[i]!)) out.push(`${parts[i]}.${parts[i + 1]}`)
+    }
+  }
+  return out
+}
 
 /** Raccoglie in `out` gli entity_id esistenti citati in qualunque stringa della config. */
 export function collectEntityRefs(config: unknown, known: Set<string>, out: Set<string>): void {
+  const domains = new Set([...known].map(domainOf))
   const walk = (v: unknown, depth: number) => {
     if (depth > 30) return
     if (typeof v === 'string') {
-      for (const m of v.matchAll(ENTITY_ID_RE)) if (known.has(m[1]!)) out.add(m[1]!)
+      for (const id of entityCandidates(v, domains)) if (known.has(id)) out.add(id)
     } else if (Array.isArray(v)) {
       for (const x of v) walk(x, depth + 1)
     } else if (v && typeof v === 'object') {

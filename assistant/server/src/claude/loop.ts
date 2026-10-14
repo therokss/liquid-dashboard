@@ -145,7 +145,7 @@ export type TurnEvent =
 export interface TurnDeps {
   stream: StreamFn
   persist: (message: BetaMessageParam) => Promise<void>
-  executeTool: (name: string, input: unknown) => Promise<ToolOutcome>
+  executeTool: (name: string, input: unknown, toolUseId: string) => Promise<ToolOutcome>
   /** Chiamato prima di ogni richiesta: lancia se il budget è esaurito. */
   beforeRequest: () => void
   onUsage: (usage: UsageTotals) => Promise<void>
@@ -244,7 +244,7 @@ export async function runTurn(frozen: Frozen, history: BetaMessageParam[], deps:
         // Tool di sola lettura: in parallelo. Tutti i risultati in UN messaggio utente.
         const outcomes = await Promise.all(
           calls.map(async (c) => {
-            const out = await deps.executeTool(c.name, c.input)
+            const out = await deps.executeTool(c.name, c.input, c.id)
             deps.emit({ type: 'tool_done', id: c.id, ok: !out.isError })
             return { c, out }
           }),

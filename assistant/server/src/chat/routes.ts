@@ -3,13 +3,15 @@ import { openSse } from '../http/sse.ts'
 import { ChatError, type ChatService } from './service.ts'
 import { isConversationId, type ConversationStore } from './store.ts'
 import { toView } from './view.ts'
-import { TOOLSET_VERSION } from '../claude/tools/registry.ts'
+import { SUPPORTED_TOOLSETS } from '../claude/tools/registry.ts'
 import { buildHomeSnapshot } from '../inventory/snapshot.ts'
 import { DEFAULT_CONSENTS, parseConsents, PRIVACY_LABELS } from '../inventory/privacy.ts'
 import type { HAReader } from '../ha/data.ts'
 import type { SettingsStore } from '../store/settings.ts'
 import type { UsageLedger } from '../claude/usage.ts'
 import type { Options } from '../options.ts'
+import type { DraftStore } from '../drafts/store.ts'
+import { publicDraft } from '../drafts/service.ts'
 
 export interface ChatRouteDeps {
   chat: ChatService
@@ -18,6 +20,7 @@ export interface ChatRouteDeps {
   usage: UsageLedger
   options: Options
   ha: HAReader | null
+  drafts?: DraftStore
 }
 
 function convId(params: Record<string, string>): string {
@@ -70,9 +73,11 @@ export function chatRoutes(deps: ChatRouteDeps): Route[] {
           model: conv.header.model,
           effort: conv.header.effort,
           inventoryStats: conv.header.inventoryStats,
-          readOnly: conv.header.toolsetVersion !== TOOLSET_VERSION,
+          readOnly: !SUPPORTED_TOOLSETS.has(conv.header.toolsetVersion),
           running: chat.isRunning(id),
           items: toView(conv),
+          // Bozze per tool_use: l'interfaccia mostra la scheda al posto dell'etichetta.
+          drafts: Object.fromEntries((deps.drafts?.byConversation(id) ?? []).map((d) => [d.toolUseId, publicDraft(d)])),
         })
       },
     },

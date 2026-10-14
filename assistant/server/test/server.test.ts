@@ -151,3 +151,45 @@ test('API della chat via HTTP: header anti-CSRF, parametri, JSON, SSE a riposo',
     await rm(dir, { recursive: true, force: true })
   }
 })
+
+test('API delle bozze: header obbligatorio, doppia conferma, cronologia', async () => {
+  const { DraftStore } = await import('../src/drafts/store.ts')
+  const { DraftService } = await import('../src/drafts/service.ts')
+  const { draftRoutes } = await import('../src/drafts/routes.ts')
+  const { ConversationStore } = await import('../src/chat/store.ts')
+  const { fakeHA } = await import('./fakeHome.ts')
+  const { fakeWriter } = await import('./fakeWriter.ts')
+  const dir = await mkdtemp(join(tmpdir(), 'assistente-http-bozze-'))
+  const ha = fakeHA()
+  const writer = fakeWriter(await ha.states())
+  const store = new DraftStore(dir)
+  await store.load()
+  const conversations = new ConversationStore(dir)
+  await conversations.load()
+  const service = new DraftService({ store, ha, writer, conversations, pollMs: 5, pollTimeoutMs: 500 })
+  const yaml = 'alias: Apri\ndescription: x\ntriggers:\n  - trigger: state\n    entity_id: input_boolean.ospiti\nactions:\n  - action: mqtt.publish\n    data: { topic: t, payload: p }\n'
+  const p = await service.propose({ yaml, spiegazione: 'x' }, { conversationId: 'cinesistente0001', toolUseId: 'tu' })
+  assert.equal(p.ok, true)
+  const draftId = p.ok ? p.draft.id : ''
+  const server = createApp({ routes: draftRoutes({ service, store }), wwwDir: dir, access: { mode: 'dev', isAdmin: async () => true } })
+  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()))
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+  const H = { 'Content-Type': 'application/json', 'X-Assistente': '1' }
+  try {
+    assert.equal((await fetch(`${base}/api/drafts/${draftId}/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 403)
+    const noConfirm = await fetch(`${base}/api/drafts/${draftId}/apply`, { method: 'POST', headers: H, body: '{}' })
+    assert.equal(noConfirm.status, 400)
+    assert.equal(((await noConfirm.json()) as { error: string }).error, 'conferma_richiesta')
+    const ok = await fetch(`${base}/api/drafts/${draftId}/apply`, { method: 'POST', headers: H, body: JSON.stringify({ confirmCritical: true }) })
+    assert.equal(ok.status, 200)
+    const body = (await ok.json()) as { draft: { status: string; applied: { entityId: string } } }
+    assert.equal(body.draft.status, 'applied')
+    assert.equal(body.draft.applied.entityId, 'automation.apri')
+    const hist = (await (await fetch(`${base}/api/history`)).json()) as { entries: Array<{ action: string }> }
+    assert.equal(hist.entries[0]!.action, 'creata')
+    assert.equal((await fetch(`${base}/api/drafts/xx/apply`, { method: 'POST', headers: H, body: '{}' })).status, 400)
+  } finally {
+    await new Promise<void>((r) => server.close(() => r()))
+    await rm(dir, { recursive: true, force: true })
+  }
+})

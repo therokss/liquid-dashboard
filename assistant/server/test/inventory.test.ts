@@ -106,5 +106,5 @@ test('snapshot e prompt di sistema: stabili tra due chat sulla stessa casa', asy
   const blocks = buildSystemPrompt(s1)
   assert.equal(blocks.length, 2)
   assert.deepEqual(blocks[1]!.cache_control, { type: 'ephemeral', ttl: '1h' })
-  assert.ok(!/\d{2}:\d{2}/.test(blocks[0]!.text), 'niente orari nel prompt di sistema')
+  assert.ok(!/Adesso:|\d{2}\/\d{2}\/\d{4}|ore \d{2}:\d{2}/.test(blocks[0]!.text + blocks[1]!.text), 'niente data/ora corrente nel prompt di sistema')
 })

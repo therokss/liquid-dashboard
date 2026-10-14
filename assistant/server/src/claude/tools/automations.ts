@@ -240,8 +240,6 @@ const catalogoSchema = z.object({
   filtro: z.string().max(60).optional().describe('Integrazione o parola chiave (es. "light", "calendar", "occupancy"). Senza filtro restituisce solo i nomi.'),
 })
 
-let catalogCache: { at: number; value: Record<string, unknown> } | null = null
-
 export const catalogoTrigger: ToolSpec<typeof catalogoSchema> = {
   name: 'catalogo_trigger',
   description:
@@ -249,12 +247,8 @@ export const catalogoTrigger: ToolSpec<typeof catalogoSchema> = {
   schema: catalogoSchema,
   label: (i) => `Consulto il catalogo dei trigger${i.filtro ? ` (${i.filtro})` : ''}`,
   async run(input, ctx) {
-    if (!catalogCache || Date.now() - catalogCache.at > 10 * 60_000) {
-      const first = await ctx.ha.subscribeOnce({ type: 'trigger_platforms/subscribe' }, 8_000)
-      if (!first || typeof first !== 'object') throw new ToolError('Catalogo dei trigger non disponibile in questo momento.')
-      catalogCache = { at: Date.now(), value: first as Record<string, unknown> }
-    }
-    const all = catalogCache.value
+    const all = await ctx.ha.triggerCatalog()
+    if (!all) throw new ToolError('Catalogo dei trigger non disponibile in questo momento.')
     const keys = Object.keys(all).sort()
     if (!input.filtro) return { totale: keys.length, trigger: keys, nota: 'Usa il parametro filtro per vedere i campi di un gruppo di trigger.' }
     const f = normalize(input.filtro)
@@ -282,8 +276,4 @@ function compactDescription(desc: unknown): unknown {
       }),
     ),
   }
-}
-
-export function resetTriggerCatalogCache(): void {
-  catalogCache = null
 }

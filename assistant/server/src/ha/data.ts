@@ -26,6 +26,7 @@ export const READ_TYPES = new Set([
   'config_entries/get',
   'automation/config',
   'script/config',
+  'validate_config',
   'search/related',
   'trace/list',
   'logbook/get_events',
@@ -57,6 +58,10 @@ export interface HAReader {
   call<T = unknown>(msg: Json, timeoutMs?: number): Promise<T>
   /** Primo evento di una sottoscrizione "una tantum" (es. catalogo dei trigger). */
   subscribeOnce(msg: Json, waitMs: number): Promise<unknown>
+  /** dominio → servizi registrati (cache di qualche minuto). */
+  services(): Promise<Map<string, Set<string>>>
+  /** Catalogo dei tipi di trigger (cache di qualche minuto); null se non disponibile. */
+  triggerCatalog(): Promise<Record<string, unknown> | null>
 }
 
 export class HAData implements HAReader {
@@ -64,6 +69,8 @@ export class HAData implements HAReader {
   private cfgCache: Promise<HAConfigInfo> | null = null
   private statesCache: { at: number; value: Promise<Map<string, HAState>> } | null = null
   private unsubs: Array<() => Promise<void>> = []
+  private servicesCache: { at: number; value: Promise<Map<string, Set<string>>> } | null = null
+  private catalogCache: { at: number; value: Promise<Record<string, unknown> | null> } | null = null
 
   constructor(
     private readonly conn: Pick<HAConnection, 'sendMessage' | 'subscribe' | 'onState'>,
@@ -83,6 +90,39 @@ export class HAData implements HAReader {
     this.regCache = null
     this.cfgCache = null
     this.statesCache = null
+    this.servicesCache = null
+    this.catalogCache = null
+  }
+
+  services(): Promise<Map<string, Set<string>>> {
+    if (!this.servicesCache || Date.now() - this.servicesCache.at > 5 * 60_000) {
+      const value = this.call<Record<string, Record<string, unknown>>>({ type: 'get_services' }).then(
+        (r) => new Map(Object.entries(r).map(([domain, svcs]) => [domain, new Set(Object.keys(svcs))])),
+      )
+      value.catch(() => {
+        if (this.servicesCache?.value === value) this.servicesCache = null
+      })
+      this.servicesCache = { at: Date.now(), value }
+    }
+    return this.servicesCache.value
+  }
+
+  triggerCatalog(): Promise<Record<string, unknown> | null> {
+    if (!this.catalogCache || Date.now() - this.catalogCache.at > 10 * 60_000) {
+      const value = this.subscribeOnce({ type: 'trigger_platforms/subscribe' }, 8_000).then((first) =>
+        first && typeof first === 'object' ? (first as Record<string, unknown>) : null,
+      )
+      value.then(
+        (v) => {
+          if (v === null && this.catalogCache?.value === value) this.catalogCache = null
+        },
+        () => {
+          if (this.catalogCache?.value === value) this.catalogCache = null
+        },
+      )
+      this.catalogCache = { at: Date.now(), value }
+    }
+    return this.catalogCache.value
   }
 
   private async subscribeRegistryEvents(): Promise<void> {

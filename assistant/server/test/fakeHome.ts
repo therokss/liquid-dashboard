@@ -118,6 +118,28 @@ export const AUTOMATION_CONFIG: Json = {
   mode: 'single',
 }
 
+const TRIGGER_CATALOG: Json = {
+  state: { fields: { entity_id: { required: true, selector: { entity: {} } } } },
+  numeric_state: { fields: {} },
+  sun: { fields: {} },
+  time: { fields: {} },
+  webhook: { fields: {} },
+  'light.turned_on': { target: { entity: { domain: 'light' } }, fields: { behavior: { selector: { select: { options: ['any', 'first', 'last'] } } } } },
+}
+
+export const SERVICES: Record<string, string[]> = {
+  light: ['turn_on', 'turn_off', 'toggle'],
+  switch: ['turn_on', 'turn_off'],
+  notify: ['mobile_app', 'notify'],
+  automation: ['turn_on', 'turn_off', 'trigger', 'reload'],
+  input_boolean: ['turn_on', 'turn_off'],
+  shell_command: ['riavvia'],
+  homeassistant: ['restart', 'turn_on', 'turn_off'],
+  button: ['press'],
+  lock: ['lock', 'unlock'],
+  mqtt: ['publish'],
+}
+
 export interface FakeHA extends HAReader {
   calls: Json[]
   history: Record<string, Json[]>
@@ -154,6 +176,15 @@ export function fakeHA(overrides: { states?: Map<string, HAState>; registries?: 
           return Object.fromEntries((msg.entity_ids as string[]).map((id) => [id, history[id] ?? []])) as T
         case 'recorder/statistics_during_period':
           return {} as T
+        case 'validate_config': {
+          const out: Json = {}
+          for (const key of ['triggers', 'conditions', 'actions']) {
+            if (!(key in msg)) continue
+            const bad = JSON.stringify(msg[key]).includes('NON_VALIDO')
+            out[key] = bad ? { valid: false, error: `valore non valido in ${key}` } : { valid: true, error: null }
+          }
+          return out as T
+        }
         case 'manifest/get':
           return { name: 'Lumi', documentation: 'https://www.home-assistant.io/integrations/lumi', iot_class: 'local_push', integration_type: 'hub' } as T
         case 'device_automation/trigger/list':
@@ -164,10 +195,9 @@ export function fakeHA(overrides: { states?: Map<string, HAState>; registries?: 
     },
     async subscribeOnce(msg: Json) {
       calls.push(msg)
-      return {
-        state: { fields: { entity_id: { required: true, selector: { entity: {} } } } },
-        'light.turned_on': { target: { entity: { domain: 'light' } }, fields: { behavior: { selector: { select: { options: ['any', 'first', 'last'] } } } } },
-      }
+      return TRIGGER_CATALOG
     },
+    services: async () => new Map(Object.entries(SERVICES).map(([d, list]) => [d, new Set(list)])),
+    triggerCatalog: async () => TRIGGER_CATALOG,
   }
 }

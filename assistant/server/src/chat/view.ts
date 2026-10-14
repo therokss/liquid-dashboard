@@ -43,7 +43,7 @@ export function toView(conv: Conversation): ViewItem[] {
           }
         }
         const text = bs
-          .filter((b): b is Extract<BetaContentBlockParam, { type: 'text' }> => b.type === 'text' && !b.text.startsWith('<contesto>'))
+          .filter((b): b is Extract<BetaContentBlockParam, { type: 'text' }> => b.type === 'text' && !b.text.startsWith('<contesto>') && !b.text.startsWith('<evento'))
           .map((b) => b.text)
           .join('\n')
         if (text) {

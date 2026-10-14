@@ -1,6 +1,6 @@
 name: "Assistente Claude"
 description: "Chatta con Claude, crea e verifica le automazioni di Home Assistant"
-version: "0.2.0"
+version: "0.3.0"
 slug: "claude_assistant"
 url: "https://github.com/therokss/liquid-dashboard"
 init: false

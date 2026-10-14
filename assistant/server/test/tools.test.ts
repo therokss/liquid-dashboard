@@ -1,7 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { executeTool, toolDefinitions, toolLabel, READ_TOOLS } from '../src/claude/tools/registry.ts'
-import { resetTriggerCatalogCache } from '../src/claude/tools/automations.ts'
+import { executeTool, toolDefinitions, toolLabel, CHAT_TOOLS } from '../src/claude/tools/registry.ts'
 import { summarizeSeries, toSamples } from '../src/claude/tools/history.ts'
 import { DEFAULT_CONSENTS, type Consents } from '../src/inventory/privacy.ts'
 import type { ToolContext } from '../src/claude/tools/common.ts'
@@ -20,7 +19,7 @@ async function run(name: string, input: unknown, c = ctx()) {
 
 test('definizioni dei tool: schema oggetto, streaming eager, nomi unici', () => {
   const defs = toolDefinitions()
-  assert.equal(defs.length, READ_TOOLS.length)
+  assert.equal(defs.length, CHAT_TOOLS.length)
   assert.equal(new Set(defs.map((d) => d.name)).size, defs.length)
   for (const d of defs) {
     assert.equal(d.input_schema.type, 'object', d.name)
@@ -136,9 +135,8 @@ test('elenca_automazioni e catalogo_trigger', async () => {
   const byEntity = await run('elenca_automazioni', { entity_id: 'light.lampada_arco' })
   assert.deepEqual(byEntity.json.automazioni.map((a: any) => a.entity_id), ['automation.luci_sera'])
 
-  resetTriggerCatalogCache()
   const names = await run('catalogo_trigger', {})
-  assert.deepEqual(names.json.trigger, ['light.turned_on', 'state'])
+  assert.deepEqual(names.json.trigger, ['light.turned_on', 'numeric_state', 'state', 'sun', 'time', 'webhook'])
   const light = await run('catalogo_trigger', { filtro: 'light' })
   assert.equal(light.json.trigger['light.turned_on'].campi.behavior.tipo, 'select')
 })

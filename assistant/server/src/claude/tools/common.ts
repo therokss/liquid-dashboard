@@ -4,11 +4,24 @@ import { deviceName } from '../../ha/types.ts'
 import { buildPrivacyIndex, classifyPrivacy, PRIVACY_LABELS, type Consents, type PrivacyCategory } from '../../inventory/privacy.ts'
 import { entityName } from '../../inventory/inventory.ts'
 
+export interface DraftProposer {
+  propose(
+    input: { yaml: string; spiegazione: string; sostituisce?: string },
+    call: { conversationId: string; toolUseId: string },
+  ): Promise<
+    | { ok: true; draft: { id: string; kind: 'create' | 'update'; alias: string; fixes: string[]; warnings: string[]; critical: Array<{ ref: string; reason: string }>; target?: { entityId: string } } }
+    | { ok: false; errors: string[]; warnings: string[]; fixes: string[] }
+  >
+}
+
 export interface ToolContext {
   ha: HAReader
   /** Letti a ogni chiamata: se l'utente revoca un consenso vale subito, anche nelle chat aperte. */
   consents: () => Consents
   now: () => Date
+  /** Solo nella chat: serve a proponi_automazione per legare la bozza alla scheda. */
+  drafts?: DraftProposer
+  call?: { conversationId: string; toolUseId: string }
 }
 
 /** Errore "atteso" di un tool: diventa un tool_result con is_error e questo messaggio. */

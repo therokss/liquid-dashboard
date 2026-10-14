@@ -173,3 +173,51 @@ test('chat: eventi riascoltabili da Last-Event-ID dopo una disconnessione', asyn
     await rm(dir, { recursive: true, force: true })
   }
 })
+
+test('chat + bozze: proponi_automazione crea la scheda, l\'evento arriva a Claude al turno dopo', async () => {
+  const { DraftStore } = await import('../src/drafts/store.ts')
+  const { DraftService } = await import('../src/drafts/service.ts')
+  const { fakeWriter } = await import('./fakeWriter.ts')
+  const YAML = 'alias: Luce ospiti\ndescription: Accende la lampada quando arrivano ospiti\ntriggers:\n  - trigger: state\n    entity_id: input_boolean.ospiti\n    to: "on"\nactions:\n  - action: light.turn_on\n    target:\n      entity_id: light.lampada_arco\n'
+  const t = await setup([
+    msg([toolUse('tu_bozza', 'proponi_automazione', { yaml: YAML, spiegazione: 'Accende la lampada per gli ospiti.' })], 'tool_use'),
+    msg([text('Ecco la bozza: controllala nella scheda.')], 'end_turn'),
+    msg([text('Perfetto, ora è attiva.')], 'end_turn'),
+    msg([text('Prego!')], 'end_turn'),
+  ])
+  try {
+    const ha = (t.chat as any).deps.ha
+    const drafts = new DraftStore(t.dir)
+    await drafts.load()
+    const writer = fakeWriter(await ha.states())
+    const service = new DraftService({ store: drafts, ha, writer, conversations: t.store, pollMs: 5, pollTimeoutMs: 1_000 })
+    const chat = new ChatService({ ...(t.chat as any).deps, drafts: service })
+    const { id } = await chat.create('admin')
+    await chat.send(id, 'Accendi la lampada quando attivo ospiti')
+    await collect(chat, id)
+    const [draft] = drafts.byConversation(id)
+    assert.ok(draft, 'bozza creata')
+    assert.equal(draft!.toolUseId, 'tu_bozza')
+    const result = t.stream.requests[1]!.messages[2].content[0]
+    assert.equal(result.is_error, undefined)
+    assert.match(result.content, /in attesa/)
+    assert.equal(writer.files.size, 0, 'nessuna scrittura senza tap')
+
+    await service.apply(draft!.id, { enabled: true, confirmCritical: false, by: 'admin' })
+    await chat.send(id, 'Fatto?')
+    await collect(chat, id)
+    const last = t.stream.requests[2]!.messages.at(-1)
+    const texts = last.content.map((b: any) => b.text)
+    assert.match(texts[1], /^<evento id="e[a-z0-9]+">L'utente ha creato l'automazione "Luce ospiti"/)
+    assert.equal(texts[2], 'Fatto?')
+    // L'evento viene consegnato una sola volta
+    await chat.send(id, 'Grazie')
+    await collect(chat, id)
+    assert.ok(!JSON.stringify(t.stream.requests[3]!.messages.at(-1)).includes('<evento'))
+    const conv = (await t.store.get(id))!
+    const view = toView(conv)
+    assert.ok(!JSON.stringify(view).includes('<evento'))
+  } finally {
+    await rm(t.dir, { recursive: true, force: true })
+  }
+})

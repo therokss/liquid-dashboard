@@ -3,6 +3,45 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.3.0] — 2026-10-14
+### Aggiunto
+- **Automazioni create con un tocco.** Quando chiedi un'automazione (nuova o la modifica di
+  una esistente) Claude prepara una **bozza**: in chat compare una scheda con la
+  spiegazione, i controlli superati, lo YAML e, per le modifiche, le **differenze** rispetto
+  alla versione attuale. Premi **Crea automazione** (o **Applica modifica**) e l'add-on la
+  scrive in Home Assistant con la stessa API dell'editor; oppure **Scarta**. Si può anche
+  **creare disattivata**.
+- **Controlli prima della scheda**: YAML senza `!secret`/`!include`, sintassi aggiornata
+  in automatico (`trigger:`, `action:`, chiavi al plurale), entità, aree, dispositivi e
+  servizi esistenti, validazione di Home Assistant. Se qualcosa non va la bozza non viene
+  mostrata e Claude la corregge da solo.
+- **Annulla**: elimina l'automazione appena creata o ripristina la versione precedente
+  (salvata in un backup nell'add-on). Se nel frattempo l'hai modificata a mano, chiede
+  conferma prima di sovrascrivere.
+- **Apri nell'editor**: porta direttamente all'automazione nell'editor di Home Assistant.
+- Le automazioni create dall'assistente ricevono la categoria **"Claude"**.
+- **Impostazioni → Modifiche fatte dall'assistente**: cronologia di creazioni, modifiche e
+  ripristini, con chi li ha confermati.
+- Claude sa cosa hai fatto con le sue bozze (applicata, scartata, annullata) dal messaggio
+  successivo, senza che tu debba dirlo.
+### Sicurezza
+- Claude non scrive mai in Home Assistant: prepara solo bozze, e scrive l'add-on dopo il
+  tuo tocco, ricontrollando tutto in quel momento.
+- **Doppia conferma** per le automazioni che comandano serrature, apriporta, allarmi,
+  sirene, valvole, garage e cancelli, citofono, o che pubblicano su MQTT.
+- Servizi mai ammessi nelle automazioni proposte: `shell_command`, `python_script`,
+  `rest_command`, `command_line`, `hassio`, riavvio/arresto di Home Assistant, pulizia del
+  recorder, installazione di aggiornamenti; vietati anche i nomi di servizio a template.
+- Se l'automazione è stata modificata da qualcun altro dopo la proposta, la modifica viene
+  rifiutata invece di sovrascrivere. Se dopo il salvataggio Home Assistant non riesce a
+  caricarla, l'add-on torna subito alla versione precedente.
+### Corretto
+- Lo YAML mostrato mette tra virgolette valori come `"on"`, `"off"` e `"00:10:00"`: incollato
+  nell'editor di Home Assistant significa esattamente la stessa cosa.
+### Note
+- Le chat aperte con la 0.2 continuano a funzionare in sola lettura; per le bozze apri una
+  nuova chat.
+
 ## [0.2.0] — 2026-10-14
 ### Aggiunto
 - **Chat con Claude che conosce la casa**, in sola lettura. Risponde su dispositivi, stati

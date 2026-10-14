@@ -12,6 +12,10 @@ import { HARest } from '../src/ha/rest.ts'
 import { DEFAULT_OPTIONS } from '../src/options.ts'
 import type { StreamFn } from '../src/claude/loop.ts'
 import { fakeHA } from './fakeHome.ts'
+import { fakeWriter } from './fakeWriter.ts'
+import { DraftStore } from '../src/drafts/store.ts'
+import { DraftService } from '../src/drafts/service.ts'
+import { draftRoutes } from '../src/drafts/routes.ts'
 import { msg, text, thinking, toolUse } from './fakeClaude.ts'
 
 // Anteprima dell'interfaccia senza Home Assistant né chiave API: casa sintetica e un Claude
@@ -43,11 +47,41 @@ actions:
 mode: single
 \`\`\``
 
+const DRAFT_YAML = `alias: Spegni lampada arco senza presenza
+description: Spegne la lampada dopo 10 minuti senza nessuno in soggiorno
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.radar_presenza
+    to: "off"
+    for: "00:10:00"
+conditions:
+  - condition: state
+    entity_id: light.lampada_arco
+    state: "on"
+actions:
+  - action: light.turn_off
+    target:
+      entity_id: light.lampada_arco
+mode: single
+`
+
 const preview: StreamFn = async (params, signal, h) => {
   const last = params.messages[params.messages.length - 1]!
   const hasResult = Array.isArray(last.content) && last.content.some((b) => b.type === 'tool_result')
+  const userText = JSON.stringify(params.messages.filter((m) => m.role === 'user').at(-1)?.content ?? '').toLowerCase()
   h.onBlockStart('thinking')
   await sleep(700)
+  if (/\bcrea\b|spegn/.test(userText) && !hasResult) {
+    h.onBlockStart('tool_use', 'proponi_automazione')
+    await sleep(500)
+    return msg([thinking(), toolUse(`tu_${Date.now()}`, 'proponi_automazione', { yaml: DRAFT_YAML, spiegazione: 'Spegne la lampada arco quando il radar non rileva nessuno per 10 minuti, solo se è accesa.' })], 'tool_use')
+  }
+  if (hasResult && /proponi_automazione|bozza/.test(JSON.stringify(last.content))) {
+    const text1 = 'Ho preparato la bozza: controlla i dettagli nella scheda e premi **Crea automazione** se ti va bene.'
+    h.onBlockStart('text')
+    h.onText(text1)
+    return msg([thinking(), text(text1)], 'end_turn')
+  }
   if (!hasResult) {
     h.onBlockStart('tool_use', 'dettagli_entita')
     await sleep(400)
@@ -70,11 +104,15 @@ const settings = new SettingsStore(dir)
 await settings.load()
 const usage = new UsageLedger(dir, () => 'Europe/Rome')
 const ha = fakeHA()
-const chat = new ChatService({ store, ha, settings, usage, options, stream: preview })
+const draftStore = new DraftStore(dir)
+await draftStore.load()
+const drafts = new DraftService({ store: draftStore, ha, writer: fakeWriter(await ha.states()), conversations: store, pollMs: 50 })
+const chat = new ChatService({ store, ha, settings, usage, options, stream: preview, drafts })
 const server = createApp({
   routes: [
     ...buildRoutes({ mode: 'dev', conn: null, rest: new HARest({ mode: 'none', wsUrl: '', restBase: '', token: '' }), options, addon: null, usage }),
-    ...chatRoutes({ chat, store, settings, usage, options, ha }),
+    ...chatRoutes({ chat, store, settings, usage, options, ha, drafts: draftStore }),
+    ...draftRoutes({ service: drafts, store: draftStore }),
   ],
   wwwDir: process.env.ASSISTANT_WWW_DIR ?? resolve(import.meta.dirname, '../../web/dist'),
   access: { mode: 'dev', isAdmin: async () => true },

@@ -56,6 +56,35 @@ export interface InventoryStats {
   automations: number
 }
 
+export interface DraftPublic {
+  id: string
+  toolUseId: string
+  status: 'pending' | 'applied' | 'discarded' | 'undone'
+  kind: 'create' | 'update'
+  alias: string
+  explanation: string
+  yaml: string
+  fixes: string[]
+  warnings: string[]
+  checks: Array<{ label: string; ok: boolean; detail?: string }>
+  critical: Array<{ ref: string; reason: string }>
+  target: { entityId: string; alias: string; automationId: string } | null
+  diff: Array<{ op: ' ' | '+' | '-'; line: string }> | null
+  applied: { at: string; by: string; automationId: string; entityId: string | null; enabled: boolean; warning: string | null } | null
+  undone: { at: string; by: string } | null
+  discarded: { at: string; by: string } | null
+  lastError: string | null
+}
+
+export interface HistoryEntry {
+  ts: string
+  by: string
+  action: 'creata' | 'modificata' | 'annullata_creazione' | 'ripristinata' | 'rollback_automatico'
+  automationId: string
+  entityId: string | null
+  alias: string
+}
+
 export interface ConversationDetail {
   summary: ConversationSummary
   model: string
@@ -64,6 +93,7 @@ export interface ConversationDetail {
   readOnly: boolean
   running: boolean
   items: ViewItem[]
+  drafts: Record<string, DraftPublic>
 }
 
 export type ConsentKey = 'posizione' | 'telecamere' | 'appMobile'
@@ -150,5 +180,9 @@ export const api = {
   payload: (id: string) => getJson<{ model: string; system: string; tools: Array<{ name: string; description: string }> }>(`api/chat/conversations/${id}/payload`),
   settings: () => getJson<SettingsData>('api/settings'),
   setPrivacy: (consents: Consents) => call<{ consents: Consents }>('PUT', 'api/settings/privacy', { consents }),
+  applyDraft: (id: string, opts: { enabled: boolean; confirmCritical: boolean }) => call<{ draft: DraftPublic }>('POST', `api/drafts/${id}/apply`, opts),
+  undoDraft: (id: string, force = false) => call<{ draft: DraftPublic }>('POST', `api/drafts/${id}/undo`, { force }),
+  discardDraft: (id: string) => call<{ draft: DraftPublic }>('POST', `api/drafts/${id}/discard`, {}),
+  history: () => getJson<{ entries: HistoryEntry[] }>('api/history'),
   inventoryPreview: () => getJson<{ stats: InventoryStats; text: string; chars: number }>('api/inventory/preview'),
 }

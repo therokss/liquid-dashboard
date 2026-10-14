@@ -3,8 +3,8 @@ import type { BetaMessageParam } from '@anthropic-ai/sdk/resources/beta/messages
 import { ConversationStore, newConversationId, type Conversation, type HeaderLine } from './store.ts'
 import { runTurn, type Features, type StreamFn, type TurnEvent } from '../claude/loop.ts'
 import { buildSystemPrompt, contextBlock, PROMPT_VERSION } from '../claude/prompt.ts'
-import { executeTool, toolDefinitions, toolLabel, TOOLSET_VERSION } from '../claude/tools/registry.ts'
-import type { ToolContext } from '../claude/tools/common.ts'
+import { executeTool, SUPPORTED_TOOLSETS, toolDefinitions, toolLabel, TOOLSET_VERSION } from '../claude/tools/registry.ts'
+import type { DraftProposer, ToolContext } from '../claude/tools/common.ts'
 import { describeClaudeError } from '../claude/client.ts'
 import { buildHomeSnapshot } from '../inventory/snapshot.ts'
 import type { HAReader } from '../ha/data.ts'
@@ -46,6 +46,8 @@ export interface ChatServiceDeps {
   options: Options
   /** null se manca la chiave API. */
   stream: StreamFn | null
+  /** Bozze di automazione (dalla 0.3). */
+  drafts?: DraftProposer
   now?: () => Date
 }
 
@@ -115,14 +117,22 @@ export class ChatService {
     }
     const conv = await this.deps.store.get(conversationId)
     if (!conv) throw new ChatError(404, 'conversazione_inesistente', 'Conversazione non trovata')
-    if (conv.header.toolsetVersion !== TOOLSET_VERSION) {
+    if (!SUPPORTED_TOOLSETS.has(conv.header.toolsetVersion)) {
       throw new ChatError(409, 'conversazione_vecchia', 'Questa chat è di una versione precedente dell\'add-on: aprine una nuova per continuare.')
     }
 
+    // Eventi non ancora comunicati a Claude (bozze applicate, scartate, annullate).
+    const delivered = new Set<string>()
+    for (const m of conv.messages) {
+      if (m.role !== 'user' || typeof m.content === 'string') continue
+      for (const b of m.content) if (b.type === 'text') for (const x of b.text.matchAll(/<evento id="([^"]+)">/g)) delivered.add(x[1]!)
+    }
+    const events = conv.lines.filter((l) => l.type === 'event' && !delivered.has(l.id)) as Array<{ id: string; text: string }>
     const userMessage: BetaMessageParam = {
       role: 'user',
       content: [
         { type: 'text', text: contextBlock(this.now(), conv.header.timeZone) },
+        ...events.map((e) => ({ type: 'text' as const, text: `<evento id="${e.id}">${e.text}</evento>` })),
         { type: 'text', text: clean },
       ],
     }
@@ -154,7 +164,7 @@ export class ChatService {
   private async execute(job: Job, conv: Conversation): Promise<void> {
     const { header } = conv
     const ha = this.requireHA()
-    const toolCtx: ToolContext = { ha, consents: () => this.deps.settings.consents(), now: this.now }
+    const toolCtx: ToolContext = { ha, consents: () => this.deps.settings.consents(), now: this.now, drafts: this.deps.drafts }
     let features = this.features.get(header.model)
     if (!features) this.features.set(header.model, (features = { fallbacks: true, blockBinding: true }))
     try {
@@ -165,7 +175,7 @@ export class ChatService {
           stream: this.deps.stream!,
           features,
           persist: (message) => this.deps.store.append(job.conversationId, { type: 'message', ts: this.now().toISOString(), message }),
-          executeTool: (name, input) => executeTool(name, input, toolCtx),
+          executeTool: (name, input, toolUseId) => executeTool(name, input, { ...toolCtx, call: { conversationId: job.conversationId, toolUseId } }),
           beforeRequest: () => {
             if (this.deps.usage.status(this.deps.options).level === 'bloccato') {
               throw new ChatError(429, 'budget_superato', 'Budget mensile raggiunto durante la risposta: interrotta.')

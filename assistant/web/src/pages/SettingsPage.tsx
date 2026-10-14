@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Eye, Loader2, ShieldAlert, Stethoscope } from 'lucide-react'
-import { api, type ConsentKey, type Consents, type InventoryStats, type SettingsData } from '../api'
+import { ExternalLink, Eye, Loader2, ShieldAlert, Stethoscope } from 'lucide-react'
+import { api, type ConsentKey, type Consents, type HistoryEntry, type InventoryStats, type SettingsData } from '../api'
+import { automationEditorPath, navigateHomeAssistant } from '../lib/navigate'
 import { Button, Section } from '../components/Glass'
-import { t } from '../i18n/it'
+import { t, type TextKey } from '../i18n/it'
 
 const CONSENT_TEXT: Record<ConsentKey, { title: string; text: string; warning: string }> = {
   posizione: {
@@ -95,6 +96,41 @@ function InventoryPreview() {
   )
 }
 
+function History() {
+  const [entries, setEntries] = useState<HistoryEntry[] | null>(null)
+  useEffect(() => {
+    api.history().then((r) => setEntries(r.entries), () => setEntries([]))
+  }, [])
+  return (
+    <Section title={t('setHistory')} intro={t('setHistoryIntro')}>
+      {entries === null && <p className="as-probe-summary as-summary">{t('loading')}</p>}
+      {entries?.length === 0 && <p className="as-probe-summary as-summary">{t('setHistoryEmpty')}</p>}
+      {entries && entries.length > 0 && (
+        <ul className="as-history">
+          {entries.slice(0, 30).map((e, i) => (
+            <li key={i}>
+              <div>
+                <p className="as-probe-label">
+                  {t(`hist_${e.action}` as TextKey)} · {e.alias}
+                </p>
+                <p className="as-probe-summary">
+                  {new Date(e.ts).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · {e.by}
+                  {e.entityId ? ` · ${e.entityId}` : ''}
+                </p>
+              </div>
+              {(e.action === 'creata' || e.action === 'modificata' || e.action === 'ripristinata') && (
+                <button type="button" className="as-icon-btn" onClick={() => navigateHomeAssistant(automationEditorPath(e.automationId))} aria-label={t('draftOpenEditor')} title={t('draftOpenEditor')}>
+                  <ExternalLink size={16} />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  )
+}
+
 export function SettingsPage({ onOpenDiagnostics }: { onOpenDiagnostics: () => void }) {
   const [data, setData] = useState<SettingsData | null>(null)
   const [saving, setSaving] = useState<ConsentKey | null>(null)
@@ -143,6 +179,8 @@ export function SettingsPage({ onOpenDiagnostics }: { onOpenDiagnostics: () => v
         <p className="as-probe-summary as-summary">{t('setPrivacyNote')}</p>
         {error && <p className="as-error">{error}</p>}
       </Section>
+
+      <History />
 
       <InventoryPreview />
 

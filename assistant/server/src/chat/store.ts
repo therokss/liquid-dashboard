@@ -55,7 +55,15 @@ export interface TitleLine {
   title: string
 }
 
-export type Line = HeaderLine | MessageLine | TurnLine | TitleLine
+/** Fatto avvenuto fuori dal dialogo (es. bozza applicata): Claude lo riceve col messaggio successivo. */
+export interface EventLine {
+  type: 'event'
+  id: string
+  ts: string
+  text: string
+}
+
+export type Line = HeaderLine | MessageLine | TurnLine | TitleLine | EventLine
 
 export interface Conversation {
   header: HeaderLine
@@ -162,7 +170,9 @@ export class ConversationStore {
     return this.load1(id)
   }
 
-  async append(id: string, line: MessageLine | TurnLine | TitleLine): Promise<void> {
+  async append(id: string, line: MessageLine | TurnLine | TitleLine | EventLine): Promise<void> {
+    // Conversazione eliminata (es. bozza applicata dopo): niente file orfani.
+    if (!this.index.has(id)) return
     await appendJsonl(this.file(id), line)
     const s = this.index.get(id)
     if (!s) return

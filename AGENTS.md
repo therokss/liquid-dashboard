@@ -44,4 +44,8 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
 - Chat: prompt di sistema e tool sono congelati nell'intestazione di ogni conversazione
   (`/data/conversations/<id>.jsonl`, solo in aggiunta). Se cambi nomi o parametri dei tool
   incrementa `TOOLSET_VERSION` (`server/src/claude/tools/registry.ts`); se cambi il testo
-  del prompt incrementa `PROMPT_VERSION`.
+  del prompt incrementa `PROMPT_VERSION`; aggiorna `SUPPORTED_TOOLSETS` con le versioni
+  ancora eseguibili.
+- Scritture in HA solo da `server/src/ha/writer.ts`, chiamato da `drafts/service.ts` dopo il
+  tap dell'admin (route `/api/drafts/:id/apply|undo|discard`). I tool di Claude ricevono solo
+  `HAReader` (sola lettura, elenco chiuso di comandi in `ha/data.ts`).

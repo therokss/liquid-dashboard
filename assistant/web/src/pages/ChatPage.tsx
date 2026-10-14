@@ -15,8 +15,9 @@ import {
   Wrench,
   X,
 } from 'lucide-react'
-import { api, ApiCallError, type ConversationDetail, type ConversationSummary, type Session, type ViewItem, type ViewPart } from '../api'
+import { api, ApiCallError, type ConversationDetail, type ConversationSummary, type DraftPublic, type Session, type ViewItem, type ViewPart } from '../api'
 import { GlassCard } from '../components/Glass'
+import { DraftCard } from '../components/DraftCard'
 import { t } from '../i18n/it'
 
 // Chat con Claude: elenco delle conversazioni, risposte in streaming via SSE (il turno gira
@@ -25,7 +26,7 @@ import { t } from '../i18n/it'
 const SUGGESTIONS = [
   'Quali luci sono accese adesso?',
   'Com’è andata la temperatura in casa nelle ultime 24 ore?',
-  'Quali automazioni non sono mai scattate negli ultimi giorni?',
+  'Crea un’automazione che spenga le luci quando non c’è nessuno in casa.',
   'Perché un’automazione non è scattata ieri sera? Ti dico quale.',
 ]
 
@@ -97,12 +98,18 @@ function ToolChip({ part }: { part: Extract<ViewPart, { type: 'tool' }> }) {
   )
 }
 
-function Parts({ parts }: { parts: ViewPart[] }) {
+type DraftProps = { drafts?: Record<string, DraftPublic>; onDraft?: (d: DraftPublic) => void }
+
+function Parts({ parts, drafts, onDraft }: { parts: ViewPart[] } & DraftProps) {
   return (
     <>
       {parts.map((p, i) => {
         if (p.type === 'text') return <Markdown key={i} text={p.text} />
-        if (p.type === 'tool') return <ToolChip key={p.id} part={p} />
+        if (p.type === 'tool') {
+          const draft = drafts?.[p.id]
+          if (draft && onDraft) return <DraftCard key={p.id} draft={draft} onChange={onDraft} />
+          return <ToolChip key={p.id} part={p} />
+        }
         return (
           <p key={i} className={`as-note ${p.tone}`}>
             {p.tone === 'info' ? <Info size={14} /> : <AlertTriangle size={14} />} {p.text}
@@ -113,7 +120,7 @@ function Parts({ parts }: { parts: ViewPart[] }) {
   )
 }
 
-function Message({ item }: { item: ViewItem }) {
+function Message({ item, drafts, onDraft }: { item: ViewItem } & DraftProps) {
   if (item.kind === 'user') {
     return (
       <div className="as-msg user">
@@ -124,7 +131,7 @@ function Message({ item }: { item: ViewItem }) {
   return (
     <div className="as-msg assistant">
       <div className="as-answer">
-        <Parts parts={item.parts} />
+        <Parts parts={item.parts} drafts={drafts} onDraft={onDraft} />
         {(item.costUsd !== undefined || item.fallback) && (
           <p className="as-meta">
             {item.costUsd !== undefined && `≈ ${usd(item.costUsd)}`}
@@ -296,6 +303,8 @@ export function ChatPage({ session }: { session: Session }) {
     }
   }
 
+  const updateDraft = (d: DraftPublic) => setDetail((cur) => (cur ? { ...cur, drafts: { ...cur.drafts, [d.toolUseId]: d } } : cur))
+
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
@@ -393,7 +402,7 @@ export function ChatPage({ session }: { session: Session }) {
             </div>
           )}
           {items.map((it, i) => (
-            <Message key={i} item={it} />
+            <Message key={i} item={it} drafts={detail?.drafts} onDraft={updateDraft} />
           ))}
           {pendingUser && !items.some((it, i) => i === items.length - 1 && it.kind === 'user' && it.text === pendingUser) && (
             <Message item={{ kind: 'user', text: pendingUser, ts: '' }} />

@@ -10,9 +10,10 @@ Un assistente per Home Assistant basato su Claude (Anthropic) che:
   raggiunte, oscillazioni, conflitti) e propone correzioni;
 - **studia i dispositivi** che non conosce cercando la documentazione sul web.
 
-> Versione 0.2.0: c'è la **Chat in sola lettura** (Claude conosce la casa, legge stati,
-> storici e automazioni e prepara lo YAML da incollare) e la **Diagnostica**. Creazione con
-> un tap, Suggerisci, Verifica e studio dei dispositivi arrivano nelle versioni successive.
+> Versione 0.3.0: c'è la **Chat** (Claude conosce la casa, legge stati, storici e
+> automazioni) con la **creazione e modifica delle automazioni con un tocco**, e la
+> **Diagnostica**. Suggerisci, Verifica e studio dei dispositivi arrivano nelle versioni
+> successive.
 
 ## Cosa serve
 
@@ -41,10 +42,34 @@ Apri il pannello **Assistente** → **Chat** e fai una domanda, per esempio:
 - "Quali automazioni usano il sensore di presenza della cucina?"
 - "Preparami un'automazione che spenga le luci quando esco di casa."
 
-Sotto la risposta vedi quali letture ha fatto Claude (etichette) e il costo stimato. In
-questa versione l'assistente **non modifica nulla**: lo YAML proposto si copia con
-**Copia** e si incolla in *Impostazioni → Automazioni e scene → Crea automazione → ⋮ →
-Modifica in YAML*.
+Sotto la risposta vedi quali letture ha fatto Claude (etichette) e il costo stimato.
+
+### Creare o modificare un'automazione
+
+Chiedilo in chat ("spegni le luci del soggiorno quando non c'è nessuno da 10 minuti",
+"nell'automazione *Luci sera* aggiungi la condizione che sia buio"). Claude prepara una
+**bozza** e in chat compare una scheda con:
+
+- spiegazione e **controlli** superati (YAML, entità, servizi, validazione di HA);
+- lo **YAML** e, se è una modifica, le **differenze** rispetto a ora;
+- **Crea automazione** / **Applica modifica**, oppure **Scarta**; per le nuove anche
+  *Crea disattivata*.
+
+Claude non può applicare nulla da solo: scrive l'add-on dopo il tuo tocco, con la stessa
+API dell'editor di Home Assistant. Dopo l'applicazione trovi **Apri nell'editor** e
+**Annulla** (elimina la nuova automazione o ripristina la versione precedente, salvata in un
+backup). Le automazioni create ricevono la categoria **Claude**; la cronologia è in
+*Impostazioni → Modifiche fatte dall'assistente*.
+
+Per le automazioni che comandano **serrature, apriporta, allarmi, sirene, valvole, garage
+e cancelli o il citofono** serve una seconda conferma esplicita. Alcuni servizi non sono mai
+ammessi (comandi di shell, script Python, chiamate REST, riavvio di Home Assistant, pulizia
+del recorder, aggiornamenti). Le automazioni definite in YAML/packages o create da una
+blueprint non si modificano da qui: Claude ti propone lo YAML da copiare.
+
+> Consiglio: prima del primo utilizzo fai un backup di Home Assistant. L'editor riscrive
+> `automations.yaml` a ogni salvataggio (anche quello di HA lo fa), quindi eventuali
+> commenti nel file vengono persi.
 
 Ogni chat "fotografa" la casa all'apertura: se aggiungi dispositivi o cambi i modelli
 nelle opzioni, apri una **Nuova chat**. Lo storico degli stati copre i giorni conservati
