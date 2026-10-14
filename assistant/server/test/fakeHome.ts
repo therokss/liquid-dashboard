@@ -143,22 +143,44 @@ export const SERVICES: Record<string, string[]> = {
 export interface FakeHA extends HAReader {
   calls: Json[]
   history: Record<string, Json[]>
+  /** Voci del Registro attività (logbook/get_events), con when in secondi. */
+  logbook: Json[]
 }
+
+/** Utenti finti: una persona, il Supervisor (sistema) e il Cloud (voce = persona). */
+export const USERS: Json[] = [
+  { id: 'a'.repeat(32), name: 'Demo', username: 'demo', is_owner: true, is_active: true, system_generated: false, group_ids: ['system-admin'] },
+  { id: 'b'.repeat(32), name: 'Supervisor', is_owner: false, is_active: true, system_generated: true, group_ids: ['system-admin'] },
+  { id: 'c'.repeat(32), name: 'Home Assistant Cloud', is_owner: false, is_active: true, system_generated: true, group_ids: [] },
+  { id: 'd'.repeat(32), name: 'Node-RED', username: 'nodered', is_owner: false, is_active: true, system_generated: false, group_ids: ['system-admin'] },
+]
 
 export function fakeHA(overrides: { states?: Map<string, HAState>; registries?: Registries } = {}): FakeHA {
   const registries = overrides.registries ?? fakeRegistries()
   const states = overrides.states ?? fakeStates()
   const calls: Json[] = []
   const history: Record<string, Json[]> = {}
+  const logbook: Json[] = []
   return {
     calls,
     history,
+    logbook,
     config: async () => ({ location_name: 'Casa Demo', version: '2026.9.3', time_zone: 'Europe/Rome', language: 'it', country: 'IT', unit_system: { temperature: '°C', length: 'km' } }),
     registries: async () => registries,
     states: async () => states,
     async call<T>(msg: Json): Promise<T> {
       calls.push(msg)
       switch (msg.type) {
+        case 'get_config':
+          return { location_name: 'Casa Demo', version: '2026.9.3', time_zone: 'Europe/Rome', country: 'IT', latitude: 41.9, longitude: 12.5, unit_system: {} } as T
+        case 'config/auth/list':
+          return USERS as T
+        case 'logbook/get_events': {
+          const s = Date.parse(msg.start_time) / 1000
+          const e = Date.parse(msg.end_time) / 1000
+          const ids = new Set(msg.entity_ids as string[])
+          return logbook.filter((r) => r.when >= s && r.when < e && ids.has(r.entity_id)) as T
+        }
         case 'automation/config':
           if (msg.entity_id === 'automation.luci_sera') return { config: AUTOMATION_CONFIG } as T
           return { config: { alias: 'Vecchia', triggers: [], actions: [] } } as T

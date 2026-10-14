@@ -49,3 +49,12 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
 - Scritture in HA solo da `server/src/ha/writer.ts`, chiamato da `drafts/service.ts` dopo il
   tap dell'admin (route `/api/drafts/:id/apply|undo|discard`). I tool di Claude ricevono solo
   `HAReader` (sola lettura, elenco chiuso di comandi in `ha/data.ts`).
+- Suggerisci (`server/src/suggest/`):
+  - `collect.ts` legge il logbook a blocchi di un giorno e classifica le cause dai campi
+    `context_*`;
+  - `miner.ts` calcola in modo deterministico candidati, numeri ed esempi;
+  - `service.ts` fa una sola chiamata con output strutturato (`claude/structured.ts`) e
+    passa ogni YAML dalla pipeline delle bozze, con al più una correzione.
+
+  I numeri mostrati vengono sempre dal miner, mai dal modello. Test con lo storico sintetico
+  di `test/fakeActivity.ts`.

@@ -78,12 +78,61 @@ non ti serve eliminalo dagli Aiutanti: non verrà ricreato.
 
 Ogni chat "fotografa" la casa all'apertura: se aggiungi dispositivi o cambi i modelli
 nelle opzioni, apri una **Nuova chat**. Lo storico degli stati copre i giorni conservati
-dal recorder (10 per impostazione predefinita); oltre, per i sensori numerici, si usano le
-statistiche giornaliere.
+dal recorder (10 per impostazione predefinita, vedi il consiglio in *Suggerisci*); oltre,
+per i sensori numerici, si usano le statistiche giornaliere.
+
+## Suggerisci
+
+Apri **Suggerisci**, scegli quanti giorni analizzare e premi **Analizza**. L'add-on legge il
+Registro attività di Home Assistant e cerca le cose che fai **a mano** sempre allo stesso
+modo. Questa parte gira tutta nell'add-on, è gratuita e richiede da pochi secondi a un paio
+di minuti:
+
+| Tipo | Esempio |
+|---|---|
+| Causa → effetto | luce della cucina accesa entro 30 s dal movimento, solo col buio |
+| Abitudine oraria | tapparella aperta verso le 07:30 nei giorni feriali |
+| Programma esterno | luce del giardino accesa ogni giorno alle 19:00 in punto da un'app |
+| Dimenticato acceso | luce rimasta accesa con tutti fuori casa, o per tutta la notte |
+| Pulsante | pulsante premuto spesso senza che succeda nulla |
+
+Ogni candidato mostra i numeri che lo giustificano e alcuni **esempi** con data e ora, da
+confrontare nel Registro attività di Home Assistant.
+
+Poi premi **Fatti scrivere le automazioni** (vedi la stima del costo sul pulsante). Claude
+valuta ogni candidato, sconsiglia quelli che non convincono e scrive lo YAML degli altri.
+Le proposte diventano **bozze** come quelle della chat, con gli stessi controlli e gli
+stessi pulsanti (*Crea automazione*, *Crea disattivata*, *Annulla*…). Inoltre:
+
+- **Discuti in chat** apre una chat già avviata su quella proposta, per cambiarla;
+- **Non mi interessa** la nasconde per 60 giorni.
+
+Non vengono riproposti i comportamenti già coperti da un'automazione (sezione *Già
+automatizzate*) né le reazioni gestite direttamente dai dispositivi, come le regole di un
+bridge Hue.
+
+Per distinguere le azioni delle persone da quelle degli strumenti (add-on, Node-RED, script
+esterni che usano un loro utente) controlla **Impostazioni → Persone e strumenti**.
+
+> Più storico, proposte migliori. Il recorder di Home Assistant conserva 10 giorni per
+> impostazione predefinita. Per arrivare a 30 senza far crescere troppo il database,
+> escludi le entità che cambiano di continuo e non servono alle automazioni, come il
+> traffico di rete o i sensori di server e NAS. Ad esempio, in `configuration.yaml`:
+>
+> ```yaml
+> recorder:
+>   purge_keep_days: 30
+>   exclude:
+>     entity_globs:
+>       - sensor.*_rx
+>       - sensor.*_tx
+> ```
 
 ## Impostazioni
 
 - **Privacy**: tre categorie escluse di default, riattivabili a tuo rischio (vedi sotto).
+- **Persone e strumenti**: quali utenti di Home Assistant sono persone e quali strumenti,
+  per Suggerisci.
 - **Cosa vede Claude**: l'inventario esatto che apre ogni nuova chat.
 - **Modelli** e **spesa del mese** rispetto alle soglie di budget.
 
@@ -110,7 +159,9 @@ sono esclusi:
 Si riattivano da **Impostazioni → Privacy**, a tuo rischio. Sempre esclusi, qualunque
 scelta: token, password, chiavi, indirizzi IP e MAC, URL, numeri di serie. Gli entity_id di
 entità escluse possono comparire nelle configurazioni delle automazioni che li usano, ma
-stati e storici restano esclusi. Le conversazioni sono salvate solo nell'add-on (cartella
+stati e storici restano esclusi. Per *Suggerisci* Claude riceve solo i numeri dei
+candidati: mai storici grezzi, nomi degli utenti o coordinate della casa, che servono solo
+a calcolare alba e tramonto dentro l'add-on. Le conversazioni sono salvate solo nell'add-on (cartella
 `/data`, inclusa nei backup di Home Assistant).
 
 ## Permessi

@@ -5,6 +5,7 @@ import { ComingSoonPage } from './pages/ComingSoonPage'
 import { DiagnosticsPage } from './pages/DiagnosticsPage'
 import { ChatPage } from './pages/ChatPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { SuggestPage } from './pages/SuggestPage'
 import { GlassCard } from './components/Glass'
 import { t } from './i18n/it'
 
@@ -49,6 +50,16 @@ export function App() {
     setTab(next)
   }
 
+  // "Discuti in chat" da Suggerisci: la chat apre la conversazione appena creata.
+  const openChat = (conversationId: string) => {
+    try {
+      sessionStorage.setItem('as-chat', conversationId)
+    } catch {
+      /* senza sessionStorage la chat apre l'ultima conversazione */
+    }
+    go('chat')
+  }
+
   // Dopo un aggiornamento l'ingress di HA può servire la pagina vecchia: lo segnaliamo.
   const staleUi = session && __APP_VERSION__ !== 'dev' && session.version !== 'dev' && session.version !== __APP_VERSION__
 
@@ -78,7 +89,7 @@ export function App() {
           {session && tab === 'diagnostics' && <DiagnosticsPage session={session} />}
           {session && tab === 'chat' && <ChatPage session={session} />}
           {session && tab === 'settings' && <SettingsPage onOpenDiagnostics={() => go('diagnostics')} />}
-          {session && tab === 'suggest' && <ComingSoonPage icon={Sparkles} title={t('tabSuggest')} text={t('comingSuggest')} version="0.4" />}
+          {session && tab === 'suggest' && <SuggestPage onOpenChat={openChat} />}
           {session && tab === 'verify' && <ComingSoonPage icon={ShieldCheck} title={t('tabVerify')} text={t('comingVerify')} version="0.5" />}
           {session && tab === 'devices' && <ComingSoonPage icon={Cpu} title={t('tabDevices')} text={t('comingDevices')} version="0.6" />}
         </main>

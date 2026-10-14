@@ -18,8 +18,10 @@ export interface DraftCheck {
 
 export interface Draft {
   id: string
+  /** '' per le bozze nate da Suggerisci */
   conversationId: string
   toolUseId: string
+  suggestion?: { runId: string; candidateId: string }
   createdAt: string
   status: DraftStatus
   kind: 'create' | 'update'

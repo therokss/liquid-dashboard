@@ -7,7 +7,8 @@ import type { Options } from '../options.ts'
 
 export interface UsageRecord {
   ts: string
-  kind: 'chat'
+  kind: 'chat' | 'suggest'
+  /** conversazione (chat) o analisi (Suggerisci) */
   conversationId: string
   model: string
   input: number

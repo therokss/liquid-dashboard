@@ -17,6 +17,9 @@ import { DraftService } from './drafts/service.ts'
 import { draftRoutes } from './drafts/routes.ts'
 import { HAWriter } from './ha/writer.ts'
 import { ensureTestHelper } from './setup/testHelper.ts'
+import { SuggestStore } from './suggest/store.ts'
+import { SuggestService } from './suggest/service.ts'
+import { suggestRoutes } from './suggest/routes.ts'
 import { resolveEndpoints } from './ha/env.ts'
 import { HAConnection } from './ha/connection.ts'
 import { HARest, supervisorSelfInfo } from './ha/rest.ts'
@@ -69,12 +72,30 @@ async function main(): Promise<void> {
   })
   const client = createClaudeClient(options)
   const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? undefined })
+  const suggestStore = new SuggestStore(DATA_DIR)
+  await suggestStore.load()
+  const suggest = new SuggestService({
+    store: suggestStore,
+    ha,
+    settings,
+    usage,
+    options,
+    stream: client ? sdkStreamer(client) : null,
+    // Preventivo gratuito: countTokens con lo stesso modello, prompt e schema della richiesta vera.
+    count: client
+      ? async (params) => (await client.beta.messages.countTokens(params as unknown as Parameters<typeof client.beta.messages.countTokens>[0])).input_tokens
+      : null,
+    drafts,
+    draftStore,
+    chat,
+  })
 
   const server = createApp({
     routes: [
       ...buildRoutes({ mode: endpoints.mode, conn, rest, options, addon, usage }),
       ...chatRoutes({ chat, store, settings, usage, options, ha, drafts: draftStore }),
       ...(drafts ? draftRoutes({ service: drafts, store: draftStore }) : []),
+      ...suggestRoutes({ service: suggest, store: suggestStore, settings, usage, options, ha }),
     ],
     wwwDir: findWwwDir(),
     access: { mode: endpoints.mode, isAdmin: (id) => admins.isAdmin(id) },

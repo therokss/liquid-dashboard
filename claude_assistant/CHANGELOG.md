@@ -3,6 +3,43 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.4.0] — 2026-10-14
+### Aggiunto
+- **Suggerisci**: l'add-on legge il Registro attività degli ultimi 7, 14 o 30 giorni e trova
+  le cose che fai a mano sempre allo stesso modo:
+  - **causa → effetto**, ad esempio la luce accesa a mano entro mezzo minuto dal movimento,
+    con l'eventuale condizione che la rende affidabile (buio, poca luce in stanza, fascia
+    oraria);
+  - **abitudini orarie**, separate tra giorni feriali e fine settimana o festivi, e legate al
+    tramonto o all'alba quando sono più regolari così;
+  - **programmi esterni**: azioni alla stessa ora esatta ogni giorno, fatte da app o
+    dispositivi e non da Home Assistant;
+  - **dispositivi dimenticati accesi** con la casa vuota o per tutta la notte;
+  - **pulsanti** premuti senza nessun effetto.
+
+  Ogni proposta mostra i suoi numeri ("20 volte su 20, di solito dopo 20 s") e alcuni
+  esempi con data e ora da confrontare nel Registro attività.
+- L'analisi è **locale e gratuita**. Poi, se vuoi, premi **Fatti scrivere le
+  automazioni** (con la stima del costo): Claude (modello di analisi) valuta ogni candidato
+  e scrive lo YAML, oppure lo sconsiglia spiegando perché. Le proposte diventano le stesse
+  **bozze** della chat, con gli stessi controlli, e se una non li supera Claude la corregge
+  una volta.
+- Per ogni proposta:
+  - **Discuti in chat** apre una nuova chat già avviata su quella proposta;
+  - **Non mi interessa** la nasconde per 60 giorni.
+- I comportamenti già coperti da un'automazione non vengono riproposti: compaiono in
+  **Già automatizzate**, da rivedere con Verifica.
+- **Impostazioni → Persone e strumenti**: indica quali utenti di Home Assistant sono
+  persone e quali strumenti (add-on, Node-RED…). Solo le azioni delle persone contano come
+  abitudini.
+### Modificato
+- La chat non dà più per scontati 10 giorni di storico: si adatta a quanti ne conserva il
+  recorder.
+### Privacy
+- A Claude arrivano solo i numeri dei candidati: niente storici grezzi, nomi degli utenti o
+  coordinate della casa. Le coordinate servono solo a calcolare alba e tramonto dentro
+  l'add-on.
+
 ## [0.3.1] — 2026-10-14
 ### Aggiunto
 - **Interruttore di prova `input_boolean.test_claude`** ("Test Claude"), creato

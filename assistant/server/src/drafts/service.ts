@@ -27,6 +27,9 @@ export interface ProposeInput {
   sostituisce?: string
 }
 
+/** Da dove nasce la bozza: un tool_use in chat o un candidato di Suggerisci. */
+export type DraftOrigin = { conversationId: string; toolUseId: string } | { suggestion: { runId: string; candidateId: string } }
+
 export type ProposeResult =
   | { ok: true; draft: Draft }
   | { ok: false; errors: string[]; warnings: string[]; fixes: string[] }
@@ -148,7 +151,7 @@ export class DraftService {
     return { entityId: state.entity_id, automationId: id }
   }
 
-  async propose(input: ProposeInput, call: { conversationId: string; toolUseId: string }): Promise<ProposeResult> {
+  async propose(input: ProposeInput, origin: DraftOrigin): Promise<ProposeResult> {
     const parsed = parseYaml(input.yaml)
     if (parsed.errors.length) return { ok: false, errors: parsed.errors, warnings: [], fixes: [] }
     const norm = normalizeAutomation(parsed.value)
@@ -183,8 +186,9 @@ export class DraftService {
     const yaml = toYaml(config)
     const draft: Draft = {
       id: this.deps.store.newId(this.now().getTime()),
-      conversationId: call.conversationId,
-      toolUseId: call.toolUseId,
+      conversationId: 'conversationId' in origin ? origin.conversationId : '',
+      toolUseId: 'toolUseId' in origin ? origin.toolUseId : '',
+      ...('suggestion' in origin ? { suggestion: origin.suggestion } : {}),
       createdAt: this.now().toISOString(),
       status: 'pending',
       kind: target ? 'update' : 'create',
@@ -248,6 +252,7 @@ export class DraftService {
   }
 
   private async event(conversationId: string, text: string): Promise<void> {
+    if (!conversationId) return // bozza nata da Suggerisci: nessuna chat da avvisare
     await this.deps.conversations
       .append(conversationId, { type: 'event', id: `e${this.now().getTime().toString(36)}${randomBytes(3).toString('hex')}`, ts: this.now().toISOString(), text })
       .catch((err) => log.warn('Evento della bozza non registrato nella chat', err instanceof Error ? err.message : err))
@@ -413,6 +418,7 @@ export function publicDraft(d: Draft) {
     checks: d.checks,
     critical: d.critical,
     target: d.target ? { entityId: d.target.entityId, alias: d.target.alias, automationId: d.target.automationId } : null,
+    suggestion: d.suggestion ?? null,
     diff: d.diff ?? null,
     applied: d.applied ? { at: d.applied.at, by: d.applied.by, automationId: d.applied.automationId, entityId: d.applied.entityId, enabled: d.applied.enabled, warning: d.applied.warning ?? null } : null,
     undone: d.undone ?? null,

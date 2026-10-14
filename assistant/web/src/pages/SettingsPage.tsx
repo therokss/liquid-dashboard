@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ExternalLink, Eye, Loader2, ShieldAlert, Stethoscope } from 'lucide-react'
-import { api, type ConsentKey, type Consents, type HistoryEntry, type InventoryStats, type SettingsData } from '../api'
+import { api, type ConsentKey, type Consents, type HAUser, type HistoryEntry, type InventoryStats, type SettingsData } from '../api'
 import { automationEditorPath, navigateHomeAssistant } from '../lib/navigate'
 import { Button, Section } from '../components/Glass'
 import { t, type TextKey } from '../i18n/it'
@@ -96,6 +96,53 @@ function InventoryPreview() {
   )
 }
 
+function UsersSection() {
+  const [users, setUsers] = useState<HAUser[] | null>(null)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    api.suggestUsers().then((r) => setUsers(r.users), (e) => setError(e instanceof Error ? e.message : String(e)))
+  }, [])
+  const toggle = async (u: HAUser, person: boolean) => {
+    if (!users) return
+    setSaving(u.id)
+    setError(null)
+    try {
+      // Si inviano tutte le scelte già personalizzate più questa.
+      const kinds: Record<string, 'persona' | 'sistema'> = {}
+      for (const x of users) if (x.overridden) kinds[x.id] = x.kind
+      kinds[u.id] = person ? 'persona' : 'sistema'
+      setUsers((await api.setUserKinds(kinds)).users)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSaving(null)
+    }
+  }
+  return (
+    <Section title={t('setUsers')} intro={t('setUsersIntro')}>
+      {!users && !error && <p className="as-probe-summary as-summary">{t('loading')}</p>}
+      {users && (
+        <ul className="as-consents">
+          {users.map((u) => (
+            <li key={u.id}>
+              <div>
+                <p className="as-probe-label">{u.name}</p>
+                <p className="as-probe-summary">
+                  {u.kind === 'persona' ? t('setUserPerson') : t('cause_sistema')}
+                  {u.systemGenerated ? ` · ${t('setUserSystem')}` : ''}
+                </p>
+              </div>
+              {saving === u.id ? <Loader2 size={18} className="spin" /> : <Switch checked={u.kind === 'persona'} onChange={(v) => void toggle(u, v)} label={`${u.name}: ${t('setUserPerson')}`} />}
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <p className="as-error">{error}</p>}
+    </Section>
+  )
+}
+
 function History() {
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null)
   useEffect(() => {
@@ -181,6 +228,8 @@ export function SettingsPage({ onOpenDiagnostics }: { onOpenDiagnostics: () => v
       </Section>
 
       <History />
+
+      <UsersSection />
 
       <InventoryPreview />
 

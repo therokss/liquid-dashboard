@@ -24,6 +24,8 @@ export const READ_TYPES = new Set([
   'config/label_registry/list',
   'config/category_registry/list',
   'config_entries/get',
+  // Nomi e tipo degli utenti: distinguono azioni manuali e strumenti esterni (restano nell'add-on).
+  'config/auth/list',
   'automation/config',
   'script/config',
   'validate_config',

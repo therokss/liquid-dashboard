@@ -120,7 +120,8 @@ export type StreamFn = (params: BetaMessageStreamParams, signal: AbortSignal, ha
 
 export function sdkStreamer(client: Anthropic): StreamFn {
   return async (params, signal, h) => {
-    const stream = client.beta.messages.stream(params, { signal })
+    // Le analisi con effort alto possono durare minuti: timeout ampio, l'annullamento passa dal signal.
+    const stream = client.beta.messages.stream(params, { signal, timeout: 15 * 60_000 })
     stream.on('streamEvent', (ev) => {
       if (ev.type === 'content_block_start') {
         const b = ev.content_block as { type: string; name?: string }

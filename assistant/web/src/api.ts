@@ -109,6 +109,90 @@ export interface SettingsData {
   budget: Budget
 }
 
+export interface Evidence {
+  label: string
+  value: string
+}
+
+export type CandidateKind = 'associazione' | 'routine' | 'routine_esterna' | 'dimenticata_fuori' | 'dimenticata_notte' | 'pulsante'
+export type RunStatus = 'raccolta' | 'pronta' | 'generazione' | 'completata' | 'errore' | 'annullata' | 'interrotta'
+export type Cause = 'manuale' | 'automazione' | 'script' | 'sistema' | 'fisico' | 'altro'
+
+export interface CandidateResultView {
+  esito: 'proponi' | 'scarta'
+  titolo: string
+  spiegazione: string
+  confidenza: 'alta' | 'media' | 'bassa'
+  rischi: string
+  yaml: string
+  draftId?: string
+  errors?: string[]
+  repaired?: boolean
+  draft: DraftPublic | null
+}
+
+export interface CandidateView {
+  id: string
+  kind: CandidateKind
+  signature: string
+  title: string
+  score: number
+  areaId: string | null
+  entities: string[]
+  evidence: Evidence[]
+  examples: string[]
+  dossier: Record<string, unknown>
+  dismissed: boolean
+  result: CandidateResultView | null
+}
+
+export interface SuggestRunView {
+  id: string
+  createdAt: string
+  by: string
+  days: number
+  status: RunStatus
+  running: boolean
+  progress: { phase: string; done: number; total: number } | null
+  window?: { from: string; to: string; firstDay: string | null; observedDays: number; feriali: number; festivi: number }
+  stats?: { entities: number; events: number; byCause: Record<Cause, number>; firstDay: string | null; requestedDays: number; luxAreas: number; automations: number }
+  candidates: CandidateView[]
+  deferred: Array<{ title: string; automation: string; reason: string }>
+  estimate?: { model: string; inputTokens: number; outputTokens: number; costUsd: number; counted: boolean }
+  usage?: { model: string; costUsd: number; input: number; output: number; fallback: boolean }
+  error?: string
+  finishedAt?: string
+}
+
+export interface SuggestRunSummary {
+  id: string
+  createdAt: string
+  by: string
+  days: number
+  status: RunStatus
+  candidates: number
+  drafts: number
+  costUsd: number
+}
+
+export interface SuggestOverview {
+  runs: SuggestRunSummary[]
+  active: string | null
+  dismissed: Array<{ signature: string; title: string; at: string; by: string }>
+  budget: Budget
+  model: string
+  effort: string
+  configured: boolean
+}
+
+export interface HAUser {
+  id: string
+  name: string
+  systemGenerated: boolean
+  kind: 'persona' | 'sistema'
+  overridden: boolean
+}
+
 export type ProbeStatus = 'ok' | 'avviso' | 'errore' | 'saltata'
 
 export interface ProbeResult {
@@ -185,4 +269,15 @@ export const api = {
   discardDraft: (id: string) => call<{ draft: DraftPublic }>('POST', `api/drafts/${id}/discard`, {}),
   history: () => getJson<{ entries: HistoryEntry[] }>('api/history'),
   inventoryPreview: () => getJson<{ stats: InventoryStats; text: string; chars: number }>('api/inventory/preview'),
+  suggest: () => getJson<SuggestOverview>('api/suggest'),
+  startSuggest: (days: number) => call<{ run: SuggestRunView }>('POST', 'api/suggest/runs', { days }),
+  suggestRun: (id: string) => getJson<{ run: SuggestRunView }>(`api/suggest/runs/${id}`),
+  generateSuggest: (id: string) => call<{ run: SuggestRunView }>('POST', `api/suggest/runs/${id}/generate`, {}),
+  stopSuggest: (id: string) => call<{ stopped: boolean }>('POST', `api/suggest/runs/${id}/stop`, {}),
+  dismissCandidate: (id: string, cid: string) => call<{ run: SuggestRunView }>('POST', `api/suggest/runs/${id}/candidates/${cid}/dismiss`, {}),
+  undismissCandidate: (id: string, cid: string) => call<{ run: SuggestRunView }>('POST', `api/suggest/runs/${id}/candidates/${cid}/undismiss`, {}),
+  discussCandidate: (id: string, cid: string) => call<{ conversationId: string }>('POST', `api/suggest/runs/${id}/candidates/${cid}/chat`, {}),
+  clearDismissed: () => call<{ cleared: number }>('POST', 'api/suggest/dismissed/clear', {}),
+  suggestUsers: () => getJson<{ users: HAUser[] }>('api/suggest/users'),
+  setUserKinds: (kinds: Record<string, 'persona' | 'sistema'>) => call<{ users: HAUser[] }>('PUT', 'api/settings/users', { kinds }),
 }

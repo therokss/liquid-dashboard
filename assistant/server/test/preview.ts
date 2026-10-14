@@ -17,6 +17,10 @@ import { DraftStore } from '../src/drafts/store.ts'
 import { DraftService } from '../src/drafts/service.ts'
 import { draftRoutes } from '../src/drafts/routes.ts'
 import { msg, text, thinking, toolUse } from './fakeClaude.ts'
+import { SuggestStore } from '../src/suggest/store.ts'
+import { SuggestService } from '../src/suggest/service.ts'
+import { suggestRoutes } from '../src/suggest/routes.ts'
+import { fakeActivity, NOW } from './fakeActivity.ts'
 
 // Anteprima dell'interfaccia senza Home Assistant né chiave API: casa sintetica e un Claude
 // simulato che risponde in streaming. Avvio: npm run preview (poi npm run dev:web).
@@ -65,7 +69,50 @@ actions:
 mode: single
 `
 
+const SUGGEST_YAML = [
+  DRAFT_YAML.replace('Spegni lampada arco senza presenza', 'Lampada arco col movimento al buio').replace('Spegne la lampada dopo 10 minuti senza nessuno in soggiorno', 'Accende la lampada arco quando il radar rileva qualcuno').replace('to: "off"', 'to: "on"').replace('    for: "00:10:00"\n', '').replace('state: "on"', 'state: "off"').replace('light.turn_off', 'light.turn_on'),
+  `alias: Spegni la presa lavatrice di notte
+description: Alle 23:00 spegne la presa della lavatrice se è rimasta accesa
+triggers:
+  - trigger: time
+    at: "23:00:00"
+conditions:
+  - condition: state
+    entity_id: switch.presa_lavatrice
+    state: "on"
+actions:
+  - action: switch.turn_off
+    target:
+      entity_id: switch.presa_lavatrice
+mode: single
+`,
+]
+
+/** Risposte strutturate finte per Suggerisci (proposte e correzioni). */
+async function previewStructured(params: Parameters<StreamFn>[0], h: Parameters<StreamFn>[2]) {
+  const schema = (params.output_config as { format?: { schema?: { required?: string[] } } }).format!.schema
+  h.onBlockStart('thinking')
+  await sleep(1500)
+  if (schema?.required?.[0] === 'correzioni') return msg([text(JSON.stringify({ correzioni: [] }))], 'end_turn', { model: 'claude-opus-5-5' })
+  const ids = [...String(params.messages[0]!.content).matchAll(/"id":"(c\d+)"/g)].map((m) => m[1]!)
+  const proposte = ids.map((id, i) =>
+    i < 2
+      ? { candidato: id, esito: 'proponi', titolo: i === 0 ? 'Luce col movimento quando fa buio' : 'Presa lavatrice spenta di notte', spiegazione: i === 0 ? 'Accesa a mano 20 volte su 20 entro mezzo minuto dal movimento, sempre col buio.' : 'Rimasta accesa 6 notti su 20: spegnerla alle 23 evita consumi inutili.', yaml: SUGGEST_YAML[i]!, confidenza: i === 0 ? 'alta' : 'media', rischi: i === 0 ? '' : 'Se un lavaggio parte tardi verrebbe interrotto.' }
+      : i === 3
+        ? { candidato: id, esito: 'proponi', titolo: 'Tapparella al mattino', spiegazione: 'Aperta a mano 14 feriali su 14 verso le 07:30.', yaml: SUGGEST_YAML[1]!.replace('state: "on"', 'state: NON_VALIDO'), confidenza: 'media', rischi: '' }
+        : { candidato: id, esito: 'scarta', titolo: '', spiegazione: 'Lo fa già un programma esterno all’ora esatta: meglio lasciarlo dov’è o disattivarlo prima di spostarlo in Home Assistant.', yaml: '', confidenza: 'bassa', rischi: '' },
+  )
+  const json = JSON.stringify({ proposte })
+  h.onBlockStart('text')
+  for (const chunk of json.match(/[\s\S]{1,400}/g) ?? []) {
+    h.onText(chunk)
+    await sleep(60)
+  }
+  return msg([thinking(), text(json)], 'end_turn', { model: 'claude-opus-5-5', usage: { input_tokens: 5200, output_tokens: 9100, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, cache_creation: null, iterations: null } })
+}
+
 const preview: StreamFn = async (params, signal, h) => {
+  if ((params.output_config as { format?: unknown } | undefined)?.format) return previewStructured(params, h)
   const last = params.messages[params.messages.length - 1]!
   const hasResult = Array.isArray(last.content) && last.content.some((b) => b.type === 'tool_result')
   const userText = JSON.stringify(params.messages.filter((m) => m.role === 'user').at(-1)?.content ?? '').toLowerCase()
@@ -108,11 +155,36 @@ const draftStore = new DraftStore(dir)
 await draftStore.load()
 const drafts = new DraftService({ store: draftStore, ha, writer: fakeWriter(await ha.states()), conversations: store, pollMs: 50 })
 const chat = new ChatService({ store, ha, settings, usage, options, stream: preview, drafts })
+const suggestStore = new SuggestStore(dir, () => new Date(NOW))
+await suggestStore.load()
+const suggest = new SuggestService({
+  store: suggestStore,
+  ha,
+  settings,
+  usage,
+  options,
+  stream: preview,
+  count: async () => 5200,
+  drafts,
+  draftStore,
+  chat,
+  now: () => new Date(NOW),
+  collect: async (_ha, opts) => {
+    for (const [phase, total] of [['Registri e configurazione', 0], ['Automazioni esistenti', 120], ['Registro attività', 21], ['Luminosità per stanza', 0]] as const) {
+      for (let i = 0; i <= Math.min(total, 6); i++) {
+        opts.onProgress?.({ phase, done: Math.round((i / 6) * total), total })
+        await sleep(250)
+      }
+    }
+    return fakeActivity()
+  },
+})
 const server = createApp({
   routes: [
     ...buildRoutes({ mode: 'dev', conn: null, rest: new HARest({ mode: 'none', wsUrl: '', restBase: '', token: '' }), options, addon: null, usage }),
     ...chatRoutes({ chat, store, settings, usage, options, ha, drafts: draftStore }),
     ...draftRoutes({ service: drafts, store: draftStore }),
+    ...suggestRoutes({ service: suggest, store: suggestStore, settings, usage, options, ha }),
   ],
   wwwDir: process.env.ASSISTANT_WWW_DIR ?? resolve(import.meta.dirname, '../../web/dist'),
   access: { mode: 'dev', isAdmin: async () => true },
