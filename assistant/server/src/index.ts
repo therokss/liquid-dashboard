@@ -23,6 +23,9 @@ import { suggestRoutes } from './suggest/routes.ts'
 import { VerifyStore } from './verify/store.ts'
 import { VerifyService } from './verify/service.ts'
 import { verifyRoutes } from './verify/routes.ts'
+import { KbStore } from './devices/kb.ts'
+import { DevicesService } from './devices/service.ts'
+import { devicesRoutes } from './devices/routes.ts'
 import { resolveEndpoints } from './ha/env.ts'
 import { HAConnection } from './ha/connection.ts'
 import { HARest, supervisorSelfInfo } from './ha/rest.ts'
@@ -74,7 +77,10 @@ async function main(): Promise<void> {
     if (s === 'connected' && ha && writer) setTimeout(() => void ensureTestHelper({ ha, writer, settings }), 3_000).unref()
   })
   const client = createClaudeClient(options)
-  const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? undefined })
+  const kb = new KbStore(DATA_DIR)
+  await kb.load()
+  const devices = new DevicesService({ kb, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null })
+  const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? undefined, devices })
   // Preventivo gratuito: countTokens con lo stesso modello, prompt e schema della richiesta vera.
   const count = client
     ? async (params: Record<string, unknown>) => (await client.beta.messages.countTokens(params as unknown as Parameters<typeof client.beta.messages.countTokens>[0])).input_tokens
@@ -93,6 +99,7 @@ async function main(): Promise<void> {
       ...(drafts ? draftRoutes({ service: drafts, store: draftStore }) : []),
       ...suggestRoutes({ service: suggest, store: suggestStore, settings, usage, options, ha }),
       ...verifyRoutes({ service: verify, store: verifyStore, usage, options }),
+      ...devicesRoutes({ service: devices, usage, options }),
     ],
     wwwDir: findWwwDir(),
     access: { mode: endpoints.mode, isAdmin: (id) => admins.isAdmin(id) },

@@ -187,7 +187,7 @@ export function DiagnosticsPage({ session }: { session: Session }) {
     [t('infoHa'), session.ha.version ? `${session.ha.version} (${session.ha.state})` : session.ha.error ?? session.ha.state],
     [t('infoUser'), session.user?.displayName || session.user?.name || '—'],
     [t('infoChatModel'), `${session.options.chatModel} · ${session.options.chatEffort}`],
-    [t('infoAnalysisModel'), `${session.options.analysisModel} · ${session.options.suggestEffort}/${session.options.verifyEffort}`],
+    [t('infoAnalysisModel'), `${session.options.analysisModel} · ${session.options.suggestEffort}/${session.options.verifyEffort}/${session.options.devicesEffort}`],
   ]
   return (
     <div className="as-page">

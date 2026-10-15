@@ -201,17 +201,6 @@ body {
 .as-info-row dt { color: var(--text-secondary); }
 .as-info-row dd { overflow-wrap: anywhere; }
 
-.as-soon {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: var(--space-sm);
-  padding: var(--space-2xl) var(--space-lg);
-}
-
-.as-soon-icon { color: var(--accent); }
-
 .as-center { text-align: center; margin-top: var(--space-2xl); }
 
 .as-center-card {
@@ -887,3 +876,41 @@ body {
 .as-ok { color: #30d158; flex-shrink: 0; }
 .as-ver-clean { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; margin-top: var(--space-sm); font-size: 13px; color: var(--text-secondary); }
 .as-ver-clean li { display: flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+
+/* Dispositivi */
+.as-dev-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); }
+.as-dev-search { flex: 1 1 240px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius-pill); background: var(--glass-bg); border: 1px solid var(--glass-border-dim); color: var(--text-secondary); }
+.as-dev-search input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--text-primary); font: inherit; font-size: 14px; }
+.as-dev-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.as-dev-filter { cursor: pointer; font: inherit; font-size: 12px; }
+.as-dev-filter.active { color: var(--text-primary); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--glass-bg)); }
+.as-dev-list { list-style: none; display: flex; flex-direction: column; }
+.as-dev-row { border-top: 1px solid var(--glass-border-dim); }
+.as-dev-row:first-child { border-top: none; }
+.as-dev-head { width: 100%; display: flex; align-items: center; gap: var(--space-sm); padding: 10px 0; background: none; border: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.as-dev-name { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.as-dev-model { font-size: 14px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.as-dev-commercial { font-size: 12px; color: var(--text-tertiary); overflow-wrap: anywhere; }
+.as-dev-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.as-dev-chips .as-chip { padding: 2px 8px; font-size: 11px; }
+.as-dev-chevron { flex-shrink: 0; color: var(--text-tertiary); transition: transform 0.2s; }
+.as-dev-row.open .as-dev-chevron { transform: rotate(180deg); }
+.as-dev-body { display: flex; flex-direction: column; gap: var(--space-sm); padding: 0 0 var(--space-md); }
+.as-dev-integrations { display: flex; flex-wrap: wrap; gap: 6px; }
+.as-dev-card { display: flex; flex-direction: column; gap: var(--space-sm); padding: var(--space-md); border-radius: var(--radius-md); background: var(--glass-bg); border: 1px solid var(--glass-border-dim); }
+.as-dev-text { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.as-dev-block h4 { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
+.as-dev-bullets { padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; line-height: 1.45; color: var(--text-secondary); overflow-wrap: anywhere; }
+.as-dev-pairs { display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.45; }
+.as-dev-pairs dt { font-weight: 600; overflow-wrap: anywhere; }
+.as-dev-pairs dd { color: var(--text-secondary); overflow-wrap: anywhere; }
+.as-dev-sources { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.as-dev-sources li { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.as-dev-sources a { color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }
+.as-dev-sources a svg { vertical-align: -1px; }
+.as-dev-source-meta { font-size: 11px; color: var(--text-tertiary); overflow-wrap: anywhere; }
+.as-dev-meta { font-size: 12px; color: var(--text-tertiary); overflow-wrap: anywhere; }
+.as-dev-queries { list-style: none; display: flex; flex-direction: column; gap: 2px; margin-top: 4px; font-size: 12px; color: var(--text-secondary); }
+.as-dev-queries li { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.as-dev-queries svg { flex-shrink: 0; }
+.as-dev-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }

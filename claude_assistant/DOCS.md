@@ -10,10 +10,9 @@ Un assistente per Home Assistant basato su Claude (Anthropic) che:
   raggiunte, oscillazioni, conflitti) e propone correzioni;
 - **studia i dispositivi** che non conosce cercando la documentazione sul web.
 
-> Versione 0.3.0: c'è la **Chat** (Claude conosce la casa, legge stati, storici e
-> automazioni) con la **creazione e modifica delle automazioni con un tocco**, e la
-> **Diagnostica**. Suggerisci, Verifica e studio dei dispositivi arrivano nelle versioni
-> successive.
+> Dalla versione 0.6.0 ci sono tutte le funzioni principali: **Chat** con creazione e
+> modifica delle automazioni con un tocco, **Suggerisci**, **Verifica**, **Dispositivi** e
+> **Diagnostica**.
 
 ## Cosa serve
 
@@ -31,6 +30,7 @@ Un assistente per Home Assistant basato su Claude (Anthropic) che:
 | `chat_model` / `chat_effort` | Modello e livello di ragionamento della chat. Predefinito `claude-sonnet-5-5`, `medium`. |
 | `analysis_model` | Modello di Suggerisci, Verifica e studio dei dispositivi. Predefinito `claude-opus-5-5`. |
 | `suggest_effort` / `verify_effort` | Livello di ragionamento delle due analisi (`high` e `medium`). |
+| `devices_effort` | Livello di ragionamento dello studio dei dispositivi sul web (`medium`). |
 | `monthly_budget_warn_usd` / `monthly_budget_block_usd` | Spesa mensile stimata oltre la quale l'add-on avvisa e poi smette di chiamare Claude. |
 
 ## Chat
@@ -164,6 +164,43 @@ problemi trovati, esiti delle ultime esecuzioni e attività delle entità usate,
 e, quando serve, propone una versione corretta come bozza. **Discuti in chat** apre una chat
 già avviata sull'automazione.
 
+## Dispositivi
+
+Apri **Dispositivi**: c'è una voce per ogni modello presente in casa, anche quando lo stesso
+oggetto arriva da più integrazioni (per esempio Matter, Bluetooth e cloud). Per ogni modello
+vedi le integrazioni, con quella locale per prima, i codici modello, il firmware, i
+dispositivi della casa e i tipi di entità. Restano fuori i dispositivi disattivati, i servizi
+e quelli esclusi per privacy.
+
+**Studia** fa cercare a Claude (modello di analisi) le informazioni sul web, solo su siti
+fidati:
+
+- documentazione e forum di Home Assistant;
+- GitHub;
+- zigbee2mqtt.io, esphome.io e Z-Wave JS;
+- il sito del produttore.
+
+Il risultato è una **scheda** con le fonti, che contiene:
+
+- come funziona il modello e come si collega;
+- entità ed eventi in Home Assistant;
+- consigli per le automazioni;
+- limiti noti.
+
+Uno studio dura uno o due minuti e costa circa $0,20–0,40: il pulsante mostra la media
+degli studi già fatti. Mentre lavora vedi le ricerche che sta facendo e puoi fermarlo. Nella
+scheda finiscono solo pagine davvero viste durante la ricerca: l'add-on scarta gli indirizzi
+inventati.
+
+Una scheda nuova è una **bozza**. Leggila e premi **Approva** se ti sembra corretta; puoi
+anche rifare lo studio o eliminarla.
+
+In chat Claude conosce l'elenco delle schede e le legge quando la risposta dipende da come
+si comporta un modello (sensori di presenza, pulsanti, prese con misura di potenza…). Quando
+usa una scheda lo dice, e avverte se è ancora una bozza. Se gli chiedi esplicitamente di
+studiare un dispositivo che non ha la scheda può avviare lo studio dalla chat, al massimo due
+volte per conversazione.
+
 ## Impostazioni
 
 - **Privacy**: tre categorie escluse di default, riattivabili a tuo rischio (vedi sotto).
@@ -199,8 +236,20 @@ stati e storici restano esclusi. Per *Suggerisci* Claude riceve solo i numeri de
 candidati: mai storici grezzi, nomi degli utenti o coordinate della casa, che servono solo
 a calcolare alba e tramonto dentro l'add-on. Il controllo rapido di *Verifica* non invia
 nulla; l'analisi approfondita invia la configurazione delle automazioni scelte e lo stato e
-il numero di cambi delle entità che usano, con le stesse esclusioni. Le conversazioni sono salvate solo nell'add-on (cartella
-`/data`, inclusa nei backup di Home Assistant).
+il numero di cambi delle entità che usano, con le stesse esclusioni.
+
+Per lo **studio dei dispositivi** Claude riceve solo i dati del modello:
+
+- produttore, modello e codici modello;
+- firmware;
+- integrazioni e tipi di entità;
+- tipi di trigger.
+
+Non riceve mai nomi, aree o stati dei tuoi dispositivi, quindi le ricerche sul web non
+contengono nulla della casa. Le ricerche fatte restano visibili nella scheda.
+
+Conversazioni e schede sono salvate solo nell'add-on (cartella `/data`, inclusa nei backup
+di Home Assistant).
 
 ## Permessi
 

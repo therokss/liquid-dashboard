@@ -38,8 +38,8 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
   versioni di Liquid Dashboard. Commit e rilascio come sopra.
 - **CHANGELOG** solo in `claude_assistant/CHANGELOG.md` (quello in radice è di Liquid Dashboard).
 - Il repo è pubblico: nei test e negli esempi solo dati sintetici, mai dati della casa reale.
-- **Anteprima senza HA né chiave API**: `npm run preview` in `assistant/` (casa sintetica di
-  `test/fakeHome.ts` + `test/fakeVerify.ts` e un Claude simulato) dopo `npx vite build` in `web/`, oppure con
+- **Anteprima senza HA né chiave API**: `npm run preview` in `assistant/` (case sintetiche di
+  `test/fakeHome.ts`, `test/fakeVerify.ts` e `test/fakeDevices.ts` e un Claude simulato) dopo `npx vite build` in `web/`, oppure con
   `npm run dev:web` per l'hot reload.
 - Chat: prompt di sistema e tool sono congelati nell'intestazione di ogni conversazione
   (`/data/conversations/<id>.jsonl`, solo in aggiunta). Se cambi nomi o parametri dei tool
@@ -71,3 +71,19 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
   Le firme dei problemi (`regola:codice:id automazione:chiave`) servono a "Ignora": se le cambi,
   i problemi ignorati ricompaiono. Test con la casa sintetica di `test/fakeVerify.ts`, che è
   anche quella dell'anteprima.
+- Dispositivi (`server/src/devices/`):
+  - `catalog.ts` raggruppa i dispositivi per (produttore, modello) normalizzati, con alias
+    dei produttori e unione per `model_id`;
+  - `kb.ts` salva le schede in `/data/kb/devices/<slug>.json`. Lo schema zod `CardContent` è
+    anche l'input dello strumento `salva_scheda`;
+  - `study.ts` è il sotto-agente isolato:
+    - strumenti `web_search_20260318` e `web_fetch_20260318`, con `allowed_domains` e
+      `allowed_callers: ['direct']`, più `salva_scheda`;
+    - gestisce `pause_turn` e fa fino a 2 correzioni se le fonti non sono state viste nella
+      ricerca;
+    - all'API va solo `StudySubject` (mai nomi, aree o stati).
+  - `service.ts` esegue uno studio alla volta, in memoria, e fornisce l'indice e i tool alla
+    chat (`leggi_scheda_dispositivo`, `studia_dispositivo`, con tetto per conversazione).
+
+  Test con `test/fakeDevices.ts`, che verifica anche che nelle richieste non ci siano nomi
+  della casa.

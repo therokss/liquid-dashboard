@@ -4,6 +4,7 @@ import { ToolError, type ToolContext } from './common.ts'
 import { cercaEntita, dettagliEntita, infoDispositivo } from './entities.ts'
 import { catalogoTrigger, elencaAutomazioni, leggiAutomazione, riepilogoStorico } from './automations.ts'
 import { proponiAutomazione } from './drafts.ts'
+import { leggiSchedaDispositivo, studiaDispositivo } from './devices.ts'
 import { log } from '../../log.ts'
 
 /**
@@ -12,13 +13,13 @@ import { log } from '../../log.ts'
  * cambia nomi o significato dei parametri, si incrementa e le chat vecchie restano leggibili
  * ma non proseguibili.
  */
-export const TOOLSET_VERSION = 2
+export const TOOLSET_VERSION = 3
 
 /**
- * Versioni di cui il server sa ancora eseguire tutti i tool: la 1 (0.2.x, sola lettura) è un
- * sottoinsieme invariato della 2, quindi le chat vecchie possono proseguire.
+ * Versioni di cui il server sa ancora eseguire tutti i tool: la 1 (0.2.x, sola lettura) e la 2
+ * (0.3–0.5, + bozze) sono sottoinsiemi invariati della 3, quindi le chat vecchie proseguono.
  */
-export const SUPPORTED_TOOLSETS = new Set([1, 2])
+export const SUPPORTED_TOOLSETS = new Set([1, 2, 3])
 
 export interface ToolSpec<S extends z.ZodType> {
   name: string
@@ -42,8 +43,8 @@ export const READ_TOOLS: AnySpec[] = [
   infoDispositivo,
 ]
 
-/** Tool della chat: lettura + proposta di bozze. */
-export const CHAT_TOOLS: AnySpec[] = [...READ_TOOLS, proponiAutomazione]
+/** Tool della chat: lettura + proposta di bozze + schede dei dispositivi (dalla 0.6). */
+export const CHAT_TOOLS: AnySpec[] = [...READ_TOOLS, proponiAutomazione, leggiSchedaDispositivo, studiaDispositivo]
 
 const byName = new Map(CHAT_TOOLS.map((t) => [t.name, t]))
 

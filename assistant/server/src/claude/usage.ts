@@ -7,8 +7,8 @@ import type { Options } from '../options.ts'
 
 export interface UsageRecord {
   ts: string
-  kind: 'chat' | 'suggest' | 'verify'
-  /** conversazione (chat) o analisi (Suggerisci, Verifica) */
+  kind: 'chat' | 'suggest' | 'verify' | 'devices'
+  /** conversazione (chat), analisi (Suggerisci, Verifica) o modello studiato (Dispositivi) */
   conversationId: string
   model: string
   input: number
@@ -17,6 +17,7 @@ export interface UsageRecord {
   cacheWrite: number
   costUsd: number
   fallback?: boolean
+  searches?: number
 }
 
 export interface BudgetStatus {

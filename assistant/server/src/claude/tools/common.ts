@@ -3,6 +3,8 @@ import type { AreaEntry, DeviceEntry, EntityEntry, HAState, Registries } from '.
 import { deviceName } from '../../ha/types.ts'
 import { buildPrivacyIndex, classifyPrivacy, PRIVACY_LABELS, type Consents, type PrivacyCategory } from '../../inventory/privacy.ts'
 import { entityName } from '../../inventory/inventory.ts'
+import type { CatalogEntry } from '../../devices/catalog.ts'
+import type { Card } from '../../devices/kb.ts'
 
 export interface DraftProposer {
   propose(
@@ -14,6 +16,13 @@ export interface DraftProposer {
   >
 }
 
+/** Conoscenza dei modelli di dispositivo (catalogo + schede KB), per i tool della chat. */
+export interface DeviceKnowledge {
+  find(q: { produttore?: string; modello?: string; deviceId?: string }): Promise<{ entry: CatalogEntry | null; card: Card | null; candidates: CatalogEntry[] }>
+  /** Studia il modello sul web e attende la scheda; lancia con un messaggio per l'utente. */
+  study(key: string, call: { conversationId: string }): Promise<Card>
+}
+
 export interface ToolContext {
   ha: HAReader
   /** Letti a ogni chiamata: se l'utente revoca un consenso vale subito, anche nelle chat aperte. */
@@ -22,6 +31,8 @@ export interface ToolContext {
   /** Solo nella chat: serve a proponi_automazione per legare la bozza alla scheda. */
   drafts?: DraftProposer
   call?: { conversationId: string; toolUseId: string }
+  /** Schede dei dispositivi (dalla 0.6). */
+  devices?: DeviceKnowledge
 }
 
 /** Errore "atteso" di un tool: diventa un tool_result con is_error e questo messaggio. */

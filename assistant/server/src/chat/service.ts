@@ -4,7 +4,7 @@ import { ConversationStore, newConversationId, type Conversation, type HeaderLin
 import { runTurn, type Features, type StreamFn, type TurnEvent } from '../claude/loop.ts'
 import { buildSystemPrompt, contextBlock, PROMPT_VERSION } from '../claude/prompt.ts'
 import { executeTool, SUPPORTED_TOOLSETS, toolDefinitions, toolLabel, TOOLSET_VERSION } from '../claude/tools/registry.ts'
-import type { DraftProposer, ToolContext } from '../claude/tools/common.ts'
+import type { DeviceKnowledge, DraftProposer, ToolContext } from '../claude/tools/common.ts'
 import { describeClaudeError } from '../claude/client.ts'
 import { buildHomeSnapshot } from '../inventory/snapshot.ts'
 import type { HAReader } from '../ha/data.ts'
@@ -48,6 +48,8 @@ export interface ChatServiceDeps {
   stream: StreamFn | null
   /** Bozze di automazione (dalla 0.3). */
   drafts?: DraftProposer
+  /** Schede dei dispositivi (dalla 0.6): indice nel prompt e tool. */
+  devices?: DeviceKnowledge & { index(): string }
   now?: () => Date
 }
 
@@ -91,7 +93,7 @@ export class ChatService {
       promptVersion: PROMPT_VERSION,
       haVersion: snapshot.config.version,
       timeZone: snapshot.config.time_zone,
-      system: buildSystemPrompt(snapshot),
+      system: buildSystemPrompt(snapshot, this.deps.devices?.index() ?? ''),
       tools: toolDefinitions(),
       inventoryStats: snapshot.stats,
     }
@@ -164,7 +166,7 @@ export class ChatService {
   private async execute(job: Job, conv: Conversation): Promise<void> {
     const { header } = conv
     const ha = this.requireHA()
-    const toolCtx: ToolContext = { ha, consents: () => this.deps.settings.consents(), now: this.now, drafts: this.deps.drafts }
+    const toolCtx: ToolContext = { ha, consents: () => this.deps.settings.consents(), now: this.now, drafts: this.deps.drafts, devices: this.deps.devices }
     let features = this.features.get(header.model)
     if (!features) this.features.set(header.model, (features = { fallbacks: true, blockBinding: true }))
     try {

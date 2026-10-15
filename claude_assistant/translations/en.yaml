@@ -17,6 +17,9 @@ configuration:
   verify_effort:
     name: "\"Review\" effort"
     description: Effort for the in-depth review of existing automations.
+  devices_effort:
+    name: Device research effort
+    description: Effort of the sub-agent that searches the web for information about a device model.
   monthly_budget_warn_usd:
     name: Monthly budget, warning threshold (USD)
     description: Above this estimated monthly spend the add-on shows a warning.

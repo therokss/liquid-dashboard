@@ -114,6 +114,18 @@ export const dettagliEntita: ToolSpec<typeof dettagliSchema> = {
   },
 }
 
+/** Stato della scheda KB del modello (leggi_scheda_dispositivo per il contenuto). */
+async function cardStatus(ctx: ToolContext, deviceId: string): Promise<string | null> {
+  if (!ctx.devices) return null
+  try {
+    const { card } = await ctx.devices.find({ deviceId })
+    if (!card) return 'assente'
+    return card.status === 'approvata' ? 'approvata (leggi_scheda_dispositivo)' : 'bozza (leggi_scheda_dispositivo)'
+  } catch {
+    return null
+  }
+}
+
 const infoSchema = z
   .object({
     device_id: z.string().max(64).optional().describe('device_id del dispositivo'),
@@ -181,6 +193,7 @@ export const infoDispositivo: ToolSpec<typeof infoSchema> = {
         }),
       entita_disabilitate: own.filter((e) => e.disabled_by).length,
       trigger_di_dispositivo: triggers,
+      scheda_modello: await cardStatus(ctx, dev.id),
     }
   },
 }

@@ -13,6 +13,7 @@ export interface Options {
   analysisModel: string
   suggestEffort: Effort
   verifyEffort: Effort
+  devicesEffort: Effort
   monthlyBudgetWarnUsd: number
   monthlyBudgetBlockUsd: number
 }
@@ -24,6 +25,7 @@ export const DEFAULT_OPTIONS: Options = {
   analysisModel: 'claude-opus-5-5',
   suggestEffort: 'high',
   verifyEffort: 'medium',
+  devicesEffort: 'medium',
   monthlyBudgetWarnUsd: 25,
   monthlyBudgetBlockUsd: 50,
 }
@@ -50,6 +52,7 @@ export function parseOptions(raw: Record<string, unknown>): Options {
     analysisModel: str(raw.analysis_model, d.analysisModel),
     suggestEffort: effort(raw.suggest_effort, d.suggestEffort),
     verifyEffort: effort(raw.verify_effort, d.verifyEffort),
+    devicesEffort: effort(raw.devices_effort, d.devicesEffort),
     monthlyBudgetWarnUsd: num(raw.monthly_budget_warn_usd, d.monthlyBudgetWarnUsd),
     monthlyBudgetBlockUsd: num(raw.monthly_budget_block_usd, d.monthlyBudgetBlockUsd),
   }

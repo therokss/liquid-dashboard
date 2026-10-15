@@ -48,6 +48,9 @@ export function costUsd(model: string, u: TokenUsage): number {
   return usd / 1_000_000
 }
 
+/** Ricerche web: $10 ogni 1000 (le letture di pagine con web_fetch costano solo i token). */
+export const WEB_SEARCH_USD = 0.01
+
 export interface UsageTotals {
   model: string
   input: number
@@ -57,6 +60,8 @@ export interface UsageTotals {
   costUsd: number
   /** Almeno una parte servita da un modello di riserva (fallback dopo un rifiuto). */
   fallback: boolean
+  /** ricerche web fatturate (solo nello studio dei dispositivi) */
+  searches?: number
 }
 
 interface IterationLike extends TokenUsage {
@@ -68,7 +73,10 @@ interface IterationLike extends TokenUsage {
  * Costo di una risposta. Con i fallback lato server `usage.iterations` riporta ogni tentativo
  * (anche quello rifiutato) con il proprio modello: è la fonte corretta; altrimenti vale `usage`.
  */
-export function messageCost(message: { model: string; usage: TokenUsage & { iterations?: IterationLike[] | null } }): UsageTotals {
+export function messageCost(message: {
+  model: string
+  usage: TokenUsage & { iterations?: IterationLike[] | null; server_tool_use?: { web_search_requests?: number } | null }
+}): UsageTotals {
   const its = (message.usage.iterations ?? []).filter((i) => i.type === 'message' || i.type === 'fallback_message')
   const parts: Array<{ model: string; u: TokenUsage }> = its.length
     ? its.map((i) => ({ model: i.model ?? message.model, u: i }))
@@ -80,6 +88,11 @@ export function messageCost(message: { model: string; usage: TokenUsage & { iter
     totals.cacheRead += u.cache_read_input_tokens ?? 0
     totals.cacheWrite += u.cache_creation_input_tokens ?? 0
     totals.costUsd += costUsd(model, u)
+  }
+  const searches = message.usage.server_tool_use?.web_search_requests ?? 0
+  if (searches > 0) {
+    totals.searches = searches
+    totals.costUsd += searches * WEB_SEARCH_USD
   }
   return totals
 }

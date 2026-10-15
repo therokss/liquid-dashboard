@@ -17,6 +17,9 @@ configuration:
   verify_effort:
     name: Effort di "Verifica"
     description: Effort per la revisione approfondita delle automazioni esistenti.
+  devices_effort:
+    name: Effort dello studio dei dispositivi
+    description: Effort del sotto-agente che cerca sul web le informazioni su un modello di dispositivo.
   monthly_budget_warn_usd:
     name: Budget mensile, soglia di avviso (USD)
     description: Oltre questa spesa mensile stimata l'add-on mostra un avviso.

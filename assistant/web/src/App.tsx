@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { MessageCircle, Sparkles, ShieldCheck, Cpu, Settings, RefreshCw } from 'lucide-react'
 import { api, ApiError, type Session } from './api'
-import { ComingSoonPage } from './pages/ComingSoonPage'
 import { DiagnosticsPage } from './pages/DiagnosticsPage'
 import { ChatPage } from './pages/ChatPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SuggestPage } from './pages/SuggestPage'
 import { VerifyPage } from './pages/VerifyPage'
+import { DevicesPage } from './pages/DevicesPage'
 import { GlassCard } from './components/Glass'
 import { t } from './i18n/it'
 
@@ -92,7 +92,7 @@ export function App() {
           {session && tab === 'settings' && <SettingsPage onOpenDiagnostics={() => go('diagnostics')} />}
           {session && tab === 'suggest' && <SuggestPage onOpenChat={openChat} />}
           {session && tab === 'verify' && <VerifyPage onOpenChat={openChat} />}
-          {session && tab === 'devices' && <ComingSoonPage icon={Cpu} title={t('tabDevices')} text={t('comingDevices')} version="0.6" />}
+          {session && tab === 'devices' && <DevicesPage />}
         </main>
 
         <nav className="as-tabbar glass-panel" aria-label="Sezioni">

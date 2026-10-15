@@ -3,6 +3,30 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.6.0] — 2026-10-15
+### Aggiunto
+- **Dispositivi**: una voce per ogni modello presente in casa, anche quando lo stesso oggetto
+  arriva da più integrazioni (Matter, Bluetooth, cloud…). Per ogni modello si vedono le
+  integrazioni (quella locale per prima), i codici modello, il firmware, i dispositivi e i
+  tipi di entità.
+- **Studia**: Claude cerca il modello sul web, solo su siti fidati (Home Assistant,
+  GitHub, zigbee2mqtt, ESPHome, Z-Wave JS, produttore), e scrive una **scheda** con le
+  fonti. La scheda spiega come funziona il modello, entità ed eventi, consigli per le
+  automazioni e limiti noti.
+  - Alla ricerca vanno solo i dati del modello: mai nomi, aree o stati.
+  - Le fonti inventate vengono scartate.
+  - Mentre lavora si vedono le ricerche fatte e si può fermare.
+  - Il pulsante mostra il costo stimato.
+- Le schede nascono come **bozza** e si **approvano** dalla pagina.
+- **In chat** Claude conosce l'elenco delle schede, le legge quando servono e dice quando le
+  usa. Su richiesta esplicita può studiare un modello dalla chat, al massimo due volte per
+  conversazione.
+- Opzione `devices_effort` per il livello di ragionamento dello studio (predefinito
+  `medium`).
+### Modificato
+- Il costo stimato comprende anche le ricerche web ($10 ogni 1000).
+- `info_dispositivo` in chat indica se il modello ha una scheda.
+
 ## [0.5.0] — 2026-10-15
 ### Aggiunto
 - **Verifica**: controllo rapido e gratuito di tutte le automazioni, fatto dall'add-on con

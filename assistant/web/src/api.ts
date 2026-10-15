@@ -13,6 +13,7 @@ export interface Session {
     analysisModel: string
     suggestEffort: string
     verifyEffort: string
+    devicesEffort: string
     monthlyBudgetWarnUsd: number
     monthlyBudgetBlockUsd: number
     anthropicConfigured: boolean
@@ -322,6 +323,82 @@ export interface AnthropicPing {
   countTokens?: { model: string; inputTokens: number } | { model: string; error: string }
 }
 
+export interface CatalogIntegration {
+  domain: string
+  name: string | null
+  iotClass: string | null
+  documentation: string | null
+  devices: number
+}
+
+export interface CardSummary {
+  slug: string
+  status: 'bozza' | 'approvata'
+  nome_commerciale: string
+  categoria: string
+  createdAt: string
+  approved?: { at: string; by: string }
+  costUsd: number
+}
+
+export interface DeviceModel {
+  key: string
+  slug: string
+  manufacturer: string
+  model: string
+  modelIds: string[]
+  firmware: string[]
+  devices: Array<{ id: string; name: string; area: string | null; integration: string | null }>
+  integrations: CatalogIntegration[]
+  entityKinds: Record<string, number>
+  card: CardSummary | null
+  failure: { at: string; message: string; costUsd: number } | null
+}
+
+export interface ActiveStudy {
+  key: string
+  slug: string
+  manufacturer: string
+  model: string
+  by: string
+  origin: 'pagina' | 'chat'
+  startedAt: string
+  progress: { phase: 'ragionamento' | 'ricerca' | 'lettura' | 'scrittura'; searches: number; fetches: number; queries: string[] }
+  costUsd: number
+}
+
+export interface DevicesOverview {
+  entries: DeviceModel[]
+  orphans: Array<{ key: string; manufacturer: string; model: string; card: CardSummary }>
+  active: ActiveStudy | null
+  estimateUsd: number
+  budget: Budget
+  model: string
+  effort: string
+  configured: boolean
+}
+
+export interface DeviceCard {
+  key: string
+  manufacturer: string
+  model: string
+  modelIds: string[]
+  status: 'bozza' | 'approvata'
+  createdAt: string
+  studiedBy: string
+  approved?: { at: string; by: string }
+  nome_commerciale: string
+  categoria: string
+  sintesi: string
+  collegamento: string
+  entita: Array<{ cosa: string; significato: string }>
+  eventi: Array<{ evento: string; significato: string }>
+  consigli: string[]
+  limiti: string[]
+  fonti: Array<{ url: string; titolo: string; aperta: boolean }>
+  study: { model: string; effort: string; costUsd: number; searches: number; fetches: number; queries: string[]; durationMs: number }
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message)
@@ -396,4 +473,10 @@ export const api = {
   unignoreFinding: (id: string, fid: string) => call<{ run: VerifyRunView }>('POST', `api/verify/runs/${id}/findings/${fid}/unignore`, {}),
   discussAutomation: (id: string, automation: string) => call<{ conversationId: string }>('POST', `api/verify/runs/${id}/chat`, { automation }),
   clearIgnored: () => call<{ cleared: number }>('POST', 'api/verify/ignored/clear', {}),
+  devices: () => getJson<DevicesOverview>('api/devices'),
+  deviceCard: (slug: string) => getJson<{ card: DeviceCard }>(`api/devices/cards/${slug}`),
+  studyDevice: (key: string) => call<{ active: ActiveStudy }>('POST', 'api/devices/study', { key }),
+  stopStudy: () => call<{ stopped: boolean }>('POST', 'api/devices/study/stop', {}),
+  approveCard: (slug: string) => call<{ card: DeviceCard }>('POST', `api/devices/cards/${slug}/approve`, {}),
+  deleteCard: (slug: string) => call<{ removed: boolean }>('DELETE', `api/devices/cards/${slug}`),
 }
