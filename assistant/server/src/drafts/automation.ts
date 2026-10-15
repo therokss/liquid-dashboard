@@ -10,10 +10,10 @@ export const MAX_YAML_CHARS = 30_000
 
 const TOP_KEYS = new Set([
   'alias', 'description', 'triggers', 'conditions', 'actions', 'mode', 'max', 'max_exceeded', 'variables',
-  'trigger_variables', 'trace', 'id',
+  'trigger_variables', 'trace', 'initial_state', 'id',
 ])
 const MODES = new Set(['single', 'restart', 'queued', 'parallel'])
-const KEY_ORDER = ['alias', 'description', 'triggers', 'conditions', 'actions', 'mode', 'max', 'max_exceeded', 'variables', 'trigger_variables', 'trace']
+const KEY_ORDER = ['alias', 'description', 'triggers', 'conditions', 'actions', 'mode', 'max', 'max_exceeded', 'variables', 'trigger_variables', 'trace', 'initial_state']
 
 export interface ParseResult {
   config?: AutomationConfig
@@ -75,6 +75,40 @@ function normalizeSteps(steps: unknown[], fixes: Set<string>): unknown[] {
   })
 }
 
+function modernTriggers(v: unknown, fixes: Set<string>): unknown[] {
+  return asList(v).map((t) => {
+    if (!isPlainObject(t)) return t
+    if ('platform' in t && !('trigger' in t)) {
+      const { platform, ...rest } = t
+      fixes.add('`platform:` → `trigger:` nei trigger')
+      return { trigger: platform, ...rest }
+    }
+    return t
+  })
+}
+
+/**
+ * Sintassi attuale senza controlli (trigger/condition/action → plurali, platform → trigger,
+ * service → action): per leggere configurazioni esistenti, anche scritte anni fa.
+ */
+export function modernize(value: Record<string, unknown>): { config: Record<string, unknown>; fixes: string[] } {
+  const c: Record<string, unknown> = { ...value }
+  const fixes = new Set<string>()
+  for (const [singular, plural] of [['trigger', 'triggers'], ['condition', 'conditions'], ['action', 'actions']] as const) {
+    if (!(singular in c)) continue
+    if (!(plural in c)) {
+      c[plural] = c[singular]
+      fixes.add(`\`${singular}:\` → \`${plural}:\``)
+    }
+    delete c[singular]
+  }
+  if ('use_blueprint' in c) return { config: c, fixes: [...fixes] }
+  c.triggers = modernTriggers(c.triggers, fixes)
+  c.conditions = asList(c.conditions)
+  c.actions = normalizeSteps(asList(c.actions), fixes)
+  return { config: c, fixes: [...fixes] }
+}
+
 /** Normalizza e controlla la forma di una singola automazione. */
 export function normalizeAutomation(raw: unknown): ParseResult {
   const errors: string[] = []
@@ -109,15 +143,7 @@ export function normalizeAutomation(raw: unknown): ParseResult {
   if (c.description === undefined || c.description === '') warnings.push('Manca `description`: aggiungila per spiegare cosa fa.')
   else if (typeof c.description !== 'string') errors.push('`description` deve essere un testo.')
 
-  const triggers = asList(c.triggers).map((t) => {
-    if (!isPlainObject(t)) return t
-    if ('platform' in t && !('trigger' in t)) {
-      const { platform, ...rest } = t
-      fixes.add('`platform:` → `trigger:` nei trigger')
-      return { trigger: platform, ...rest }
-    }
-    return t
-  })
+  const triggers = modernTriggers(c.triggers, fixes)
   if (triggers.length === 0) errors.push('Serve almeno un trigger in `triggers:`.')
   c.triggers = triggers
   c.conditions = asList(c.conditions)

@@ -11,6 +11,8 @@ export interface HAState {
 
 export interface EntityEntry {
   entity_id: string
+  /** id interno del registro (uuid): lo usano trigger, condizioni e azioni di tipo "device". */
+  registry_id: string | null
   platform: string
   device_id: string | null
   area_id: string | null
@@ -105,6 +107,7 @@ export function toEntityEntry(raw: Record<string, unknown>): EntityEntry {
   const cats = raw.categories && typeof raw.categories === 'object' ? (raw.categories as Record<string, unknown>) : {}
   return {
     entity_id: String(raw.entity_id),
+    registry_id: str(raw.id),
     platform: String(raw.platform ?? ''),
     device_id: str(raw.device_id),
     area_id: str(raw.area_id),

@@ -31,7 +31,11 @@ export interface CheckContext {
   services: Map<string, Set<string>>
   /** Tipi di trigger disponibili (null se il catalogo non è raggiungibile). */
   triggerTypes: Set<string> | null
+  /** id di registro (uuid) delle entità non disabilitate: li usano trigger e azioni "device". */
+  registryIds?: Set<string>
 }
+
+export const REGISTRY_ID_RE = /^[0-9a-f]{32}$/
 
 export interface CriticalRef {
   ref: string
@@ -46,20 +50,20 @@ export interface CheckResult {
   critical: CriticalRef[]
 }
 
-const isTemplate = (s: string) => s.includes('{{') || s.includes('{%')
+export const isTemplate = (s: string) => s.includes('{{') || s.includes('{%')
 
-function idList(v: unknown): string[] {
+export function idList(v: unknown): string[] {
   if (typeof v === 'string') return v.split(',').map((s) => s.trim()).filter(Boolean)
   if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string')
   return []
 }
 
-function isObj(v: unknown): v is Record<string, unknown> {
+export function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
 /** Tutti i passi di azione, anche annidati, con il loro percorso (per i messaggi). */
-function* walkSteps(steps: unknown, path: string): Generator<{ step: Record<string, unknown>; path: string }> {
+export function* walkSteps(steps: unknown, path: string): Generator<{ step: Record<string, unknown>; path: string }> {
   const list = Array.isArray(steps) ? steps : steps === undefined ? [] : [steps]
   for (const [i, step] of list.entries()) {
     if (!isObj(step)) continue
@@ -75,7 +79,11 @@ function* walkSteps(steps: unknown, path: string): Generator<{ step: Record<stri
   }
 }
 
-export function checkAutomation(config: AutomationConfig, ctx: CheckContext): CheckResult {
+/**
+ * `allowedServices`: servizi già usati dalla versione attuale di un'automazione che si sta
+ * modificando: restano ammessi anche se l'assistente non potrebbe introdurli.
+ */
+export function checkAutomation(config: AutomationConfig, ctx: CheckContext, opts: { allowedServices?: Set<string> } = {}): CheckResult {
   const errors: string[] = []
   const warnings: string[] = []
   const referenced = new Set<string>()
@@ -102,8 +110,13 @@ export function checkAutomation(config: AutomationConfig, ctx: CheckContext): Ch
     if (!isObj(v)) return
     for (const [key, val] of Object.entries(v)) {
       if (key === 'entity_id') {
-        for (const id of idList(val)) {
+        // Un entity_id a template si controlla solo come template (sotto), mai diviso alle virgole.
+        for (const id of typeof val === 'string' && isTemplate(val) ? [] : idList(val)) {
           if (id === 'all' || id === 'none' || isTemplate(id)) continue
+          if (REGISTRY_ID_RE.test(id)) {
+            if (ctx.registryIds && !ctx.registryIds.has(id)) errors.push(`L'entità con id di registro ${id} non esiste più (o è disabilitata).`)
+            continue
+          }
           if (!/^[a-z_][a-z0-9_]*\.[a-z0-9_]+$/.test(id)) errors.push(`entity_id non valido: "${id}".`)
           else if (!ctx.entities.has(id)) errors.push(`L'entità ${id} non esiste (o è disabilitata). Cerca quella giusta con cerca_entita.`)
           else {
@@ -163,7 +176,7 @@ export function checkAutomation(config: AutomationConfig, ctx: CheckContext): Ch
       continue
     }
     const [, domain, service] = m
-    if (DENIED_DOMAINS.has(domain!) || DENIED_SERVICES.has(action)) {
+    if ((DENIED_DOMAINS.has(domain!) || DENIED_SERVICES.has(action)) && !opts.allowedServices?.has(action)) {
       errors.push(`${path}: il servizio ${action} non è ammesso nelle automazioni create dall'assistente.`)
       continue
     }

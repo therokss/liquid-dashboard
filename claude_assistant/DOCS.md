@@ -128,6 +128,42 @@ esterni che usano un loro utente) controlla **Impostazioni → Persone e strumen
 >       - sensor.*_tx
 > ```
 
+## Verifica
+
+Apri **Verifica** e premi **Controlla**. L'add-on esamina tutte le automazioni con regole
+precise, senza inviare nulla a Claude: è gratuito e richiede pochi secondi.
+
+| Regola | Cosa trova |
+|---|---|
+| Riferimenti | entità, dispositivi, aree o servizi che non esistono più; automazioni senza trigger o azioni |
+| Stato | automazioni che Home Assistant non riesce a caricare (con il motivo) o disattivate |
+| Entità senza dati | entità usate che sono "non disponibili" da più di un giorno |
+| Soglie | soglie `numeric_state` mai raggiunte negli ultimi 30 giorni; stessa soglia per salire e scendere |
+| Logica | `condition: trigger` con un id che nessun trigger ha; attese lunghe in `mode: single` |
+| Frequenza | trigger `state` senza `to:` che scattano a ogni cambio di attributo; `time_pattern` scritti male (`minutes: "5"` è il minuto 5 di ogni ora, non "ogni 5 minuti") |
+| Oscillazioni | luci o prese accese e spente a ripetizione dalla stessa automazione |
+| Conflitti | due automazioni che si contraddicono; azioni corrette a mano subito dopo |
+| Esecuzioni | errori, attivazioni ignorate o scartate nelle ultime tracce |
+| Sintassi | forma precedente al 2024.10 (`platform:`, `service:`) |
+
+Oscillazioni e conflitti si ricavano dal Registro attività degli ultimi giorni (7 di
+default, 0 per saltarli).
+
+Molti problemi hanno una **correzione meccanica**, ad esempio sostituire un'entità
+rinominata con quella che ha lo stesso nome, aggiungere `to: null`, scrivere `"/5"` nel
+`time_pattern`. Quelle **sicure** sono già spuntate; quelle **da verificare** le scegli tu.
+**Prepara la correzione** crea una bozza con le differenze rispetto ad ora: la applichi con
+un tocco e puoi annullarla, come in chat. Le automazioni nei file YAML, nei packages o da
+blueprint non si modificano da qui: la Verifica dice cosa cambiare.
+
+**Ignora** nasconde un problema finché non lo ripristini.
+
+L'**analisi approfondita** è facoltativa e a pagamento (stima del costo sul pulsante). Scegli
+le automazioni (di default quelle con errori o avvisi): Claude riceve configurazione,
+problemi trovati, esiti delle ultime esecuzioni e attività delle entità usate, dà un giudizio
+e, quando serve, propone una versione corretta come bozza. **Discuti in chat** apre una chat
+già avviata sull'automazione.
+
 ## Impostazioni
 
 - **Privacy**: tre categorie escluse di default, riattivabili a tuo rischio (vedi sotto).
@@ -161,7 +197,9 @@ scelta: token, password, chiavi, indirizzi IP e MAC, URL, numeri di serie. Gli e
 entità escluse possono comparire nelle configurazioni delle automazioni che li usano, ma
 stati e storici restano esclusi. Per *Suggerisci* Claude riceve solo i numeri dei
 candidati: mai storici grezzi, nomi degli utenti o coordinate della casa, che servono solo
-a calcolare alba e tramonto dentro l'add-on. Le conversazioni sono salvate solo nell'add-on (cartella
+a calcolare alba e tramonto dentro l'add-on. Il controllo rapido di *Verifica* non invia
+nulla; l'analisi approfondita invia la configurazione delle automazioni scelte e lo stato e
+il numero di cambi delle entità che usano, con le stesse esclusioni. Le conversazioni sono salvate solo nell'add-on (cartella
 `/data`, inclusa nei backup di Home Assistant).
 
 ## Permessi

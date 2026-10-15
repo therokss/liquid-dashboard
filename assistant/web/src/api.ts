@@ -185,6 +185,112 @@ export interface SuggestOverview {
   configured: boolean
 }
 
+// --- Verifica -------------------------------------------------------------------------------
+
+export type Severity = 'errore' | 'avviso' | 'info'
+export type RuleId = 'V1' | 'V2' | 'V3' | 'V4' | 'V5' | 'V6' | 'V7' | 'V8' | 'V9' | 'V10'
+export type VerifyStatus = 'raccolta' | 'pronta' | 'analisi' | 'completata' | 'errore' | 'annullata' | 'interrotta'
+
+export interface VerifyFinding {
+  id: string
+  signature: string
+  rule: RuleId
+  code: string
+  severity: Severity
+  automation: string
+  title: string
+  detail: string
+  refs: string[]
+  fix?: { kind: string; certain: boolean; label: string }
+  ignored: boolean
+}
+
+export interface AutomationReport {
+  entityId: string
+  id: string | null
+  alias: string
+  state: string
+  source: 'editor' | 'blueprint' | 'yaml' | 'senza_id'
+  editable: boolean
+  mode: string
+  lastTriggered: string | null
+  traces: { stored: number; outcomes: Record<string, number>; lastError: string | null; perHour: number | null; last: string | null }
+  entities: string[]
+  findings: string[]
+}
+
+export interface ReviewView {
+  giudizio: 'ok' | 'da_migliorare' | 'problemi'
+  sintesi: string
+  problemi: Array<{ titolo: string; spiegazione: string; gravita: 'alta' | 'media' | 'bassa' }>
+  yaml: string
+  spiegazione: string
+  errors?: string[]
+  repaired?: boolean
+  draft: DraftPublic | null
+}
+
+export interface FixView {
+  findings: string[]
+  errors?: string[]
+  draft: DraftPublic | null
+}
+
+export interface VerifyEstimate {
+  model: string
+  systemTokens: number
+  perAutomation: Record<string, number>
+  outputPerAutomation: number
+  outputPerBatch: number
+  batchSize: number
+  priceIn: number
+  priceOut: number
+  counted: boolean
+}
+
+export interface VerifyRunView {
+  id: string
+  createdAt: string
+  by: string
+  days: number
+  status: VerifyStatus
+  running: boolean
+  progress: { phase: string; done: number; total: number } | null
+  stats?: { automations: number; editable: number; withFindings: number; bySeverity: Record<Severity, number>; byRule: Partial<Record<RuleId, number>>; events: number; logged: number; durationMs: number }
+  reports: AutomationReport[]
+  findings: VerifyFinding[]
+  estimate?: VerifyEstimate
+  selection?: string[]
+  defaultSelection: string[]
+  reviews: Record<string, ReviewView>
+  fixes: Record<string, FixView>
+  usage?: { model: string; costUsd: number; input: number; output: number; fallback: boolean }
+  error?: string
+  finishedAt?: string
+}
+
+export interface VerifyRunSummary {
+  id: string
+  createdAt: string
+  by: string
+  status: VerifyStatus
+  automations: number
+  findings: number
+  errors: number
+  reviewed: number
+  costUsd: number
+}
+
+export interface VerifyOverview {
+  runs: VerifyRunSummary[]
+  active: string | null
+  ignored: Array<{ signature: string; title: string; at: string; by: string }>
+  budget: Budget
+  model: string
+  effort: string
+  configured: boolean
+}
+
 export interface HAUser {
   id: string
   name: string
@@ -280,4 +386,14 @@ export const api = {
   clearDismissed: () => call<{ cleared: number }>('POST', 'api/suggest/dismissed/clear', {}),
   suggestUsers: () => getJson<{ users: HAUser[] }>('api/suggest/users'),
   setUserKinds: (kinds: Record<string, 'persona' | 'sistema'>) => call<{ users: HAUser[] }>('PUT', 'api/settings/users', { kinds }),
+  verify: () => getJson<VerifyOverview>('api/verify'),
+  startVerify: (days: number) => call<{ run: VerifyRunView }>('POST', 'api/verify/runs', { days }),
+  verifyRun: (id: string) => getJson<{ run: VerifyRunView }>(`api/verify/runs/${id}`),
+  analyzeVerify: (id: string, automations: string[]) => call<{ run: VerifyRunView }>('POST', `api/verify/runs/${id}/analyze`, { automations }),
+  stopVerify: (id: string) => call<{ stopped: boolean }>('POST', `api/verify/runs/${id}/stop`, {}),
+  fixVerify: (id: string, automation: string, findings: string[]) => call<{ run: VerifyRunView }>('POST', `api/verify/runs/${id}/fix`, { automation, findings }),
+  ignoreFinding: (id: string, fid: string) => call<{ run: VerifyRunView }>('POST', `api/verify/runs/${id}/findings/${fid}/ignore`, {}),
+  unignoreFinding: (id: string, fid: string) => call<{ run: VerifyRunView }>('POST', `api/verify/runs/${id}/findings/${fid}/unignore`, {}),
+  discussAutomation: (id: string, automation: string) => call<{ conversationId: string }>('POST', `api/verify/runs/${id}/chat`, { automation }),
+  clearIgnored: () => call<{ cleared: number }>('POST', 'api/verify/ignored/clear', {}),
 }

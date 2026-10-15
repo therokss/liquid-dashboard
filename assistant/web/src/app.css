@@ -834,3 +834,56 @@ body {
   width: 100%;
 }
 .as-history li.current .as-probe-label { color: var(--accent); }
+
+/* --- Verifica --------------------------------------------------------------------------- */
+
+.as-ver-card.worst-errore { box-shadow: inset 3px 0 0 #ff453a; }
+.as-ver-card.worst-avviso { box-shadow: inset 3px 0 0 #ff9f0a; }
+.as-ver-counts { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.as-ver-counts .sev-errore, .as-ver-finding.sev-errore .as-ver-sev { color: #ff453a; }
+.as-ver-counts .sev-avviso, .as-ver-finding.sev-avviso .as-ver-sev { color: #ff9f0a; }
+.as-ver-finding.sev-info .as-ver-sev { color: var(--text-tertiary); }
+
+.as-ver-findings { list-style: none; display: flex; flex-direction: column; }
+.as-ver-finding { display: flex; align-items: flex-start; gap: var(--space-sm); padding: 10px 0; border-top: 1px solid var(--glass-border-dim); }
+.as-ver-finding:first-child { border-top: none; padding-top: 4px; }
+.as-ver-finding.ignored { opacity: 0.55; }
+.as-ver-sev { flex-shrink: 0; margin-top: 2px; }
+.as-ver-finding-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.as-ver-finding-title { font-size: 14px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.as-ver-rule { margin-left: 4px; padding: 1px 8px; font-size: 11px; font-weight: 400; vertical-align: 1px; }
+.as-ver-finding-detail { font-size: 13px; line-height: 1.45; color: var(--text-secondary); overflow-wrap: anywhere; }
+.as-ver-fix { display: flex; align-items: flex-start; gap: 6px; font-size: 13px; line-height: 1.45; cursor: pointer; overflow-wrap: anywhere; }
+.as-ver-fix > input, .as-ver-fix > svg { flex-shrink: 0; margin-top: 3px; }
+.as-ver-fix > span { flex: 1; min-width: 0; }
+.as-ver-fix.disabled { cursor: default; color: var(--text-secondary); }
+.as-ver-fix .as-chip { padding: 1px 8px; font-size: 11px; }
+.as-ver-ignore { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; text-decoration: none; color: var(--text-secondary); }
+.as-ver-ignore:disabled { opacity: 0.5; cursor: default; }
+
+.as-ver-fixbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+.as-ver-fixbar .as-probe-summary { flex: 1 1 220px; }
+
+.as-ver-review { display: flex; flex-direction: column; gap: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--glass-border-dim); }
+.as-ver-review .as-probe-label { display: flex; align-items: center; gap: 6px; }
+.as-ver-problems { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.as-ver-problems li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; line-height: 1.4; }
+.as-ver-problems li > span:last-child { flex-basis: 100%; color: var(--text-secondary); }
+.as-ver-problems li.grav-alta .as-chip { color: #ff453a; }
+.as-ver-problems li.grav-media .as-chip { color: #ff9f0a; }
+.as-chip.verdict-ok { color: #30d158; border-color: rgba(48, 209, 88, 0.35); }
+.as-chip.verdict-da_migliorare { color: #ff9f0a; border-color: rgba(255, 159, 10, 0.35); }
+.as-chip.verdict-problemi { color: #ff453a; border-color: rgba(255, 69, 58, 0.35); }
+
+.as-ver-filters { display: flex; flex-wrap: wrap; gap: var(--space-sm) var(--space-md); margin-top: var(--space-md); font-size: 13px; color: var(--text-secondary); }
+.as-ver-filters label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.as-ver-deep { padding-top: var(--space-md); border-top: 1px solid var(--glass-border-dim); }
+.as-ver-deep .as-details { margin-top: 0; width: 100%; }
+.as-ver-select-actions { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: var(--space-sm) 0; font-size: 13px; }
+.as-ver-select { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; max-height: 40vh; overflow: auto; font-size: 13px; }
+.as-ver-select label { display: flex; align-items: center; gap: 6px; cursor: pointer; min-width: 0; }
+.as-ver-select label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.as-ver-select label > span.hot { font-weight: 600; }
+.as-ok { color: #30d158; flex-shrink: 0; }
+.as-ver-clean { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; margin-top: var(--space-sm); font-size: 13px; color: var(--text-secondary); }
+.as-ver-clean li { display: flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }

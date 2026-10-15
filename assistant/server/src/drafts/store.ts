@@ -22,6 +22,7 @@ export interface Draft {
   conversationId: string
   toolUseId: string
   suggestion?: { runId: string; candidateId: string }
+  verification?: { runId: string; automation: string }
   createdAt: string
   status: DraftStatus
   kind: 'create' | 'update'

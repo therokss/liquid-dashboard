@@ -11,8 +11,6 @@ import { UsageLedger } from '../src/claude/usage.ts'
 import { HARest } from '../src/ha/rest.ts'
 import { DEFAULT_OPTIONS } from '../src/options.ts'
 import type { StreamFn } from '../src/claude/loop.ts'
-import { fakeHA } from './fakeHome.ts'
-import { fakeWriter } from './fakeWriter.ts'
 import { DraftStore } from '../src/drafts/store.ts'
 import { DraftService } from '../src/drafts/service.ts'
 import { draftRoutes } from '../src/drafts/routes.ts'
@@ -21,6 +19,10 @@ import { SuggestStore } from '../src/suggest/store.ts'
 import { SuggestService } from '../src/suggest/service.ts'
 import { suggestRoutes } from '../src/suggest/routes.ts'
 import { fakeActivity, NOW } from './fakeActivity.ts'
+import { verifyHome, VNOW } from './fakeVerify.ts'
+import { VerifyStore } from '../src/verify/store.ts'
+import { VerifyService } from '../src/verify/service.ts'
+import { verifyRoutes } from '../src/verify/routes.ts'
 
 // Anteprima dell'interfaccia senza Home Assistant né chiave API: casa sintetica e un Claude
 // simulato che risponde in streaming. Avvio: npm run preview (poi npm run dev:web).
@@ -88,12 +90,57 @@ mode: single
 `,
 ]
 
-/** Risposte strutturate finte per Suggerisci (proposte e correzioni). */
+const REVIEW_YAML = `alias: Assenza soggiorno
+description: Spegne la lampada dopo 5 minuti senza nessuno (30 la sera)
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.radar_presenza
+    to: "off"
+    for: { minutes: 5 }
+    id: "5"
+  - trigger: state
+    entity_id: binary_sensor.radar_presenza
+    to: "off"
+    for: { minutes: 30 }
+    id: "30"
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: ["5", "30"]
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: light.lampada_arco
+mode: restart
+`
+
+/** Valutazioni finte dell'analisi approfondita di Verifica. */
+function previewReviews(content: string) {
+  const ids = [...content.matchAll(/"automazione":"(automation\.[a-z0-9_]+)"/g)].map((m) => m[1]!)
+  return {
+    valutazioni: ids.map((a) =>
+      a === 'automation.assenza_soggiorno'
+        ? { automazione: a, giudizio: 'problemi', sintesi: 'Il ramo dei 5 minuti funziona, quello dei 30 non scatta mai: la condizione cerca l’id "530", che non esiste.', problemi: [{ titolo: 'Id "530" invece di "5" e "30"', spiegazione: 'Probabilmente una virgola persa: la luce resta accesa quando la stanza è vuota da 30 minuti.', gravita: 'alta' }, { titolo: 'mode single con attese lunghe', spiegazione: 'Se il radar torna "off" mentre aspetta, la nuova attivazione viene ignorata: meglio restart.', gravita: 'bassa' }], yaml_corretto: REVIEW_YAML, spiegazione_correzione: 'Usa gli id "5" e "30" e mode restart.' }
+        : a === 'automation.aggiorna_stanza_demo'
+          ? { automazione: a, giudizio: 'da_migliorare', sintesi: 'Fa quello che deve, ma scatta migliaia di volte all’ora per ogni variazione di distanza del sensore BLE.', problemi: [{ titolo: 'Trigger senza `to:`', spiegazione: 'Con `to: null` scatta solo quando cambia la stanza: stesse funzioni, una frazione delle esecuzioni.', gravita: 'media' }], yaml_corretto: '', spiegazione_correzione: 'Applica la correzione meccanica proposta dalla Verifica.' }
+          : { automazione: a, giudizio: 'ok', sintesi: 'Nessun problema oltre a quelli già segnalati dai controlli.', problemi: [], yaml_corretto: '', spiegazione_correzione: '' },
+    ),
+  }
+}
+
+/** Risposte strutturate finte per Suggerisci e Verifica (proposte, valutazioni e correzioni). */
 async function previewStructured(params: Parameters<StreamFn>[0], h: Parameters<StreamFn>[2]) {
   const schema = (params.output_config as { format?: { schema?: { required?: string[] } } }).format!.schema
   h.onBlockStart('thinking')
   await sleep(1500)
   if (schema?.required?.[0] === 'correzioni') return msg([text(JSON.stringify({ correzioni: [] }))], 'end_turn', { model: 'claude-opus-5-5' })
+  if (schema?.required?.[0] === 'valutazioni') {
+    const json = JSON.stringify(previewReviews(String(params.messages[0]!.content)))
+    h.onBlockStart('text')
+    h.onText(json)
+    return msg([thinking(), text(json)], 'end_turn', { model: 'claude-opus-5-5', usage: { input_tokens: 9800, output_tokens: 4200, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, cache_creation: null, iterations: null } })
+  }
   const ids = [...String(params.messages[0]!.content).matchAll(/"id":"(c\d+)"/g)].map((m) => m[1]!)
   const proposte = ids.map((id, i) =>
     i < 2
@@ -150,10 +197,11 @@ await store.load()
 const settings = new SettingsStore(dir)
 await settings.load()
 const usage = new UsageLedger(dir, () => 'Europe/Rome')
-const ha = fakeHA()
+// Casa sintetica della Verifica (contiene anche quella di base): un caso noto per automazione.
+const { ha, writer } = verifyHome()
 const draftStore = new DraftStore(dir)
 await draftStore.load()
-const drafts = new DraftService({ store: draftStore, ha, writer: fakeWriter(await ha.states()), conversations: store, pollMs: 50 })
+const drafts = new DraftService({ store: draftStore, ha, writer, conversations: store, pollMs: 50 })
 const chat = new ChatService({ store, ha, settings, usage, options, stream: preview, drafts })
 const suggestStore = new SuggestStore(dir, () => new Date(NOW))
 await suggestStore.load()
@@ -179,12 +227,16 @@ const suggest = new SuggestService({
     return fakeActivity()
   },
 })
+const verifyStore = new VerifyStore(dir, () => new Date(VNOW))
+await verifyStore.load()
+const verify = new VerifyService({ store: verifyStore, ha, writer, settings, usage, options, stream: preview, count: async (p) => 2400 + JSON.stringify(p).length / 3, drafts, draftStore, chat, now: () => new Date(VNOW) })
 const server = createApp({
   routes: [
     ...buildRoutes({ mode: 'dev', conn: null, rest: new HARest({ mode: 'none', wsUrl: '', restBase: '', token: '' }), options, addon: null, usage }),
     ...chatRoutes({ chat, store, settings, usage, options, ha, drafts: draftStore }),
     ...draftRoutes({ service: drafts, store: draftStore }),
     ...suggestRoutes({ service: suggest, store: suggestStore, settings, usage, options, ha }),
+    ...verifyRoutes({ service: verify, store: verifyStore, usage, options }),
   ],
   wwwDir: process.env.ASSISTANT_WWW_DIR ?? resolve(import.meta.dirname, '../../web/dist'),
   access: { mode: 'dev', isAdmin: async () => true },

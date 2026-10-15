@@ -20,6 +20,9 @@ import { ensureTestHelper } from './setup/testHelper.ts'
 import { SuggestStore } from './suggest/store.ts'
 import { SuggestService } from './suggest/service.ts'
 import { suggestRoutes } from './suggest/routes.ts'
+import { VerifyStore } from './verify/store.ts'
+import { VerifyService } from './verify/service.ts'
+import { verifyRoutes } from './verify/routes.ts'
 import { resolveEndpoints } from './ha/env.ts'
 import { HAConnection } from './ha/connection.ts'
 import { HARest, supervisorSelfInfo } from './ha/rest.ts'
@@ -72,23 +75,16 @@ async function main(): Promise<void> {
   })
   const client = createClaudeClient(options)
   const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? undefined })
+  // Preventivo gratuito: countTokens con lo stesso modello, prompt e schema della richiesta vera.
+  const count = client
+    ? async (params: Record<string, unknown>) => (await client.beta.messages.countTokens(params as unknown as Parameters<typeof client.beta.messages.countTokens>[0])).input_tokens
+    : null
   const suggestStore = new SuggestStore(DATA_DIR)
   await suggestStore.load()
-  const suggest = new SuggestService({
-    store: suggestStore,
-    ha,
-    settings,
-    usage,
-    options,
-    stream: client ? sdkStreamer(client) : null,
-    // Preventivo gratuito: countTokens con lo stesso modello, prompt e schema della richiesta vera.
-    count: client
-      ? async (params) => (await client.beta.messages.countTokens(params as unknown as Parameters<typeof client.beta.messages.countTokens>[0])).input_tokens
-      : null,
-    drafts,
-    draftStore,
-    chat,
-  })
+  const suggest = new SuggestService({ store: suggestStore, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, count, drafts, draftStore, chat })
+  const verifyStore = new VerifyStore(DATA_DIR)
+  await verifyStore.load()
+  const verify = new VerifyService({ store: verifyStore, ha, writer, settings, usage, options, stream: client ? sdkStreamer(client) : null, count, drafts, draftStore, chat })
 
   const server = createApp({
     routes: [
@@ -96,6 +92,7 @@ async function main(): Promise<void> {
       ...chatRoutes({ chat, store, settings, usage, options, ha, drafts: draftStore }),
       ...(drafts ? draftRoutes({ service: drafts, store: draftStore }) : []),
       ...suggestRoutes({ service: suggest, store: suggestStore, settings, usage, options, ha }),
+      ...verifyRoutes({ service: verify, store: verifyStore, usage, options }),
     ],
     wwwDir: findWwwDir(),
     access: { mode: endpoints.mode, isAdmin: (id) => admins.isAdmin(id) },

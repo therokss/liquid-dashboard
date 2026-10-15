@@ -7,7 +7,7 @@ import { buildPrivacyIndex, classifyPrivacy, domainOf } from '../inventory/priva
 import { entityName } from '../inventory/inventory.ts'
 import type { ConversationStore } from '../chat/store.ts'
 import { lineDiff, normalizeAutomation, parseYaml, stableJson, toYaml, type AutomationConfig } from './automation.ts'
-import { checkAutomation, type CheckContext } from './checks.ts'
+import { checkAutomation, walkSteps, type CheckContext, type CheckResult } from './checks.ts'
 import type { Draft, DraftStore } from './store.ts'
 import { log } from '../log.ts'
 
@@ -28,7 +28,10 @@ export interface ProposeInput {
 }
 
 /** Da dove nasce la bozza: un tool_use in chat o un candidato di Suggerisci. */
-export type DraftOrigin = { conversationId: string; toolUseId: string } | { suggestion: { runId: string; candidateId: string } }
+export type DraftOrigin =
+  | { conversationId: string; toolUseId: string }
+  | { suggestion: { runId: string; candidateId: string } }
+  | { verification: { runId: string; automation: string } }
 
 export type ProposeResult =
   | { ok: true; draft: Draft }
@@ -121,7 +124,23 @@ export class DraftService {
       labels: new Set(reg.labels.map((l) => l.label_id)),
       services,
       triggerTypes: catalog ? new Set(Object.keys(catalog)) : null,
+      registryIds: new Set(reg.entities.filter((e) => !e.disabled_by && e.registry_id).map((e) => e.registry_id!)),
     }
+  }
+
+  /**
+   * Controlli della bozza. Per una modifica, i problemi che la versione attuale ha già (un
+   * riferimento rotto non ancora corretto, un servizio che l'assistente non introdurrebbe)
+   * non bloccano: la bozza non peggiora nulla. Tornano come avvisi.
+   */
+  checkAgainst(config: AutomationConfig, ctx: CheckContext, current: Record<string, unknown> | null): CheckResult & { inherited: string[] } {
+    if (!current) return { ...checkAutomation(config, ctx), inherited: [] }
+    const before = normalizeAutomation(current).config
+    const allowed = new Set<string>()
+    if (before) for (const { step } of walkSteps(before.actions, 'actions')) if (typeof step.action === 'string') allowed.add(step.action)
+    const res = checkAutomation(config, ctx, { allowedServices: allowed })
+    const old = new Set(before ? checkAutomation(before, ctx, { allowedServices: allowed }).errors : [])
+    return { ...res, errors: res.errors.filter((e) => !old.has(e)), inherited: res.errors.filter((e) => old.has(e)) }
   }
 
   /** validate_config di Home Assistant su trigger, condizioni e azioni. */
@@ -159,10 +178,11 @@ export class DraftService {
     const config = norm.config
 
     let target: Draft['target']
+    let current: Record<string, unknown> | null = null
     if (input.sostituisce) {
       const t = await this.resolveTarget(input.sostituisce.trim())
       if (typeof t === 'string') return { ok: false, errors: [t], warnings: norm.warnings, fixes: norm.fixes }
-      const current = await this.deps.writer.getConfig(t.automationId)
+      current = await this.deps.writer.getConfig(t.automationId)
       if (!current) return { ok: false, errors: [`${t.entityId} non è in automations.yaml (packages o YAML): non si può modificare da qui.`], warnings: norm.warnings, fixes: norm.fixes }
       if ('use_blueprint' in current) return { ok: false, errors: [`${t.entityId} è creata da una blueprint: si modifica dall'editor di Home Assistant.`], warnings: norm.warnings, fixes: norm.fixes }
       if (configHash(current) === configHash(config)) return { ok: false, errors: ['La proposta è identica alla configurazione attuale: nessuna modifica.'], warnings: norm.warnings, fixes: norm.fixes }
@@ -177,10 +197,10 @@ export class DraftService {
     }
 
     const ctx = await this.checkContext()
-    const checked = checkAutomation(config, ctx)
+    const checked = this.checkAgainst(config, ctx, current)
     const haErrors = checked.errors.length ? [] : await this.validateWithHA(config)
     const errors = [...checked.errors, ...haErrors]
-    const warnings = [...norm.warnings, ...checked.warnings]
+    const warnings = [...norm.warnings, ...checked.warnings, ...checked.inherited.map((e) => `Già presente nella versione attuale: ${e}`)]
     if (errors.length) return { ok: false, errors, warnings, fixes: norm.fixes }
 
     const yaml = toYaml(config)
@@ -189,6 +209,7 @@ export class DraftService {
       conversationId: 'conversationId' in origin ? origin.conversationId : '',
       toolUseId: 'toolUseId' in origin ? origin.toolUseId : '',
       ...('suggestion' in origin ? { suggestion: origin.suggestion } : {}),
+      ...('verification' in origin ? { verification: origin.verification } : {}),
       createdAt: this.now().toISOString(),
       status: 'pending',
       kind: target ? 'update' : 'create',
@@ -273,7 +294,8 @@ export class DraftService {
         throw new DraftError(400, 'conferma_richiesta', 'Questa automazione comanda entità critiche: conferma esplicitamente prima di procedere.')
       }
       // La casa può essere cambiata dalla proposta: si ricontrolla tutto.
-      const recheck = checkAutomation(d.config, await this.checkContext())
+      const before = d.kind === 'update' ? await writer.getConfig(d.target!.automationId) : null
+      const recheck = this.checkAgainst(d.config, await this.checkContext(), before)
       const errors = [...recheck.errors, ...(recheck.errors.length ? [] : await this.validateWithHA(d.config))]
       if (errors.length) {
         d.lastError = errors.join(' ')
@@ -419,6 +441,7 @@ export function publicDraft(d: Draft) {
     critical: d.critical,
     target: d.target ? { entityId: d.target.entityId, alias: d.target.alias, automationId: d.target.automationId } : null,
     suggestion: d.suggestion ?? null,
+    verification: d.verification ?? null,
     diff: d.diff ?? null,
     applied: d.applied ? { at: d.applied.at, by: d.applied.by, automationId: d.applied.automationId, entityId: d.applied.entityId, enabled: d.applied.enabled, warning: d.applied.warning ?? null } : null,
     undone: d.undone ?? null,

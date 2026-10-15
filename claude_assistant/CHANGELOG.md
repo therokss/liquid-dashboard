@@ -3,6 +3,36 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.5.0] — 2026-10-15
+### Aggiunto
+- **Verifica**: controllo rapido e gratuito di tutte le automazioni, fatto dall'add-on con
+  regole precise e senza inviare nulla a Claude. Trova:
+  - riferimenti rotti: entità, dispositivi, aree e servizi che non esistono più;
+  - automazioni non caricate, con il motivo dato da Home Assistant, e automazioni spente;
+  - entità usate che non danno dati da più di un giorno;
+  - soglie mai raggiunte negli ultimi 30 giorni e soglie identiche per salire e scendere;
+  - condizioni su id di trigger inesistenti, compresi gli id "incollati" come "530" al posto
+    di "5" e "30";
+  - trigger che scattano troppo spesso: `state` senza `to:` sui sensori che cambiano
+    attributi di continuo, e `time_pattern` come `minutes: "5"` (una volta all'ora) quando
+    il nome dice "ogni 5 minuti";
+  - oscillazioni, automazioni in conflitto e azioni corrette a mano subito dopo, dal
+    Registro attività;
+  - errori e attivazioni scartate nelle ultime esecuzioni;
+  - sintassi precedente al 2024.10.
+- **Correzioni con un tocco** per i casi meccanici: entità rinominata sostituita con quella
+  che ha lo stesso nome, `to: null`, intervallo `"/N"` nel `time_pattern`, id dei trigger
+  separati, sintassi aggiornata. Diventano una bozza con le differenze, si applicano e si
+  annullano come quelle della chat. Le correzioni sicure sono già spuntate.
+- **Analisi approfondita** facoltativa, con la stima del costo: Claude (modello di analisi)
+  giudica le automazioni scelte, a gruppi di 5, e propone le correzioni come bozze.
+- Per ogni automazione: **Ignora** un problema, **Discuti in chat**, **Apri nell'editor**.
+### Modificato
+- Le bozze di modifica non vengono più bloccate da problemi che l'automazione aveva già
+  (ad esempio un altro riferimento rotto): diventano avvisi.
+- I controlli delle bozze riconoscono le entità indicate per id di registro nei blocchi di
+  tipo dispositivo e accettano `initial_state`.
+
 ## [0.4.0] — 2026-10-14
 ### Aggiunto
 - **Suggerisci**: l'add-on legge il Registro attività degli ultimi 7, 14 o 30 giorni e trova

@@ -39,7 +39,7 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
 - **CHANGELOG** solo in `claude_assistant/CHANGELOG.md` (quello in radice è di Liquid Dashboard).
 - Il repo è pubblico: nei test e negli esempi solo dati sintetici, mai dati della casa reale.
 - **Anteprima senza HA né chiave API**: `npm run preview` in `assistant/` (casa sintetica di
-  `test/fakeHome.ts` e un Claude simulato) dopo `npx vite build` in `web/`, oppure con
+  `test/fakeHome.ts` + `test/fakeVerify.ts` e un Claude simulato) dopo `npx vite build` in `web/`, oppure con
   `npm run dev:web` per l'hot reload.
 - Chat: prompt di sistema e tool sono congelati nell'intestazione di ogni conversazione
   (`/data/conversations/<id>.jsonl`, solo in aggiunta). Se cambi nomi o parametri dei tool
@@ -58,3 +58,16 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
 
   I numeri mostrati vengono sempre dal miner, mai dal modello. Test con lo storico sintetico
   di `test/fakeActivity.ts`.
+- Verifica (`server/src/verify/`):
+  - `collect.ts` legge configurazioni (caricata e dell'editor, che decide se è modificabile),
+    tracce, statistiche delle soglie e Registro attività delle entità comandate;
+  - `rules.ts` (V1–V6, V9, V10) e `dynamic.ts` (V7–V8) producono i problemi in modo
+    deterministico; `timepattern.ts` e `similar.ts` sono i casi delicati (somiglianze prudenti:
+    stesse parole e stessi numeri);
+  - `fixes.ts` applica le correzioni meccaniche alla config dell'editor e `service.ts` le
+    passa a `DraftService.propose` con `sostituisce`;
+  - l'analisi approfondita va a lotti di 5 con output strutturato, come Suggerisci.
+
+  Le firme dei problemi (`regola:codice:id automazione:chiave`) servono a "Ignora": se le cambi,
+  i problemi ignorati ricompaiono. Test con la casa sintetica di `test/fakeVerify.ts`, che è
+  anche quella dell'anteprima.
