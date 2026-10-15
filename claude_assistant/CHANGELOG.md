@@ -3,6 +3,32 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.7.0] — 2026-10-15
+### Aggiunto
+- **Manutenzione** nella pagina Dispositivi (seconda scheda, accanto a "Modelli e schede").
+  È un controllo gratuito, senza Claude, e nessun dato esce dalla casa. Trova:
+  - integrazioni in errore o che chiedono di ripetere l'accesso;
+  - dispositivi offline da almeno 30 giorni, con la data dallo storico o dalle statistiche
+    dei sensori;
+  - entità non più fornite dall'integrazione;
+  - stanze da controllare, dall'app Hue (sicure) o dal nome (da verificare);
+  - dispositivi senza area con un indizio;
+  - oggetti collegati sia in locale sia via cloud;
+  - batterie sotto il 20% e firmware da aggiornare.
+- Modifiche con un tocco:
+  - **Sposta in…** e **Disattiva**, che si annullano anche dalle "Modifiche recenti";
+  - **Elimina dispositivo** (se l'integrazione lo consente) ed **Elimina entità**, con
+    conferma.
+
+  Prima di ogni modifica si rilegge lo stato e, se è cambiato, ci si ferma. Ogni
+  segnalazione mostra le automazioni e gli script che usano il dispositivo. I dispositivi di
+  sicurezza chiedono conferma anche per la disattivazione. Ci sono anche **Ignora** e le
+  azioni di gruppo per le stanze sicure e le entità non più fornite.
+### Corretto
+- Compatibilità con i registri di Home Assistant 2026.9, che ha diviso i dispositivi
+  condivisi da più integrazioni: gli id dei dispositivi "composti", ancora validi nelle
+  automazioni, non risultano più inesistenti nelle bozze e in Verifica.
+
 ## [0.6.4] — 2026-10-15
 ### Modificato
 - **Notifiche**: prima di creare un'automazione che manda una notifica, Claude chiede su

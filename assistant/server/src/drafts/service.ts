@@ -118,7 +118,11 @@ export class DraftService {
     }
     return {
       entities,
-      devices: new Set(reg.devices.filter((d) => !d.disabled_by).map((d) => d.id)),
+      devices: new Set([
+        ...reg.devices.filter((d) => !d.disabled_by).map((d) => d.id),
+        // Id dei dispositivi compositi di prima della 2026.9: HA li risolve ancora sui dispositivi divisi.
+        ...Object.keys(reg.compositeDevices ?? {}),
+      ]),
       areas: new Set(reg.areas.map((a) => a.area_id)),
       floors: new Set(reg.floors.map((f) => f.floor_id)),
       labels: new Set(reg.labels.map((l) => l.label_id)),

@@ -413,6 +413,71 @@ export interface DeviceCard {
   study: { model: string; effort: string; costUsd: number; searches: number; fetches: number; queries: string[]; durationMs: number }
 }
 
+export type MaintenanceKind = 'offline' | 'orfane' | 'stanza' | 'senza_area' | 'doppione' | 'integrazione' | 'batteria' | 'aggiornamento'
+
+export type MaintenanceAction =
+  | { type: 'sposta'; deviceId: string; areaId: string; areaName: string; from: string | null }
+  | { type: 'disattiva'; deviceId: string }
+  | { type: 'elimina_dispositivo'; deviceId: string; configEntryId: string }
+  | { type: 'elimina_entita'; entityIds: string[] }
+
+export interface MaintenanceDevice {
+  id: string
+  name: string
+  area: string | null
+  integration: string | null
+  model: string | null
+}
+
+export interface MaintenanceIssue {
+  id: string
+  kind: MaintenanceKind
+  signature: string
+  severity: 'avviso' | 'info'
+  confidence?: 'certa' | 'da_verificare'
+  title: string
+  detail: string
+  device?: MaintenanceDevice
+  entities?: string[]
+  actions: MaintenanceAction[]
+  link?: string
+  usedBy?: Array<{ entityId: string; name: string }>
+  critical?: string
+  applied?: { action: MaintenanceAction['type']; at: string; by: string; historyId: string; undone?: boolean }
+}
+
+export interface MaintenanceChange {
+  id: string
+  at: string
+  by: string
+  issueId: string
+  signature: string
+  title: string
+  action: MaintenanceAction
+  before: { area_id?: string | null; disabled_by?: string | null } | null
+  removed?: string[]
+  undone?: { at: string; by: string }
+}
+
+export interface MaintenanceRun {
+  id: string
+  createdAt: string
+  by: string
+  durationMs: number
+  coverageDays: number
+  issues: MaintenanceIssue[]
+  counts: Record<MaintenanceKind, number>
+  unassigned: MaintenanceDevice[]
+}
+
+export interface MaintenanceOverview {
+  run: MaintenanceRun | null
+  running: boolean
+  ignored: Array<{ signature: string; title: string; at: string; by: string }>
+  history: MaintenanceChange[]
+  canWrite: boolean
+}
+
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message)
@@ -496,4 +561,11 @@ export const api = {
   approveAllCards: (slugs: string[]) => call<{ approved: number }>('POST', 'api/devices/approve-all', { slugs }),
   deviceIdeas: (slug: string) => call<{ conversationId: string }>('POST', `api/devices/cards/${slug}/chat`, {}),
   deleteCard: (slug: string) => call<{ removed: boolean }>('DELETE', `api/devices/cards/${slug}`),
+  maintenance: () => getJson<MaintenanceOverview>('api/maintenance'),
+  checkMaintenance: () => call<MaintenanceOverview>('POST', 'api/maintenance/check', {}),
+  applyMaintenance: (id: string, action: number, confirm: boolean) =>
+    call<MaintenanceOverview & { change: MaintenanceChange }>('POST', `api/maintenance/issues/${id}/apply`, { action, confirm }),
+  undoMaintenance: (changeId: string) => call<MaintenanceOverview & { change: MaintenanceChange }>('POST', `api/maintenance/changes/${changeId}/undo`, {}),
+  ignoreMaintenance: (id: string) => call<MaintenanceOverview>('POST', `api/maintenance/issues/${id}/ignore`, {}),
+  unignoreMaintenance: (signature: string) => call<MaintenanceOverview>('POST', 'api/maintenance/unignore', { signature }),
 }

@@ -1,6 +1,7 @@
 import type { HAConnection } from './connection.ts'
 import {
   toAreaEntry,
+  toCompositeSplits,
   toDeviceEntry,
   toEntityEntry,
   toFloorEntry,
@@ -24,6 +25,9 @@ export const READ_TYPES = new Set([
   'config/label_registry/list',
   'config/category_registry/list',
   'config_entries/get',
+  // Integrazioni che chiedono di ripetere l'accesso (Manutenzione).
+  'config_entries/flow/progress',
+  'config/device_registry/list_composite_splits',
   // Nomi e tipo degli utenti: distinguono azioni manuali e strumenti esterni (restano nell'add-on).
   'config/auth/list',
   'automation/config',
@@ -193,7 +197,7 @@ export class HAData implements HAReader {
   }
 
   private async loadRegistries(): Promise<Registries> {
-    const [entities, devices, areas, floors, labels, categories, entries] = await Promise.all([
+    const [entities, devices, areas, floors, labels, categories, entries, splits] = await Promise.all([
       this.call<Json[]>({ type: 'config/entity_registry/list' }, 60_000),
       this.call<Json[]>({ type: 'config/device_registry/list' }, 60_000),
       this.call<Json[]>({ type: 'config/area_registry/list' }),
@@ -201,6 +205,8 @@ export class HAData implements HAReader {
       this.call<Json[]>({ type: 'config/label_registry/list' }).catch(() => [] as Json[]),
       this.call<Json[]>({ type: 'config/category_registry/list', scope: 'automation' }).catch(() => [] as Json[]),
       this.call<Json[]>({ type: 'config_entries/get' }).catch(() => [] as Json[]),
+      // Solo da HA 2026.9: prima il comando non esiste.
+      this.call<unknown>({ type: 'config/device_registry/list_composite_splits' }).catch(() => ({})),
     ])
     return {
       entities: entities.map(toEntityEntry),
@@ -210,6 +216,7 @@ export class HAData implements HAReader {
       labels: labels.map((l) => ({ label_id: String(l.label_id), name: String(l.name ?? l.label_id) })),
       automationCategories: categories.map((c) => ({ category_id: String(c.category_id), name: String(c.name ?? c.category_id) })),
       configEntryDomain: Object.fromEntries(entries.map((e) => [String(e.entry_id), String(e.domain)])),
+      compositeDevices: toCompositeSplits(splits),
       loadedAt: Date.now(),
     }
   }

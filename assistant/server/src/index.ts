@@ -26,6 +26,9 @@ import { verifyRoutes } from './verify/routes.ts'
 import { KbStore } from './devices/kb.ts'
 import { DevicesService } from './devices/service.ts'
 import { devicesRoutes } from './devices/routes.ts'
+import { MaintenanceStore } from './maintenance/store.ts'
+import { MaintenanceService } from './maintenance/service.ts'
+import { maintenanceRoutes } from './maintenance/routes.ts'
 import { resolveEndpoints } from './ha/env.ts'
 import { HAConnection } from './ha/connection.ts'
 import { HARest, supervisorSelfInfo } from './ha/rest.ts'
@@ -82,6 +85,9 @@ async function main(): Promise<void> {
   const devices = new DevicesService({ kb, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null })
   const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? undefined, devices })
   devices.attachChat(chat)
+  const maintenanceStore = new MaintenanceStore(DATA_DIR)
+  await maintenanceStore.load()
+  const maintenance = new MaintenanceService({ store: maintenanceStore, ha, writer })
   // Preventivo gratuito: countTokens con lo stesso modello, prompt e schema della richiesta vera.
   const count = client
     ? async (params: Record<string, unknown>) => (await client.beta.messages.countTokens(params as unknown as Parameters<typeof client.beta.messages.countTokens>[0])).input_tokens
@@ -101,6 +107,7 @@ async function main(): Promise<void> {
       ...suggestRoutes({ service: suggest, store: suggestStore, settings, usage, options, ha }),
       ...verifyRoutes({ service: verify, store: verifyStore, usage, options }),
       ...devicesRoutes({ service: devices, usage, options }),
+      ...maintenanceRoutes(maintenance),
     ],
     wwwDir: findWwwDir(),
     access: { mode: endpoints.mode, isAdmin: (id) => admins.isAdmin(id) },

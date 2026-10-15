@@ -270,7 +270,7 @@ var init_values = __esm({
 var sleep;
 var init_sleep = __esm({
   "../node_modules/@anthropic-ai/sdk/internal/utils/sleep.mjs"() {
-    sleep = (ms2, signal) => new Promise((resolve4) => {
+    sleep = (ms3, signal) => new Promise((resolve4) => {
       if (signal?.aborted)
         return resolve4();
       const onAbort = () => {
@@ -280,7 +280,7 @@ var init_sleep = __esm({
       const timer = setTimeout(() => {
         signal?.removeEventListener("abort", onAbort);
         resolve4();
-      }, ms2);
+      }, ms3);
       signal?.addEventListener("abort", onAbort, { once: true });
     });
   }
@@ -1809,11 +1809,11 @@ function resolveCredentialsFromConfig(config2, options) {
   return { provider, extraHeaders, baseURL: config2.base_url || void 0 };
 }
 async function defaultCredentials(options, profile) {
-  const loaded = await loadConfigWithSource(profile);
-  if (!loaded) {
+  const loaded2 = await loadConfigWithSource(profile);
+  if (!loaded2) {
     return null;
   }
-  const { config: config2, fromFile } = loaded;
+  const { config: config2, fromFile } = loaded2;
   const withPath = config2.authentication.credentials_path || !fromFile ? config2 : {
     ...config2,
     authentication: {
@@ -6253,8 +6253,8 @@ function backoff(attempt, baseMs, capMs) {
 function jitter(lowMs, highMs) {
   return lowMs + Math.random() * (highMs - lowMs);
 }
-function applyJitter(ms2) {
-  return ms2 * (1 - Math.random() * 0.25);
+function applyJitter(ms3) {
+  return ms3 * (1 - Math.random() * 0.25);
 }
 var init_backoff = __esm({
   "../node_modules/@anthropic-ai/sdk/internal/utils/backoff.mjs"() {
@@ -6613,10 +6613,10 @@ function toolName(tool) {
 function toolErrorContent(e) {
   return e instanceof ToolError ? e.content : thrownErrorText(e);
 }
-async function runRunnableTool(tool, rawInput, context) {
+async function runRunnableTool(tool, rawInput, context2) {
   try {
     const input2 = tool.parse ? tool.parse(rawInput) : rawInput;
-    const content = await tool.run(input2, context);
+    const content = await tool.run(input2, context2);
     return { content, isError: false };
   } catch (e) {
     return { content: toolErrorContent(e), isError: true };
@@ -6810,8 +6810,8 @@ var init_SessionToolRunner = __esm({
          * `EnvironmentWorker` keeps this equal to the lease TTL each heartbeat
          * reports; applies to a send already retrying.
          */
-        _setSendRetryWindow(ms2) {
-          __classPrivateFieldSet(this, _SessionToolRunner_sendRetryWindowMs, ms2, "f");
+        _setSendRetryWindow(ms3) {
+          __classPrivateFieldSet(this, _SessionToolRunner_sendRetryWindowMs, ms3, "f");
         }
         async *[(_SessionToolRunner_consumed = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_controller = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_detachExternal = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_requestOpts = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_toolByName = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_logger = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_seen = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_answered = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_confirmationVerdicts = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_awaitingConfirmation = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_results = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_inFlightCount = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_sendRetryWindowMs = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_onIdle = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_idleClock = /* @__PURE__ */ new WeakMap(), _SessionToolRunner_instances = /* @__PURE__ */ new WeakSet(), Symbol.asyncIterator)]() {
           if (__classPrivateFieldGet(this, _SessionToolRunner_consumed, "f")) {
@@ -7173,9 +7173,9 @@ var init_SessionToolRunner = __esm({
 });
 
 // ../node_modules/@anthropic-ai/sdk/tools/agent-toolset/sync-interval.mjs
-function checkMemorySyncInterval(ms2, option) {
-  if (!(ms2 >= MIN_MEMORY_SYNC_INTERVAL_MS)) {
-    throw new AnthropicError(`${option} must be at least ${MIN_MEMORY_SYNC_INTERVAL_MS}ms (got ${ms2}); to run without memory sync, pass \`memorySyncIntervalMs: null\` to the worker instead`);
+function checkMemorySyncInterval(ms3, option) {
+  if (!(ms3 >= MIN_MEMORY_SYNC_INTERVAL_MS)) {
+    throw new AnthropicError(`${option} must be at least ${MIN_MEMORY_SYNC_INTERVAL_MS}ms (got ${ms3}); to run without memory sync, pass \`memorySyncIntervalMs: null\` to the worker instead`);
   }
 }
 var DEFAULT_MEMORY_SYNC_INTERVAL_MS, MIN_MEMORY_SYNC_INTERVAL_MS;
@@ -8807,7 +8807,7 @@ function betaBashTool(ctx) {
         timeout_ms: { type: "integer", description: "Per-call timeout in milliseconds" }
       }
     },
-    run: async ({ command, restart, timeout_ms }, context) => {
+    run: async ({ command, restart, timeout_ms }, context2) => {
       const prev = tail;
       const gate = promiseWithResolvers();
       tail = gate.promise;
@@ -8829,7 +8829,7 @@ function betaBashTool(ctx) {
         try {
           const { output: output2, exitCode } = await session.exec(command, {
             timeoutMs: timeout_ms ?? BASH_DEFAULT_TIMEOUT_MS,
-            signal: context?.signal
+            signal: context2?.signal
           });
           if (exitCode !== 0)
             throw new ToolError(output2 || `exit ${exitCode}`);
@@ -9085,14 +9085,14 @@ function betaGrepTool(ctx) {
       properties: { pattern: { type: "string" }, path: { type: "string" } },
       required: ["pattern"]
     },
-    run: async ({ pattern, path: p }, context) => {
+    run: async ({ pattern, path: p }, context2) => {
       if (!pattern)
         throw new ToolError("grep: pattern is required");
       let searchPath = path3.resolve(ctx.workdir);
       if (p)
         searchPath = await resolvePath(ctx, p);
       const rg = await findRg();
-      return rg ? runRipgrep(rg, pattern, searchPath, context?.signal) : runWalkGrep(pattern, searchPath, context?.signal);
+      return rg ? runRipgrep(rg, pattern, searchPath, context2?.signal) : runWalkGrep(pattern, searchPath, context2?.signal);
     }
   });
 }
@@ -9464,13 +9464,13 @@ function sessionsTokenFromSecret(secret) {
   const token = parsed.sessions_token;
   return typeof token === "string" && token !== "" ? token : null;
 }
-async function withTimeout(p, ms2) {
+async function withTimeout(p, ms3) {
   let timer;
   try {
     return await Promise.race([
       p.then(() => false, () => false),
       new Promise((resolve4) => {
-        timer = setTimeout(() => resolve4(true), ms2);
+        timer = setTimeout(() => resolve4(true), ms3);
       })
     ]);
   } finally {
@@ -20686,7 +20686,7 @@ var init_client = __esm({
           const request = this.makeRequest(options, null, void 0);
           return new PagePromise(this, request, Page2);
         }
-        async fetchWithTimeout(url2, init, ms2, controller, requestOptions, logCtx) {
+        async fetchWithTimeout(url2, init, ms3, controller, requestOptions, logCtx) {
           const { signal, method, ...options } = init || {};
           const abort = this._makeAbort(controller);
           if (signal) {
@@ -20705,7 +20705,7 @@ var init_client = __esm({
           }
           const baseFetch = this.fetch;
           const timedFetch = async (innerUrl, innerInit) => {
-            const timeout = setTimeout(abort, ms2);
+            const timeout = setTimeout(abort, ms3);
             try {
               return await baseFetch.call(void 0, innerUrl, innerInit);
             } finally {
@@ -26247,15 +26247,15 @@ var require_cst_scalar = __commonJS({
       }
       return null;
     }
-    function createScalarToken(value, context) {
-      const { implicitKey = false, indent, inFlow = false, offset = -1, type = "PLAIN" } = context;
+    function createScalarToken(value, context2) {
+      const { implicitKey = false, indent, inFlow = false, offset = -1, type = "PLAIN" } = context2;
       const source = stringifyString.stringifyString({ type, value }, {
         implicitKey,
         indent: indent > 0 ? " ".repeat(indent) : "",
         inFlow,
         options: { blockQuote: true, lineWidth: -1 }
       });
-      const end = context.end ?? [
+      const end = context2.end ?? [
         { type: "newline", offset: -1, indent, source: "\n" }
       ];
       switch (source[0]) {
@@ -26279,8 +26279,8 @@ var require_cst_scalar = __commonJS({
           return { type: "scalar", offset, indent, source, end };
       }
     }
-    function setScalarValue(token, value, context = {}) {
-      let { afterKey = false, implicitKey = false, inFlow = false, type } = context;
+    function setScalarValue(token, value, context2 = {}) {
+      let { afterKey = false, implicitKey = false, inFlow = false, type } = context2;
       let indent = "indent" in token ? token.indent : null;
       if (afterKey && typeof indent === "number")
         indent += 2;
@@ -28573,18 +28573,18 @@ var READ_ONLY_WS_TYPES = /* @__PURE__ */ new Set([
   "ping"
 ]);
 function readOnly(conn) {
-  const guard5 = (msg) => {
+  const guard6 = (msg) => {
     if (!READ_ONLY_WS_TYPES.has(String(msg.type))) {
       throw new Error(`Comando non ammesso in diagnostica: ${String(msg.type)}`);
     }
   };
   return {
     call(msg, timeoutMs) {
-      guard5(msg);
+      guard6(msg);
       return conn.sendMessage(msg, timeoutMs);
     },
     async subscribeOnce(msg, waitMs) {
-      guard5(msg);
+      guard6(msg);
       let first = void 0;
       let got;
       const arrived = new Promise((r) => got = r);
@@ -28947,7 +28947,7 @@ function publicOptions(o) {
 }
 
 // src/version.ts
-var VERSION2 = true ? "0.6.4" : "dev";
+var VERSION2 = true ? "0.7.0" : "dev";
 
 // src/routes.ts
 function buildRoutes(deps) {
@@ -29527,8 +29527,8 @@ function monthKey(d, tz) {
   const p = localParts(d, tz);
   return `${p.year}-${p.month}`;
 }
-function formatDuration(ms2) {
-  const s2 = Math.round(ms2 / 1e3);
+function formatDuration(ms3) {
+  const s2 = Math.round(ms3 / 1e3);
   if (s2 < 60) return `${s2} s`;
   const m = Math.round(s2 / 60);
   if (m < 60) return `${m} min`;
@@ -48439,7 +48439,7 @@ function resolveRef(ref, ctx) {
   throw new Error(`Reference not found: ${ref}`);
 }
 function checkObjectGuards(objectSchema, guards) {
-  const guard5 = z.transform((value) => value).check((payload) => {
+  const guard6 = z.transform((value) => value).check((payload) => {
     const value = payload.value;
     if (typeof value !== "object" || value === null || Array.isArray(value))
       return;
@@ -48484,7 +48484,7 @@ function checkObjectGuards(objectSchema, guards) {
       }
     }
   });
-  return guard5.pipe(objectSchema);
+  return guard6.pipe(objectSchema);
 }
 function canonicalKey(value, seen) {
   if (value === null)
@@ -48568,7 +48568,7 @@ function plural(n) {
   return n === 1 ? "element" : "elements";
 }
 function checkArrayGuards(arraySchema, guards) {
-  const guard5 = z.transform((value) => value).check((payload) => {
+  const guard6 = z.transform((value) => value).check((payload) => {
     const items = payload.value;
     if (!Array.isArray(items))
       return;
@@ -48618,7 +48618,7 @@ function checkArrayGuards(arraySchema, guards) {
       }
     }
   });
-  return guard5.pipe(arraySchema);
+  return guard6.pipe(arraySchema);
 }
 function getTupleRest(restSchema, ctx) {
   if (restSchema === false) {
@@ -49300,7 +49300,8 @@ function toEntityEntry(raw) {
     name: str2(raw.name),
     original_name: str2(raw.original_name),
     labels: strList(raw.labels),
-    categories: Object.fromEntries(Object.entries(cats).filter(([, v]) => typeof v === "string"))
+    categories: Object.fromEntries(Object.entries(cats).filter(([, v]) => typeof v === "string")),
+    config_entry_id: str2(raw.config_entry_id)
   };
 }
 function toDeviceEntry(raw) {
@@ -49314,12 +49315,24 @@ function toDeviceEntry(raw) {
     area_id: str2(raw.area_id),
     disabled_by: str2(raw.disabled_by),
     entry_type: str2(raw.entry_type),
-    primary_config_entry: str2(raw.primary_config_entry),
-    config_entries: strList(raw.config_entries),
+    // Dalla 2026.9 ogni dispositivo ha una sola integrazione (config_entry_id); i campi al
+    // plurale restano per compatibilità, e i dispositivi figli non li hanno affatto.
+    primary_config_entry: str2(raw.primary_config_entry) ?? str2(raw.config_entry_id),
+    config_entries: strList(raw.config_entries).length ? strList(raw.config_entries) : str2(raw.config_entry_id) ? [str2(raw.config_entry_id)] : [],
     via_device_id: str2(raw.via_device_id),
     sw_version: str2(raw.sw_version),
-    labels: strList(raw.labels)
+    labels: strList(raw.labels),
+    parent_device_id: str2(raw.parent_device_id)
   };
+}
+function toCompositeSplits(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [id, v] of Object.entries(raw)) {
+    const x = v;
+    out[id] = { splitIds: strList(x?.split_ids), primaryId: str2(x?.primary_id) };
+  }
+  return out;
 }
 function toAreaEntry(raw) {
   return { area_id: String(raw.area_id), name: String(raw.name ?? raw.area_id), floor_id: str2(raw.floor_id), aliases: strList(raw.aliases) };
@@ -50039,7 +50052,7 @@ function summarizeSeries(samples, opts) {
   const segments = clipped.map((x, i) => ({ s: x.s, from: x.t, to: i + 1 < clipped.length ? clipped[i + 1].t : endMs }));
   const periodMs = Math.max(endMs - startMs, 1);
   const firstAt = clipped[0]?.t ?? startMs;
-  const coverage2 = firstAt > startMs + 6e4 ? { dati_dal: fmt(firstAt) } : {};
+  const coverage3 = firstAt > startMs + 6e4 ? { dati_dal: fmt(firstAt) } : {};
   const unavailableMs = segments.filter((g) => UNAVAILABLE.has(g.s)).reduce((a, g) => a + (g.to - g.from), 0);
   const unavailable = unavailableMs > 0 ? { non_disponibile: `${formatDuration(unavailableMs)} (${Math.round(unavailableMs / periodMs * 100)}%)` } : {};
   if (isNumeric(clipped)) {
@@ -50086,7 +50099,7 @@ function summarizeSeries(samples, opts) {
       max: num2.length ? { valore: round(max), alle: fmt(maxAt) } : null,
       media_nel_tempo: total ? round(weighted / total) : null,
       ultimo: last ? { valore: round(Number(last.s)), dalle: fmt(last.from) } : null,
-      ...coverage2,
+      ...coverage3,
       ...unavailable,
       fasce
     };
@@ -50104,11 +50117,11 @@ function summarizeSeries(samples, opts) {
     tipo: "stati",
     cambi: changes.length,
     tempo_per_stato: Object.fromEntries(
-      statesSorted.slice(0, 12).map(([s2, ms2]) => [s2, `${formatDuration(ms2)} (${Math.round(ms2 / periodMs * 100)}%)`])
+      statesSorted.slice(0, 12).map(([s2, ms3]) => [s2, `${formatDuration(ms3)} (${Math.round(ms3 / periodMs * 100)}%)`])
     ),
     ingressi_per_stato: Object.fromEntries([...entries.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12)),
     stato_attuale: segments.length ? { stato: segments[segments.length - 1].s, dalle: fmt(segments[segments.length - 1].from) } : null,
-    ...coverage2,
+    ...coverage3,
     ...unavailable,
     ultimi_cambi: changes.slice(-maxT).map((g) => ({ alle: fmt(g.from), stato: g.s, durata: formatDuration(g.to - g.from) }))
   };
@@ -50969,6 +50982,24 @@ var HAWriter = class {
   async createInputBoolean(name, icon) {
     return this.conn.sendMessage({ type: "input_boolean/create", name, icon });
   }
+  async updateDevice(deviceId, patch) {
+    if (!/^[0-9a-f]{32}$/.test(deviceId)) throw new WriteError(400, `id di dispositivo non valido: ${deviceId}`);
+    await this.conn.sendMessage({ type: "config/device_registry/update", device_id: deviceId, ...patch });
+  }
+  async removeDevice(deviceId, configEntryId) {
+    if (!/^[0-9a-f]{32}$/.test(deviceId)) throw new WriteError(400, `id di dispositivo non valido: ${deviceId}`);
+    try {
+      await this.conn.sendMessage({ type: "config/device_registry/remove", device_id: deviceId }, 3e4);
+    } catch (err) {
+      const unknown2 = err.code === "unknown_command" || /unknown command/i.test(err instanceof Error ? err.message : String(err));
+      if (!unknown2) throw err;
+      await this.conn.sendMessage({ type: "config/device_registry/remove_config_entry", device_id: deviceId, config_entry_id: configEntryId }, 3e4);
+    }
+  }
+  async removeEntity(entityId) {
+    if (!/^[a-z_][a-z0-9_]*\.[a-z0-9_]+$/.test(entityId)) throw new WriteError(400, `entity_id non valido: ${entityId}`);
+    await this.conn.sendMessage({ type: "config/entity_registry/remove", entity_id: entityId });
+  }
   async setEnabled(entityId, enabled) {
     if (!entityId.startsWith("automation.")) throw new WriteError(400, "Si possono attivare o disattivare solo automazioni");
     await this.conn.sendMessage({ type: "call_service", domain: "automation", service: enabled ? "turn_on" : "turn_off", target: { entity_id: entityId } });
@@ -51348,7 +51379,7 @@ var DraftService = class {
   constructor(deps) {
     this.deps = deps;
     this.now = deps.now ?? (() => /* @__PURE__ */ new Date());
-    this.sleep = deps.sleep ?? ((ms2) => new Promise((r) => setTimeout(r, ms2)));
+    this.sleep = deps.sleep ?? ((ms3) => new Promise((r) => setTimeout(r, ms3)));
   }
   deps;
   queue = Promise.resolve();
@@ -51379,7 +51410,11 @@ var DraftService = class {
     }
     return {
       entities,
-      devices: new Set(reg.devices.filter((d) => !d.disabled_by).map((d) => d.id)),
+      devices: /* @__PURE__ */ new Set([
+        ...reg.devices.filter((d) => !d.disabled_by).map((d) => d.id),
+        // Id dei dispositivi compositi di prima della 2026.9: HA li risolve ancora sui dispositivi divisi.
+        ...Object.keys(reg.compositeDevices ?? {})
+      ]),
       areas: new Set(reg.areas.map((a) => a.area_id)),
       floors: new Set(reg.floors.map((f) => f.floor_id)),
       labels: new Set(reg.labels.map((l) => l.label_id)),
@@ -51515,8 +51550,8 @@ var DraftService = class {
       attempts += 1;
       if (!entityId) entityId = await this.findEntity(automationId, alias, attempts % 6 === 0);
       if (entityId) {
-        const loaded = await this.deps.writer.loadedConfig(entityId);
-        if (loaded && configHash(loaded) === want) return { entityId, state: await this.deps.writer.getState(entityId) };
+        const loaded2 = await this.deps.writer.loadedConfig(entityId);
+        if (loaded2 && configHash(loaded2) === want) return { entityId, state: await this.deps.writer.getState(entityId) };
       }
       await this.sleep(pollMs);
     }
@@ -51570,43 +51605,43 @@ var DraftService = class {
       }
       const written = await writer.getConfig(automationId);
       const writtenHash = configHash(written ?? d.config);
-      const loaded = await this.waitLoaded(automationId, d.alias, d.target?.entityId ?? null, d.config);
-      if (loaded.state?.state === "unavailable") {
+      const loaded2 = await this.waitLoaded(automationId, d.alias, d.target?.entityId ?? null, d.config);
+      if (loaded2.state?.state === "unavailable") {
         if (d.kind === "create") await writer.remove(automationId).catch(() => void 0);
         else if (backupFile) {
           const before2 = await store.readBackup(backupFile);
           if (before2) await writer.save(automationId, before2).catch(() => void 0);
         }
-        await store.record({ ts, by: opts.by, action: "rollback_automatico", automationId, entityId: loaded.entityId, alias: d.alias, draftId: d.id, conversationId: d.conversationId, backupFile });
+        await store.record({ ts, by: opts.by, action: "rollback_automatico", automationId, entityId: loaded2.entityId, alias: d.alias, draftId: d.id, conversationId: d.conversationId, backupFile });
         d.lastError = "Home Assistant non \xE8 riuscito a caricare l\u2019automazione: modifica annullata automaticamente.";
         await store.save(d);
         throw new DraftError(502, "non_caricata", d.lastError);
       }
       let warning;
-      if (!loaded.state) warning = "Home Assistant non ha ancora ricaricato l\u2019automazione: controlla tra qualche secondo.";
-      if (d.kind === "create" && loaded.entityId) {
+      if (!loaded2.state) warning = "Home Assistant non ha ancora ricaricato l\u2019automazione: controlla tra qualche secondo.";
+      if (d.kind === "create" && loaded2.entityId) {
         try {
-          await writer.setCategory(loaded.entityId, await writer.ensureCategory(CATEGORY_NAME, CATEGORY_ICON));
+          await writer.setCategory(loaded2.entityId, await writer.ensureCategory(CATEGORY_NAME, CATEGORY_ICON));
         } catch (err) {
           log.warn('Categoria "Claude" non assegnata', err instanceof Error ? err.message : err);
         }
         if (!opts.enabled) {
           try {
-            await writer.setEnabled(loaded.entityId, false);
+            await writer.setEnabled(loaded2.entityId, false);
           } catch {
             warning = "Creata ma non \xE8 stato possibile disattivarla: fallo dall\u2019elenco delle automazioni.";
           }
         }
       }
       d.status = "applied";
-      d.applied = { at: ts, by: opts.by, automationId, entityId: loaded.entityId, enabled: d.kind === "create" ? opts.enabled : true, writtenHash, backupFile, ...warning ? { warning } : {} };
+      d.applied = { at: ts, by: opts.by, automationId, entityId: loaded2.entityId, enabled: d.kind === "create" ? opts.enabled : true, writtenHash, backupFile, ...warning ? { warning } : {} };
       delete d.lastError;
       await store.save(d);
-      await store.record({ ts, by: opts.by, action: d.kind === "create" ? "creata" : "modificata", automationId, entityId: loaded.entityId, alias: d.alias, draftId: d.id, conversationId: d.conversationId, backupFile });
-      log.info(`Automazione ${d.kind === "create" ? "creata" : "modificata"}: ${d.alias} (${loaded.entityId ?? automationId}) da ${opts.by}`);
+      await store.record({ ts, by: opts.by, action: d.kind === "create" ? "creata" : "modificata", automationId, entityId: loaded2.entityId, alias: d.alias, draftId: d.id, conversationId: d.conversationId, backupFile });
+      log.info(`Automazione ${d.kind === "create" ? "creata" : "modificata"}: ${d.alias} (${loaded2.entityId ?? automationId}) da ${opts.by}`);
       await this.event(
         d.conversationId,
-        d.kind === "create" ? `L'utente ha creato l'automazione "${d.alias}" dalla bozza ${d.id}: ${loaded.entityId ?? "entity_id non ancora disponibile"}, id ${automationId}, ${opts.enabled ? "attiva" : "disattivata"}.` : `L'utente ha applicato la bozza ${d.id}: l'automazione "${d.alias}" (${loaded.entityId}) \xE8 stata modificata.`
+        d.kind === "create" ? `L'utente ha creato l'automazione "${d.alias}" dalla bozza ${d.id}: ${loaded2.entityId ?? "entity_id non ancora disponibile"}, id ${automationId}, ${opts.enabled ? "attiva" : "disattivata"}.` : `L'utente ha applicato la bozza ${d.id}: l'automazione "${d.alias}" (${loaded2.entityId}) \xE8 stata modificata.`
       );
       return d;
     });
@@ -51860,6 +51895,9 @@ var READ_TYPES = /* @__PURE__ */ new Set([
   "config/label_registry/list",
   "config/category_registry/list",
   "config_entries/get",
+  // Integrazioni che chiedono di ripetere l'accesso (Manutenzione).
+  "config_entries/flow/progress",
+  "config/device_registry/list_composite_splits",
   // Nomi e tipo degli utenti: distinguono azioni manuali e strumenti esterni (restano nell'add-on).
   "config/auth/list",
   "automation/config",
@@ -52000,14 +52038,16 @@ var HAData = class {
     return this.regCache;
   }
   async loadRegistries() {
-    const [entities, devices, areas, floors, labels, categories, entries] = await Promise.all([
+    const [entities, devices, areas, floors, labels, categories, entries, splits] = await Promise.all([
       this.call({ type: "config/entity_registry/list" }, 6e4),
       this.call({ type: "config/device_registry/list" }, 6e4),
       this.call({ type: "config/area_registry/list" }),
       this.call({ type: "config/floor_registry/list" }).catch(() => []),
       this.call({ type: "config/label_registry/list" }).catch(() => []),
       this.call({ type: "config/category_registry/list", scope: "automation" }).catch(() => []),
-      this.call({ type: "config_entries/get" }).catch(() => [])
+      this.call({ type: "config_entries/get" }).catch(() => []),
+      // Solo da HA 2026.9: prima il comando non esiste.
+      this.call({ type: "config/device_registry/list_composite_splits" }).catch(() => ({}))
     ]);
     return {
       entities: entities.map(toEntityEntry),
@@ -52017,6 +52057,7 @@ var HAData = class {
       labels: labels.map((l) => ({ label_id: String(l.label_id), name: String(l.name ?? l.label_id) })),
       automationCategories: categories.map((c) => ({ category_id: String(c.category_id), name: String(c.name ?? c.category_id) })),
       configEntryDomain: Object.fromEntries(entries.map((e) => [String(e.entry_id), String(e.domain)])),
+      compositeDevices: toCompositeSplits(splits),
       loadedAt: Date.now()
     };
   }
@@ -53420,16 +53461,16 @@ function mineForgotten(ctx, out, deferred) {
       const episodes = [];
       for (const [s1, e1] of on) {
         for (const [s2, e2] of away) {
-          const ms2 = Math.min(e1, e2) - Math.max(s1, s2);
-          if (ms2 >= 20 * 6e4) episodes.push({ t: Math.max(s1, s2), ms: ms2 });
+          const ms3 = Math.min(e1, e2) - Math.max(s1, s2);
+          if (ms3 >= 20 * 6e4) episodes.push({ t: Math.max(s1, s2), ms: ms3 });
         }
       }
       const days = new Set(episodes.map((ep) => ctx.clock.at(ep.t).day));
       if (days.size >= 3) {
         const title = `In funzione con la casa vuota: "${meta3.name}"`;
-        const guard5 = related.find((au) => au.enabled && !au.unavailable && au.triggerEntities.some((t) => t.startsWith("person.") || t.startsWith("zone.") || t.startsWith("group.")));
-        if (guard5) {
-          deferred.push({ title, automation: guard5.alias, reason: `Un'automazione legata alla presenza agisce gi\xE0 su questa entit\xE0, ma \xE8 rimasta accesa ${days.size} volte: da rivedere in Verifica.` });
+        const guard6 = related.find((au) => au.enabled && !au.unavailable && au.triggerEntities.some((t) => t.startsWith("person.") || t.startsWith("zone.") || t.startsWith("group.")));
+        if (guard6) {
+          deferred.push({ title, automation: guard6.alias, reason: `Un'automazione legata alla presenza agisce gi\xE0 su questa entit\xE0, ma \xE8 rimasta accesa ${days.size} volte: da rivedere in Verifica.` });
         } else {
           const durations = episodes.map((ep) => ep.ms).sort((p, q) => p - q);
           const total = durations.reduce((s2, v) => s2 + v, 0);
@@ -55061,6 +55102,13 @@ async function collectVerify(ha, opts) {
   const registryIds = /* @__PURE__ */ new Map();
   for (const e of registries.entities) if (e.registry_id) registryIds.set(e.registry_id, e.entity_id);
   const devices = new Map(registries.devices.map((d) => [d.id, { name: d.name_by_user ?? d.name ?? d.id, disabled: Boolean(d.disabled_by) }]));
+  for (const [id, split] of Object.entries(registries.compositeDevices ?? {})) {
+    if (devices.has(id)) continue;
+    const parts = split.splitIds.map((x) => devices.get(x)).filter((x) => Boolean(x));
+    if (!parts.length) continue;
+    const main2 = devices.get(split.primaryId ?? "") ?? parts[0];
+    devices.set(id, { name: main2.name, disabled: parts.every((p) => p.disabled) });
+  }
   const autoStates = [...states.values()].filter((s2) => domainOf(s2.entity_id) === "automation").sort((a, b) => a.entity_id < b.entity_id ? -1 : 1);
   check2();
   progress("Configurazioni delle automazioni", 0, autoStates.length);
@@ -55069,22 +55117,22 @@ async function collectVerify(ha, opts) {
     8,
     async (s2) => {
       const id = typeof s2.attributes.id === "string" && s2.attributes.id ? s2.attributes.id : null;
-      const loaded = await ha.call({ type: "automation/config", entity_id: s2.entity_id }).then((r) => isObj2(r?.config) ? r.config : null).catch(() => null);
+      const loaded2 = await ha.call({ type: "automation/config", entity_id: s2.entity_id }).then((r) => isObj2(r?.config) ? r.config : null).catch(() => null);
       let source = "senza_id";
       if (id) {
         const editor = opts.writer ? await opts.writer.getConfig(id).catch(() => void 0) : void 0;
-        if (editor === void 0) source = loaded && "use_blueprint" in loaded ? "blueprint" : "yaml";
+        if (editor === void 0) source = loaded2 && "use_blueprint" in loaded2 ? "blueprint" : "yaml";
         else if (editor === null) source = "yaml";
         else source = "use_blueprint" in editor ? "blueprint" : "editor";
       }
-      if (loaded && "use_blueprint" in loaded && source === "editor") source = "blueprint";
+      if (loaded2 && "use_blueprint" in loaded2 && source === "editor") source = "blueprint";
       return {
         entityId: s2.entity_id,
         id,
         alias: entityName(s2.entity_id, entries.get(s2.entity_id), s2),
         state: s2.state,
         lastTriggered: ms(s2.attributes.last_triggered),
-        config: loaded,
+        config: loaded2,
         source,
         traces: []
       };
@@ -56272,16 +56320,16 @@ function buildCatalog(input2) {
   }
   const out = [];
   for (const [key, devices] of groups) {
-    const integrations = /* @__PURE__ */ new Map();
+    const integrations2 = /* @__PURE__ */ new Map();
     for (const d of devices) {
       const domain2 = integrationOf(d, registries);
       if (!domain2) continue;
       const m = input2.manifests.get(domain2);
-      const it = integrations.get(domain2) ?? { domain: domain2, name: m?.name ?? null, iotClass: m?.iotClass ?? null, documentation: m?.documentation ?? null, devices: 0 };
+      const it = integrations2.get(domain2) ?? { domain: domain2, name: m?.name ?? null, iotClass: m?.iotClass ?? null, documentation: m?.documentation ?? null, devices: 0 };
       it.devices += 1;
-      integrations.set(domain2, it);
+      integrations2.set(domain2, it);
     }
-    const pick2 = devices.find((d) => LOCAL(integrations.get(integrationOf(d, registries) ?? "")?.iotClass ?? null) && d.manufacturer && d.model) ?? devices.find((d) => d.manufacturer && d.model) ?? devices[0];
+    const pick2 = devices.find((d) => LOCAL(integrations2.get(integrationOf(d, registries) ?? "")?.iotClass ?? null) && d.manufacturer && d.model) ?? devices.find((d) => d.manufacturer && d.model) ?? devices[0];
     const kinds = {};
     for (const d of devices) {
       for (const id of enabledByDevice.get(d.id) ?? []) {
@@ -56298,7 +56346,7 @@ function buildCatalog(input2) {
       modelIds: [...new Set(devices.map((d) => d.model_id).filter((x) => Boolean(x)))].sort(),
       firmware: [...new Set(devices.map((d) => d.sw_version).filter((x) => Boolean(x)))].sort().slice(0, 5),
       devices: devices.map((d) => ({ id: d.id, name: deviceName(d), area: d.area_id ? areas.get(d.area_id) ?? null : null, integration: integrationOf(d, registries) })).sort((a, b) => a.name.localeCompare(b.name)),
-      integrations: [...integrations.values()].sort((a, b) => Number(LOCAL(b.iotClass)) - Number(LOCAL(a.iotClass)) || b.devices - a.devices || a.domain.localeCompare(b.domain)),
+      integrations: [...integrations2.values()].sort((a, b) => Number(LOCAL(b.iotClass)) - Number(LOCAL(a.iotClass)) || b.devices - a.devices || a.domain.localeCompare(b.domain)),
       entityKinds: Object.fromEntries(Object.entries(kinds).sort(([a], [b]) => a.localeCompare(b)))
     });
   }
@@ -56773,8 +56821,8 @@ var DevicesService = class {
   }
   /** Durata attesa di uno studio, per stimare quella di "Studia tutti". */
   estimateMs() {
-    const ms2 = this.deps.kb.list().map((c) => c.study.durationMs).filter((x) => x > 0).slice(-10);
-    return ms2.length ? ms2.reduce((a, b) => a + b, 0) / ms2.length : DEFAULT_ESTIMATE_MS;
+    const ms3 = this.deps.kb.list().map((c) => c.study.durationMs).filter((x) => x > 0).slice(-10);
+    return ms3.length ? ms3.reduce((a, b) => a + b, 0) / ms3.length : DEFAULT_ESTIMATE_MS;
   }
   /** Indice compatto delle schede per il prompt della chat. */
   index() {
@@ -57200,6 +57248,828 @@ function devicesRoutes(deps) {
   ];
 }
 
+// src/maintenance/store.ts
+import { join as join13 } from "node:path";
+var MaintenanceStore = class {
+  ignored;
+  lastFile;
+  historyFile;
+  run = null;
+  changes = /* @__PURE__ */ new Map();
+  constructor(dataDir, now = () => /* @__PURE__ */ new Date()) {
+    const dir = join13(dataDir, "maintenance");
+    this.lastFile = join13(dir, "last.json");
+    this.historyFile = join13(dir, "history.jsonl");
+    this.ignored = new SignatureStore(join13(dir, "ignored.json"), null, now);
+  }
+  async load() {
+    await this.ignored.load();
+    this.run = await readJson(this.lastFile, null);
+    this.changes.clear();
+    for (const line of await readJsonl(this.historyFile)) {
+      if (line.type === "modifica") {
+        const { type: _t, ...change } = line;
+        this.changes.set(change.id, change);
+      } else if (line.type === "annulla") {
+        const c = this.changes.get(line.id);
+        if (c) c.undone = { at: line.at, by: line.by };
+      }
+    }
+  }
+  last() {
+    return this.run;
+  }
+  async saveRun(run3) {
+    this.run = run3;
+    await writeJsonAtomic(this.lastFile, run3);
+  }
+  change(id) {
+    return this.changes.get(id);
+  }
+  /** Le più recenti prima. */
+  history(limit2 = 30) {
+    return [...this.changes.values()].sort((a, b) => a.at < b.at ? 1 : -1).slice(0, limit2);
+  }
+  async addChange(c) {
+    this.changes.set(c.id, c);
+    await appendJsonl(this.historyFile, { type: "modifica", ...c });
+  }
+  async markUndone(id, at, by) {
+    const c = this.changes.get(id);
+    if (!c) return;
+    c.undone = { at, by };
+    await appendJsonl(this.historyFile, { type: "annulla", id, at, by });
+  }
+};
+
+// src/maintenance/service.ts
+import { randomBytes as randomBytes7 } from "node:crypto";
+
+// src/maintenance/types.ts
+var KINDS = ["integrazione", "offline", "orfane", "stanza", "senza_area", "doppione", "batteria", "aggiornamento"];
+
+// src/maintenance/rules.ts
+var OFFLINE_DAYS = 30;
+var MIN_COVERAGE_DAYS = 7;
+var BATTERY_LOW = 20;
+var DAY2 = 864e5;
+var STATELESS = /* @__PURE__ */ new Set(["button", "input_button", "scene", "event", "notify", "update", "image", "tts", "stt", "conversation", "ai_task", "script", "automation"]);
+var LOCAL_CONSENTS = { posizione: false, telecamere: true, appMobile: false };
+var ERROR_STATES = /* @__PURE__ */ new Set(["setup_error", "setup_retry", "migration_error", "failed_unload"]);
+function context(input2) {
+  const byDevice = /* @__PURE__ */ new Map();
+  for (const e of input2.registries.entities) if (e.device_id && !e.disabled_by) byDevice.set(e.device_id, [...byDevice.get(e.device_id) ?? [], e]);
+  return {
+    input: input2,
+    devices: new Map(input2.registries.devices.map((d) => [d.id, d])),
+    areas: new Map(input2.registries.areas.map((a) => [a.area_id, a])),
+    entriesById: new Map(input2.entries.map((e) => [e.entryId, e])),
+    byDevice
+  };
+}
+function entryOf(ctx, d) {
+  const id = d.primary_config_entry ?? d.config_entries[0];
+  return id ? ctx.entriesById.get(id) : void 0;
+}
+function issueDevice(ctx, d) {
+  const entry = entryOf(ctx, d);
+  const domain2 = entry?.domain ?? null;
+  return {
+    id: d.id,
+    name: deviceName(d),
+    area: d.area_id ? ctx.areas.get(d.area_id)?.name ?? null : null,
+    integration: domain2 ? ctx.input.manifests.get(domain2)?.name ?? domain2 : null,
+    model: [d.manufacturer, d.model].filter(Boolean).join(" ") || null
+  };
+}
+var deviceLink = (id) => `/config/devices/device/${id}`;
+var loaded = (e) => !e || e.state === "loaded";
+var isLocal = (iot) => Boolean(iot?.startsWith("local"));
+function formatDate(t) {
+  return new Date(t).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+}
+function offlineCandidates(input2) {
+  const ctx = context({ ...input2, lastValid: /* @__PURE__ */ new Map(), coverageDays: 0 });
+  const out = /* @__PURE__ */ new Map();
+  for (const d of input2.registries.devices) {
+    if (d.disabled_by || d.entry_type === "service") continue;
+    if (!loaded(entryOf(ctx, d))) continue;
+    const use = significant(ctx, d);
+    if (use.length && use.every((e) => input2.states.get(e.entity_id)?.state === "unavailable")) out.set(d.id, use.map((e) => e.entity_id));
+  }
+  return out;
+}
+function significant(ctx, d) {
+  const withState = (ctx.byDevice.get(d.id) ?? []).filter((e) => {
+    const s2 = ctx.input.states.get(e.entity_id);
+    return s2 && s2.attributes.restored !== true && !STATELESS.has(domainOf(e.entity_id));
+  });
+  const primary = withState.filter((e) => !e.entity_category);
+  return primary.length ? primary : withState;
+}
+function offline(ctx, push) {
+  const { input: input2 } = ctx;
+  for (const [deviceId, entityIds] of offlineCandidates(input2)) {
+    const d = ctx.devices.get(deviceId);
+    const known = entityIds.map((id) => input2.lastValid.get(id));
+    if (known.some((x) => x === void 0)) continue;
+    const seen = known.filter((x) => x !== null);
+    let detail;
+    if (seen.length) {
+      const last = Math.max(...seen);
+      const days = Math.floor((input2.now - last) / DAY2);
+      if (days < OFFLINE_DAYS) continue;
+      detail = `Nessun dato dal ${formatDate(last)} (${days} giorni).`;
+    } else {
+      if (input2.coverageDays < MIN_COVERAGE_DAYS) continue;
+      detail = input2.coverageDays >= OFFLINE_DAYS ? `Nessun dato negli ultimi ${input2.coverageDays} giorni.` : `Nessun dato in tutto lo storico disponibile (${input2.coverageDays} giorni: il recorder non va pi\xF9 indietro).`;
+    }
+    const entry = entryOf(ctx, d);
+    const actions = [{ type: "disattiva", deviceId }];
+    if (entry?.supportsRemoveDevice) actions.push({ type: "elimina_dispositivo", deviceId, configEntryId: entry.entryId });
+    push({
+      kind: "offline",
+      signature: `offline:${deviceId}`,
+      severity: "avviso",
+      title: `${deviceName(d)} non risponde`,
+      detail,
+      device: issueDevice(ctx, d),
+      entities: entityIds,
+      actions,
+      link: deviceLink(deviceId)
+    });
+  }
+}
+function orphans(ctx, push) {
+  const groups = /* @__PURE__ */ new Map();
+  for (const e of ctx.input.registries.entities) {
+    if (e.disabled_by) continue;
+    if (ctx.input.states.get(e.entity_id)?.attributes.restored !== true) continue;
+    if (e.config_entry_id && !loaded(ctx.entriesById.get(e.config_entry_id))) continue;
+    const key = e.device_id ?? `platform:${e.platform}`;
+    groups.set(key, [...groups.get(key) ?? [], e]);
+  }
+  for (const [key, list] of groups) {
+    const d = key.startsWith("platform:") ? void 0 : ctx.devices.get(key);
+    const ids = list.map((e) => e.entity_id).sort();
+    const owner = d ? deviceName(d) : ctx.input.manifests.get(list[0].platform)?.name ?? list[0].platform;
+    push({
+      kind: "orfane",
+      signature: `orfane:${key}:${ids.join(",")}`,
+      severity: "info",
+      title: `${ids.length} ${ids.length === 1 ? "entit\xE0 non pi\xF9 fornita" : "entit\xE0 non pi\xF9 fornite"} \xB7 ${owner}`,
+      detail: d ? "Il dispositivo non le crea pi\xF9: eliminarle non tocca le sue altre entit\xE0." : `${owner} non le crea pi\xF9.`,
+      ...d ? { device: issueDevice(ctx, d) } : {},
+      entities: ids,
+      actions: [{ type: "elimina_entita", entityIds: ids }],
+      ...d ? { link: deviceLink(d.id) } : {}
+    });
+  }
+}
+function mentionedAreas(ctx, text) {
+  const hay = ` ${normalizeText(text)} `;
+  const hits = [];
+  for (const a of ctx.areas.values()) {
+    const terms = [a.name, ...a.aliases].map(normalizeText).filter((t) => t.length >= 3);
+    const best = Math.max(0, ...terms.filter((t) => hay.includes(` ${t} `)).map((t) => t.length));
+    if (best) hits.push({ a, len: best });
+  }
+  return hits.filter((h) => !hits.some((o) => o !== h && o.len > h.len && ` ${normalizeText(o.a.name)} `.includes(` ${normalizeText(h.a.name)} `))).map((h) => h.a);
+}
+function areaByName(ctx, name) {
+  const n = normalizeText(name);
+  return [...ctx.areas.values()].find((a) => normalizeText(a.name) === n || a.aliases.some((x) => normalizeText(x) === n));
+}
+function rooms(ctx, relevant, push) {
+  const done = /* @__PURE__ */ new Set();
+  const move = (d, target, confidence, why) => {
+    if (done.has(d.id) || d.area_id === target.area_id) return;
+    done.add(d.id);
+    const from = d.area_id ? ctx.areas.get(d.area_id)?.name ?? d.area_id : null;
+    push({
+      kind: d.area_id ? "stanza" : "senza_area",
+      signature: `${d.area_id ? "stanza" : "senza_area"}:${d.id}:${target.area_id}`,
+      severity: "info",
+      confidence,
+      title: from ? `${deviceName(d)}: ${from} \u2192 ${target.name}?` : `${deviceName(d)}: assegna a ${target.name}?`,
+      detail: why,
+      device: issueDevice(ctx, d),
+      actions: [{ type: "sposta", deviceId: d.id, areaId: target.area_id, areaName: target.name, from: d.area_id }],
+      link: deviceLink(d.id)
+    });
+  };
+  const entries = new Map(ctx.input.registries.entities.map((e) => [e.entity_id, e]));
+  for (const s2 of ctx.input.states.values()) {
+    const a = s2.attributes;
+    if (domainOf(s2.entity_id) !== "light" || a.is_hue_group !== true || a.hue_type !== "room" || !Array.isArray(a.entity_id)) continue;
+    const room = typeof a.friendly_name === "string" ? a.friendly_name : null;
+    const target = room ? areaByName(ctx, room) : void 0;
+    if (!target) continue;
+    for (const member of a.entity_id) {
+      const e = typeof member === "string" ? entries.get(member) : void 0;
+      const d = e?.device_id ? ctx.devices.get(e.device_id) : void 0;
+      if (!e || !d || d.disabled_by || e.area_id) continue;
+      move(d, target, "certa", `Nell'app Hue \xE8 nella stanza "${room}".`);
+    }
+  }
+  for (const d of ctx.devices.values()) {
+    if (d.disabled_by || d.entry_type === "service" || !relevant.has(d.id) || done.has(d.id)) continue;
+    const named = mentionedAreas(ctx, deviceName(d));
+    if (d.area_id) {
+      if (named.some((a) => a.area_id === d.area_id) || named.length !== 1) continue;
+      move(d, named[0], "da_verificare", `Il nome cita "${named[0].name}", ma il dispositivo \xE8 in un'altra area.`);
+      continue;
+    }
+    if (named.length === 1) {
+      move(d, named[0], "da_verificare", `Non ha un'area e il nome cita "${named[0].name}".`);
+      continue;
+    }
+    const own2 = [...new Set((ctx.byDevice.get(d.id) ?? []).map((e) => e.area_id).filter((x) => Boolean(x)))];
+    if (own2.length === 1 && ctx.areas.has(own2[0])) move(d, ctx.areas.get(own2[0]), "da_verificare", `Non ha un'area, ma le sue entit\xE0 sono in "${ctx.areas.get(own2[0]).name}".`);
+  }
+  return done;
+}
+function duplicates(ctx, push) {
+  for (const [compositeId, split] of Object.entries(ctx.input.registries.compositeDevices ?? {})) {
+    const parts = split.splitIds.map((id) => ctx.devices.get(id)).filter((d) => Boolean(d && !d.disabled_by));
+    if (parts.length < 2) continue;
+    const iot = (d) => {
+      const domain2 = entryOf(ctx, d)?.domain;
+      return domain2 ? ctx.input.manifests.get(domain2)?.iotClass ?? null : null;
+    };
+    const locals = parts.filter((d) => isLocal(iot(d)));
+    const clouds = parts.filter((d) => iot(d)?.startsWith("cloud"));
+    if (!locals.length || !clouds.length) continue;
+    const main2 = ctx.devices.get(split.primaryId ?? "") ?? locals[0];
+    const name = (d) => issueDevice(ctx, d).integration ?? "?";
+    push({
+      kind: "doppione",
+      signature: `doppione:${compositeId}:${clouds.map((d) => d.id).sort().join(",")}`,
+      severity: "info",
+      confidence: "da_verificare",
+      title: `${deviceName(main2)}: collegato in locale e via cloud`,
+      detail: `Lo stesso oggetto arriva da ${locals.map(name).join(", ")} (locale) e da ${clouds.map(name).join(", ")} (cloud). Se le entit\xE0 locali ti bastano, disattiva il collegamento cloud: meno doppioni e niente dipendenza da Internet. Prima sposta sulle entit\xE0 locali le automazioni che usano quelle cloud.`,
+      device: issueDevice(ctx, clouds[0]),
+      actions: clouds.map((d) => ({ type: "disattiva", deviceId: d.id })),
+      link: deviceLink(clouds[0].id)
+    });
+  }
+}
+function integrations(ctx, push) {
+  const name = (domain2) => ctx.input.manifests.get(domain2)?.name ?? domain2;
+  const reauth = /* @__PURE__ */ new Set();
+  for (const f of ctx.input.reauth) {
+    const e = f.entryId ? ctx.entriesById.get(f.entryId) : void 0;
+    reauth.add(f.entryId ?? f.domain);
+    push({
+      kind: "integrazione",
+      signature: `integrazione:reauth:${f.entryId ?? f.domain}`,
+      severity: "avviso",
+      title: `${name(f.domain)}: va ripetuto l'accesso`,
+      detail: `${e?.title ? `"${e.title}": ` : ""}l'integrazione chiede di autenticarsi di nuovo (password cambiata o accesso scaduto). Finch\xE9 non lo fai i suoi dispositivi non si aggiornano.`,
+      actions: [],
+      link: `/config/integrations/integration/${f.domain}`
+    });
+  }
+  for (const e of ctx.input.entries) {
+    if (e.disabled || !ERROR_STATES.has(e.state) || reauth.has(e.entryId)) continue;
+    const what = e.state === "setup_retry" ? "non riesce a collegarsi e riprova di continuo" : e.state === "migration_error" ? "non \xE8 riuscita ad aggiornare la configurazione" : "non si avvia";
+    push({
+      kind: "integrazione",
+      signature: `integrazione:${e.entryId}`,
+      severity: "avviso",
+      title: `${name(e.domain)}: ${what}`,
+      detail: `${e.title ? `"${e.title}"` : "Voce"}${e.reason ? `: ${e.reason}` : "."} I suoi dispositivi risultano non disponibili finch\xE9 non si risolve.`,
+      actions: [],
+      link: `/config/integrations/integration/${e.domain}`
+    });
+  }
+}
+function batteries(ctx, month, push) {
+  const low = /* @__PURE__ */ new Map();
+  for (const e of ctx.input.registries.entities) {
+    if (e.disabled_by || !e.device_id || e.platform === "mobile_app") continue;
+    const s2 = ctx.input.states.get(e.entity_id);
+    if (!s2 || s2.attributes.device_class !== "battery") continue;
+    const domain2 = domainOf(e.entity_id);
+    let value;
+    if (domain2 === "sensor" && s2.attributes.unit_of_measurement === "%" && Number.isFinite(Number(s2.state)) && s2.state !== "") {
+      value = Number(s2.state);
+      if (value >= BATTERY_LOW) continue;
+    } else if (domain2 === "binary_sensor" && s2.state === "on") value = null;
+    else continue;
+    const prev = low.get(e.device_id);
+    if (!prev || value !== null && (prev.value === null || value < prev.value)) low.set(e.device_id, { value, entityId: e.entity_id });
+  }
+  for (const [deviceId, b] of low) {
+    const d = ctx.devices.get(deviceId);
+    if (!d || d.disabled_by) continue;
+    push({
+      kind: "batteria",
+      signature: `batteria:${deviceId}:${month}`,
+      severity: b.value !== null && b.value < 10 ? "avviso" : "info",
+      title: `${deviceName(d)}: batteria ${b.value !== null ? percent(Math.round(b.value)) : "scarica"}`,
+      detail: `Da ${b.entityId}. Va cambiata o ricaricata presto.`,
+      device: issueDevice(ctx, d),
+      entities: [b.entityId],
+      actions: [],
+      link: deviceLink(deviceId)
+    });
+  }
+}
+function percent(n) {
+  return `${/^(1|8|11|8\d)$/.test(String(n)) ? "all'" : "al "}${n}%`;
+}
+function updates(ctx, push) {
+  for (const e of ctx.input.registries.entities) {
+    if (e.disabled_by || !e.device_id || domainOf(e.entity_id) !== "update") continue;
+    const s2 = ctx.input.states.get(e.entity_id);
+    const d = ctx.devices.get(e.device_id);
+    if (!s2 || s2.state !== "on" || !d || d.disabled_by || d.entry_type === "service") continue;
+    const a = s2.attributes;
+    const latest = typeof a.latest_version === "string" ? a.latest_version : "?";
+    push({
+      kind: "aggiornamento",
+      signature: `aggiornamento:${e.entity_id}:${latest}`,
+      severity: "info",
+      title: `${deviceName(d)}: firmware ${latest}`,
+      detail: `${typeof a.installed_version === "string" ? `Installato ${a.installed_version}. ` : ""}${typeof a.title === "string" ? `${a.title}. ` : ""}Si installa dalla pagina Aggiornamenti di Home Assistant: l'add-on non installa aggiornamenti.`,
+      device: issueDevice(ctx, d),
+      entities: [e.entity_id],
+      actions: [],
+      link: "/config/updates"
+    });
+  }
+}
+function runMaintenance(input2) {
+  const ctx = context(input2);
+  const out = [];
+  const push = (i) => out.push(i);
+  const inv = buildInventory({ registries: input2.registries, states: input2.states, consents: LOCAL_CONSENTS, referenced: /* @__PURE__ */ new Set() });
+  const relevant = new Set(inv.entities.map((e) => e.device_id).filter((x) => Boolean(x)));
+  integrations(ctx, push);
+  offline(ctx, push);
+  orphans(ctx, push);
+  const placed = rooms(ctx, relevant, push);
+  duplicates(ctx, push);
+  batteries(ctx, new Date(input2.now).toISOString().slice(0, 7), push);
+  updates(ctx, push);
+  const order = (k) => KINDS.indexOf(k);
+  const sorted = out.sort((a, b) => order(a.kind) - order(b.kind) || (a.severity === b.severity ? 0 : a.severity === "avviso" ? -1 : 1) || a.title.localeCompare(b.title));
+  const issues = sorted.map((i, n) => ({ id: `m${n + 1}`, ...i }));
+  const counts = Object.fromEntries(KINDS.map((k) => [k, issues.filter((i) => i.kind === k).length]));
+  const unassigned = [...ctx.devices.values()].filter((d) => !d.area_id && !d.disabled_by && d.entry_type !== "service" && relevant.has(d.id) && !placed.has(d.id)).map((d) => issueDevice(ctx, d)).sort((a, b) => a.name.localeCompare(b.name));
+  return { issues, counts, unassigned };
+}
+
+// src/maintenance/collect.ts
+var DAY3 = 864e5;
+var HISTORY_BATCH = 100;
+var INVALID2 = /* @__PURE__ */ new Set(["unavailable", "unknown", ""]);
+var STATISTICS_DAYS = 365;
+function toConfigEntries(raw) {
+  const str5 = (v) => typeof v === "string" && v !== "" ? v : null;
+  return raw.filter((e) => str5(e.entry_id) && str5(e.domain)).map((e) => ({
+    entryId: String(e.entry_id),
+    domain: String(e.domain),
+    title: str5(e.title) ?? "",
+    state: str5(e.state) ?? "loaded",
+    reason: str5(e.reason),
+    disabled: Boolean(e.disabled_by),
+    supportsRemoveDevice: e.supports_remove_device === true,
+    source: str5(e.source)
+  }));
+}
+function toReauthFlows(raw) {
+  return raw.filter((f) => f.context?.source === "reauth" && typeof f.handler === "string").map((f) => {
+    const id = f.context.entry_id;
+    return { domain: String(f.handler), entryId: typeof id === "string" ? id : null };
+  });
+}
+function ms2(v) {
+  if (typeof v === "number" && Number.isFinite(v)) return v > 1e12 ? v : v * 1e3;
+  if (typeof v === "string") {
+    const t = Date.parse(v);
+    return Number.isNaN(t) ? null : t;
+  }
+  return null;
+}
+function lastValidEnd(rows, now) {
+  const samples = toSamples(rows);
+  let last = null;
+  samples.forEach((x, i) => {
+    if (INVALID2.has(x.s)) return;
+    last = samples[i + 1]?.t ?? now;
+  });
+  return last;
+}
+async function collectMaintenance(ha, manifests, now = Date.now()) {
+  const started = Date.now();
+  const [registries, states, rawEntries, rawFlows] = await Promise.all([
+    ha.registries(),
+    ha.states(),
+    ha.call({ type: "config_entries/get" }, 3e4).catch(() => []),
+    ha.call({ type: "config_entries/flow/progress" }, 3e4).catch(() => [])
+  ]);
+  const entries = toConfigEntries(Array.isArray(rawEntries) ? rawEntries : []);
+  const reauth = toReauthFlows(Array.isArray(rawFlows) ? rawFlows : []);
+  const missing = [...new Set(entries.map((e) => e.domain))].filter((d) => !manifests.has(d));
+  if (missing.length) for (const [d, m] of await loadManifests(ha, missing)) manifests.set(d, m);
+  const base = { now, registries, states, entries, reauth, manifests };
+  const candidates = offlineCandidates(base);
+  const start = now - OFFLINE_DAYS * DAY3;
+  const coverageDays = candidates.size ? await coverage2(ha, start, now) : OFFLINE_DAYS;
+  const lastValid = /* @__PURE__ */ new Map();
+  const ids = [...new Set([...candidates.values()].flat())];
+  for (let i = 0; i < ids.length; i += HISTORY_BATCH) {
+    const batch = ids.slice(i, i + HISTORY_BATCH);
+    const r = await ha.call(
+      {
+        type: "history/history_during_period",
+        start_time: new Date(start).toISOString(),
+        end_time: new Date(now).toISOString(),
+        entity_ids: batch,
+        minimal_response: true,
+        no_attributes: true,
+        significant_changes_only: false
+      },
+      12e4
+    );
+    for (const id of batch) lastValid.set(id, lastValidEnd(r?.[id] ?? [], now));
+  }
+  await fromStatistics(ha, registries, candidates, lastValid, now);
+  return { input: { ...base, lastValid, coverageDays }, durationMs: Date.now() - started };
+}
+async function coverage2(ha, start, now) {
+  try {
+    const r = await ha.call({
+      type: "history/history_during_period",
+      start_time: new Date(start).toISOString(),
+      end_time: new Date(now).toISOString(),
+      entity_ids: ["sun.sun"],
+      minimal_response: true,
+      no_attributes: true,
+      significant_changes_only: false
+    });
+    const first = toSamples(r?.["sun.sun"] ?? [])[0];
+    return first ? Math.min(OFFLINE_DAYS, Math.floor((now - Math.max(first.t, start)) / DAY3)) : 0;
+  } catch {
+    return 0;
+  }
+}
+async function fromStatistics(ha, registries, candidates, lastValid, now) {
+  const silent = [...candidates].filter(([, ids]) => ids.every((id) => lastValid.get(id) === null));
+  if (!silent.length) return;
+  const byDevice = /* @__PURE__ */ new Map();
+  for (const e of registries.entities) {
+    if (e.device_id && !e.disabled_by && domainOf(e.entity_id) === "sensor") byDevice.set(e.device_id, [...byDevice.get(e.device_id) ?? [], e.entity_id]);
+  }
+  const sensors = silent.flatMap(([deviceId]) => byDevice.get(deviceId) ?? []);
+  if (!sensors.length) return;
+  const last = /* @__PURE__ */ new Map();
+  for (let i = 0; i < sensors.length; i += HISTORY_BATCH) {
+    const batch = sensors.slice(i, i + HISTORY_BATCH);
+    const r = await ha.call(
+      {
+        type: "recorder/statistics_during_period",
+        start_time: new Date(now - STATISTICS_DAYS * DAY3).toISOString(),
+        end_time: new Date(now).toISOString(),
+        statistic_ids: batch,
+        period: "day",
+        types: ["mean", "state"]
+      },
+      12e4
+    ).catch(() => ({}));
+    for (const id of batch) {
+      const ends = (r[id] ?? []).map((row) => ms2(row?.end)).filter((x) => x !== null);
+      if (ends.length) last.set(id, Math.max(...ends));
+    }
+  }
+  for (const [deviceId, ids] of silent) {
+    const ends = (byDevice.get(deviceId) ?? []).map((id) => last.get(id)).filter((x) => x !== void 0);
+    if (!ends.length) continue;
+    const end = Math.min(now, Math.max(...ends));
+    for (const id of ids) lastValid.set(id, end);
+  }
+}
+
+// src/maintenance/service.ts
+var MaintenanceError = class extends Error {
+  constructor(status, code, message2) {
+    super(message2);
+    this.status = status;
+    this.code = code;
+  }
+  status;
+  code;
+};
+var SECURITY_DOMAINS = /* @__PURE__ */ new Set(["lock", "alarm_control_panel", "siren", "valve"]);
+var SECURITY_COVERS = /* @__PURE__ */ new Set(["garage", "gate", "door"]);
+var USED_BY_CONCURRENCY = 8;
+var MaintenanceService = class {
+  constructor(deps) {
+    this.deps = deps;
+    this.now = deps.now ?? (() => /* @__PURE__ */ new Date());
+  }
+  deps;
+  manifests = /* @__PURE__ */ new Map();
+  checking = null;
+  writing = Promise.resolve();
+  now;
+  overview() {
+    const ignored = this.deps.store.ignored.active();
+    const run3 = this.deps.store.last();
+    return {
+      run: run3 ? { ...run3, issues: run3.issues.filter((i) => !ignored.has(i.signature)) } : null,
+      running: this.checking !== null,
+      ignored: [...ignored].map(([signature, m]) => ({ signature, ...m })).sort((a, b) => a.at < b.at ? 1 : -1),
+      history: this.deps.store.history(),
+      canWrite: this.deps.writer !== null
+    };
+  }
+  /** Un controllo alla volta: chi arriva mentre è in corso aspetta lo stesso risultato. */
+  check(by) {
+    const ha = this.deps.ha;
+    if (!ha) return Promise.reject(new MaintenanceError(503, "ha_non_disponibile", "Home Assistant non \xE8 raggiungibile"));
+    this.checking ??= this.runCheck(ha, by).finally(() => {
+      this.checking = null;
+    });
+    return this.checking;
+  }
+  async runCheck(ha, by) {
+    const started = Date.now();
+    const now = this.now().getTime();
+    const collected = await (this.deps.collect ?? collectMaintenance)(ha, this.manifests, now);
+    const result = runMaintenance(collected.input);
+    const { registries, states } = collected.input;
+    for (const issue2 of result.issues) {
+      const critical = issue2.device ? securityReason(issue2.device.id, registries, states) : null;
+      if (critical && issue2.actions.length) issue2.critical = critical;
+    }
+    await this.addUsedBy(ha, result.issues, states);
+    const run3 = {
+      id: `m${now.toString(36)}${randomBytes7(3).toString("hex")}`,
+      createdAt: new Date(now).toISOString(),
+      by,
+      durationMs: Date.now() - started,
+      coverageDays: collected.input.coverageDays,
+      ...result
+    };
+    await this.deps.store.saveRun(run3);
+    log.info(`Manutenzione: ${run3.issues.length} segnalazioni in ${Math.round(run3.durationMs / 100) / 10} s`);
+    return run3;
+  }
+  /** Automazioni e script che si fermerebbero: solo per le segnalazioni che disattivano o eliminano. */
+  async addUsedBy(ha, issues, states) {
+    const jobs = issues.filter((i) => i.actions.some((a) => a.type !== "sposta"));
+    const name = (id) => {
+      const n = states.get(id)?.attributes.friendly_name;
+      return typeof n === "string" && n ? n : id;
+    };
+    const related = async (itemType, itemId) => {
+      try {
+        const r = await ha.call({ type: "search/related", item_type: itemType, item_id: itemId });
+        return ["automation", "script"].flatMap((k) => Array.isArray(r?.[k]) ? r[k].filter((x) => typeof x === "string") : []);
+      } catch {
+        return [];
+      }
+    };
+    for (let i = 0; i < jobs.length; i += USED_BY_CONCURRENCY) {
+      await Promise.all(
+        jobs.slice(i, i + USED_BY_CONCURRENCY).map(async (issue2) => {
+          const lists = issue2.kind === "orfane" ? await Promise.all((issue2.entities ?? []).map((e) => related("entity", e))) : await Promise.all([...new Set(issue2.actions.flatMap((a) => "deviceId" in a ? [a.deviceId] : []))].map((d) => related("device", d)));
+          const ids = [...new Set(lists.flat())].sort();
+          if (ids.length) issue2.usedBy = ids.map((entityId) => ({ entityId, name: name(entityId) }));
+        })
+      );
+    }
+  }
+  requireIssue(issueId) {
+    const run3 = this.deps.store.last();
+    const issue2 = run3?.issues.find((i) => i.id === issueId);
+    if (!run3 || !issue2) throw new MaintenanceError(404, "segnalazione_inesistente", "Segnalazione non trovata: ripeti il controllo");
+    return { run: run3, issue: issue2 };
+  }
+  /** Le scritture passano una alla volta (due tocchi rapidi non si sovrappongono). */
+  serial(fn) {
+    const next = this.writing.then(fn, fn);
+    this.writing = next.catch(() => void 0);
+    return next;
+  }
+  apply(issueId, actionIndex, by, confirm) {
+    return this.serial(async () => {
+      const { ha, writer } = this.deps;
+      if (!ha || !writer) throw new MaintenanceError(503, "ha_non_disponibile", "Home Assistant non \xE8 raggiungibile");
+      const { run: run3, issue: issue2 } = this.requireIssue(issueId);
+      if (issue2.applied && !issue2.applied.undone) throw new MaintenanceError(409, "gia_applicata", "Questa modifica \xE8 gi\xE0 stata fatta");
+      if (this.deps.store.ignored.active().has(issue2.signature)) throw new MaintenanceError(409, "ignorata", "Segnalazione ignorata: riattivala prima");
+      const action = issue2.actions[actionIndex];
+      if (!action) throw new MaintenanceError(400, "azione_non_valida", "Azione non valida");
+      const destructive = action.type === "elimina_dispositivo" || action.type === "elimina_entita";
+      if ((destructive || issue2.critical) && !confirm) {
+        throw new MaintenanceError(
+          428,
+          "conferma_richiesta",
+          destructive ? "L'eliminazione non si pu\xF2 annullare: conferma per procedere" : `Il dispositivo ${issue2.critical}: conferma per procedere`
+        );
+      }
+      const [registries, states] = await Promise.all([ha.registries(), ha.states()]);
+      const change = {
+        id: `c${this.now().getTime().toString(36)}${randomBytes7(3).toString("hex")}`,
+        at: this.now().toISOString(),
+        by,
+        issueId,
+        signature: issue2.signature,
+        title: issue2.title,
+        action,
+        before: null
+      };
+      const device = (id) => {
+        const d = registries.devices.find((x) => x.id === id);
+        if (!d) throw new MaintenanceError(409, "cambiato", "Il dispositivo non esiste pi\xF9: ripeti il controllo");
+        return d;
+      };
+      switch (action.type) {
+        case "sposta": {
+          const d = device(action.deviceId);
+          if (!registries.areas.some((a) => a.area_id === action.areaId)) throw new MaintenanceError(409, "cambiato", `L'area "${action.areaName}" non esiste pi\xF9`);
+          if (d.area_id === action.areaId) throw new MaintenanceError(409, "gia_fatto", `\xC8 gi\xE0 in ${action.areaName}`);
+          if (d.area_id !== action.from) throw new MaintenanceError(409, "cambiato", "L'area del dispositivo \xE8 cambiata dopo il controllo: ripeti il controllo");
+          change.before = { area_id: d.area_id };
+          await writer.updateDevice(d.id, { area_id: action.areaId });
+          break;
+        }
+        case "disattiva": {
+          const d = device(action.deviceId);
+          if (d.disabled_by) throw new MaintenanceError(409, "gia_fatto", "Il dispositivo \xE8 gi\xE0 disattivato");
+          change.before = { disabled_by: null };
+          await writer.updateDevice(d.id, { disabled_by: "user" });
+          break;
+        }
+        case "elimina_dispositivo": {
+          device(action.deviceId);
+          const entries = await ha.call({ type: "config_entries/get" }).catch(() => []);
+          const still = offlineCandidates({ now: this.now().getTime(), registries, states, entries: toConfigEntries(Array.isArray(entries) ? entries : []), reauth: [], manifests: this.manifests });
+          if (!still.has(action.deviceId)) throw new MaintenanceError(409, "cambiato", "Il dispositivo ha risposto dopo il controllo: non lo elimino");
+          await writer.removeDevice(action.deviceId, action.configEntryId);
+          break;
+        }
+        case "elimina_entita": {
+          const known = new Set(registries.entities.map((e) => e.entity_id));
+          const still = action.entityIds.filter((id) => known.has(id) && states.get(id)?.attributes.restored === true);
+          if (!still.length) throw new MaintenanceError(409, "cambiato", "Le entit\xE0 non sono pi\xF9 da eliminare (gi\xE0 rimosse o di nuovo fornite dall'integrazione)");
+          const removed = [];
+          for (const id of still) {
+            await writer.removeEntity(id);
+            removed.push(id);
+          }
+          change.removed = removed;
+          break;
+        }
+      }
+      await this.deps.store.addChange(change);
+      issue2.applied = { action: action.type, at: change.at, by, historyId: change.id };
+      await this.deps.store.saveRun(run3);
+      log.info(`Manutenzione: ${action.type} (${issue2.signature}) da ${by}`);
+      return change;
+    });
+  }
+  undo(changeId, by) {
+    return this.serial(async () => {
+      const { ha, writer, store } = this.deps;
+      if (!ha || !writer) throw new MaintenanceError(503, "ha_non_disponibile", "Home Assistant non \xE8 raggiungibile");
+      const change = store.change(changeId);
+      if (!change) throw new MaintenanceError(404, "modifica_inesistente", "Modifica non trovata");
+      if (change.undone) throw new MaintenanceError(409, "gia_annullata", "Modifica gi\xE0 annullata");
+      const a = change.action;
+      if (a.type !== "sposta" && a.type !== "disattiva") throw new MaintenanceError(409, "non_annullabile", "Un'eliminazione non si pu\xF2 annullare");
+      const registries = await ha.registries();
+      const d = registries.devices.find((x) => x.id === a.deviceId);
+      if (!d) throw new MaintenanceError(409, "cambiato", "Il dispositivo non esiste pi\xF9");
+      if (a.type === "sposta") {
+        if (d.area_id !== a.areaId) throw new MaintenanceError(409, "cambiato", "L'area \xE8 stata cambiata di nuovo dopo la modifica: non la tocco");
+        await writer.updateDevice(d.id, { area_id: change.before?.area_id ?? null });
+      } else {
+        if (d.disabled_by !== "user") throw new MaintenanceError(409, "cambiato", "Il dispositivo \xE8 gi\xE0 stato riattivato");
+        await writer.updateDevice(d.id, { disabled_by: null });
+      }
+      const at = this.now().toISOString();
+      await store.markUndone(change.id, at, by);
+      const run3 = store.last();
+      const issue2 = run3?.issues.find((i) => i.applied?.historyId === change.id);
+      if (run3 && issue2?.applied) {
+        issue2.applied = { ...issue2.applied, undone: true };
+        await store.saveRun(run3);
+      }
+      log.info(`Manutenzione: annullato ${a.type} (${change.signature}) da ${by}`);
+      return store.change(change.id);
+    });
+  }
+  async ignore(issueId, by) {
+    const { issue: issue2 } = this.requireIssue(issueId);
+    await this.deps.store.ignored.add(issue2.signature, { at: this.now().toISOString(), by, title: issue2.title });
+  }
+  async unignore(signature) {
+    if (!this.deps.store.ignored.active().has(signature)) return false;
+    await this.deps.store.ignored.remove(signature);
+    return true;
+  }
+};
+function securityReason(deviceId, registries, states) {
+  for (const e of registries.entities) {
+    if (e.device_id !== deviceId || e.disabled_by) continue;
+    const domain2 = domainOf(e.entity_id);
+    if (SECURITY_DOMAINS.has(domain2)) return "comanda serrature, allarmi, sirene o valvole";
+    const cls = states.get(e.entity_id)?.attributes.device_class;
+    if (domain2 === "cover" && typeof cls === "string" && SECURITY_COVERS.has(cls)) return "comanda un garage, un cancello o una porta";
+  }
+  return null;
+}
+
+// src/maintenance/routes.ts
+var ISSUE_RE = /^m\d{1,5}$/;
+var CHANGE_RE = /^c[a-z0-9]{6,40}$/;
+var SIGNATURE_MAX = 4e3;
+function who5(user) {
+  return user?.name || user?.id || "admin";
+}
+async function guard5(res, fn) {
+  try {
+    await fn();
+  } catch (err) {
+    if (err instanceof MaintenanceError) return sendJson(res, err.status, { error: err.code, message: err.message });
+    if (err instanceof HttpError) throw err;
+    const message2 = err instanceof Error ? err.message : String(err);
+    log.warn(`Manutenzione: errore da Home Assistant: ${message2}`);
+    sendJson(res, err instanceof WriteError ? err.status : 502, { error: "errore_ha", message: `Home Assistant: ${message2}` });
+  }
+}
+function maintenanceRoutes(service) {
+  const param = (params, key, re) => {
+    const v = params[key] ?? "";
+    if (!re.test(v)) throw new HttpError(400, "id_non_valido");
+    return v;
+  };
+  return [
+    {
+      method: "GET",
+      path: "/api/maintenance",
+      auth: true,
+      handler: ({ res }) => sendJson(res, 200, service.overview())
+    },
+    {
+      method: "POST",
+      path: "/api/maintenance/check",
+      auth: true,
+      handler: ({ res, user }) => guard5(res, async () => {
+        await service.check(who5(user));
+        sendJson(res, 200, service.overview());
+      })
+    },
+    {
+      method: "POST",
+      path: "/api/maintenance/issues/:id/apply",
+      auth: true,
+      handler: ({ req, res, params, user }) => guard5(res, async () => {
+        const id = param(params, "id", ISSUE_RE);
+        const body = await readJsonBody(req);
+        if (typeof body.action !== "number" || !Number.isInteger(body.action) || body.action < 0 || body.action > 20) throw new HttpError(400, "azione_non_valida");
+        const change = await service.apply(id, body.action, who5(user), body.confirm === true);
+        sendJson(res, 200, { change, ...service.overview() });
+      })
+    },
+    {
+      method: "POST",
+      path: "/api/maintenance/changes/:id/undo",
+      auth: true,
+      handler: ({ res, params, user }) => guard5(res, async () => {
+        const change = await service.undo(param(params, "id", CHANGE_RE), who5(user));
+        sendJson(res, 200, { change, ...service.overview() });
+      })
+    },
+    {
+      method: "POST",
+      path: "/api/maintenance/issues/:id/ignore",
+      auth: true,
+      handler: ({ res, params, user }) => guard5(res, async () => {
+        await service.ignore(param(params, "id", ISSUE_RE), who5(user));
+        sendJson(res, 200, service.overview());
+      })
+    },
+    {
+      method: "POST",
+      path: "/api/maintenance/unignore",
+      auth: true,
+      handler: ({ req, res }) => guard5(res, async () => {
+        const body = await readJsonBody(req);
+        if (typeof body.signature !== "string" || !body.signature || body.signature.length > SIGNATURE_MAX) throw new HttpError(400, "firma_non_valida");
+        await service.unignore(body.signature);
+        sendJson(res, 200, service.overview());
+      })
+    }
+  ];
+}
+
 // src/ha/env.ts
 import { readFileSync as readFileSync2 } from "node:fs";
 function detectSupervisorToken(env = process.env) {
@@ -57580,6 +58450,9 @@ async function main() {
   const devices = new DevicesService({ kb, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null });
   const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? void 0, devices });
   devices.attachChat(chat);
+  const maintenanceStore = new MaintenanceStore(DATA_DIR);
+  await maintenanceStore.load();
+  const maintenance = new MaintenanceService({ store: maintenanceStore, ha, writer });
   const count2 = client ? async (params) => (await client.beta.messages.countTokens(params)).input_tokens : null;
   const suggestStore = new SuggestStore(DATA_DIR);
   await suggestStore.load();
@@ -57594,7 +58467,8 @@ async function main() {
       ...drafts ? draftRoutes({ service: drafts, store: draftStore }) : [],
       ...suggestRoutes({ service: suggest, store: suggestStore, settings, usage, options, ha }),
       ...verifyRoutes({ service: verify, store: verifyStore, usage, options }),
-      ...devicesRoutes({ service: devices, usage, options })
+      ...devicesRoutes({ service: devices, usage, options }),
+      ...maintenanceRoutes(maintenance)
     ],
     wwwDir: findWwwDir(),
     access: { mode: endpoints.mode, isAdmin: (id) => admins.isAdmin(id) }

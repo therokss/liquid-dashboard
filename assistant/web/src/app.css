@@ -926,3 +926,26 @@ body {
 .as-dev-batch .as-probe-summary { flex: 1 1 220px; }
 .as-dev-batch-line { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
 .as-dev-batch-line svg, .as-note > svg { flex-shrink: 0; }
+
+/* Dispositivi → Manutenzione */
+.as-dev-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.as-dev-tab { padding: 6px 14px; font-size: 13px; }
+.as-mnt-kinds { margin-top: var(--space-md); }
+.as-mnt-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-sm); margin-bottom: 4px; }
+.as-mnt-title { font-size: 16px; font-weight: 600; line-height: 1.3; }
+.as-mnt-entities { list-style: none; display: flex; flex-wrap: wrap; gap: 2px 12px; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-secondary); overflow-wrap: anywhere; }
+.as-mnt-entities .as-link { font: 12px var(--font-text); }
+.as-mnt-used { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; line-height: 1.4; color: #ff9f0a; overflow-wrap: anywhere; }
+.as-mnt-used svg { flex-shrink: 0; margin-top: 2px; }
+.as-mnt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--space-sm); margin-top: 4px; }
+.as-mnt-btn { padding: 6px 12px; font-size: 13px; gap: 6px; }
+.as-mnt-btn.danger { color: #ff453a; }
+.as-mnt-link { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.as-mnt-done { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: #30d158; }
+.as-mnt-done .as-link { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; font-size: 12px; }
+.as-mnt-applied .as-ver-finding-title, .as-mnt-applied .as-ver-finding-detail { color: var(--text-tertiary); }
+.as-mnt-history { list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+.as-mnt-history li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; overflow-wrap: anywhere; }
+.as-mnt-history li > span { flex: 1 1 240px; min-width: 0; }
+.as-mnt-history li.undone { opacity: 0.6; }
+.as-mnt-history .as-link { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }

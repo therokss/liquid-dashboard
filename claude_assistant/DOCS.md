@@ -8,11 +8,13 @@ Un assistente per Home Assistant basato su Claude (Anthropic) che:
   numeri a supporto;
 - con **Verifica** controlla le automazioni esistenti (riferimenti rotti, soglie mai
   raggiunte, oscillazioni, conflitti) e propone correzioni;
-- **studia i dispositivi** che non conosce cercando la documentazione sul web.
+- **studia i dispositivi** che non conosce cercando la documentazione sul web;
+- con **Manutenzione** trova dispositivi che non rispondono da tempo, entità rimaste nel
+  registro, stanze da sistemare, doppioni, integrazioni in errore, batterie e firmware.
 
-> Dalla versione 0.6.0 ci sono tutte le funzioni principali: **Chat** con creazione e
-> modifica delle automazioni con un tocco, **Suggerisci**, **Verifica**, **Dispositivi** e
-> **Diagnostica**.
+> Dalla versione 0.7.0 ci sono tutte le funzioni principali: **Chat** con creazione e
+> modifica delle automazioni con un tocco, **Suggerisci**, **Verifica**, **Dispositivi**
+> (con la **Manutenzione**) e **Diagnostica**.
 
 ## Cosa serve
 
@@ -222,6 +224,55 @@ usa una scheda lo dice, e avverte se è ancora una bozza. Se gli chiedi esplicit
 studiare un dispositivo che non ha la scheda può avviare lo studio dalla chat, al massimo due
 volte per conversazione.
 
+### Manutenzione
+
+Nella pagina **Dispositivi** scegli **Manutenzione**. Il controllo è gratuito: lo fa
+l'add-on da solo, senza Claude, e nessun dato esce dalla casa. Parte da solo la prima volta;
+poi lo ripeti con **Controlla ora**. Trova:
+
+- **Integrazioni in errore**: integrazioni che non si avviano, che riprovano di continuo o
+  che chiedono di ripetere l'accesso. Si sistemano dalla pagina dell'integrazione
+  (**Apri in Home Assistant**).
+- **Offline da molto tempo**: dispositivi che non danno segni di vita da almeno 30 giorni.
+  La data viene dallo storico e, oltre lo storico, dalle statistiche dei sensori, che vanno
+  indietro di mesi. Non si contano i dispositivi di un'integrazione in errore: lì il
+  problema è l'integrazione. Con un recorder di 10 giorni un dispositivo senza statistiche
+  risulta "senza dati in tutto lo storico disponibile": la pagina dice quanti giorni copre.
+- **Entità non più fornite**: entità rinominate, rimosse o sostituite che l'integrazione
+  non crea più e che restano nel registro come "non disponibili".
+- **Stanza da controllare**: dispositivi la cui area non coincide con la stanza nell'app del
+  produttore (oggi le stanze dell'app Hue, segnalate come **sicure**) oppure con la stanza
+  citata nel nome (**da verificare**).
+- **Senza area**: dispositivi senza area con un indizio (il nome o l'area delle sue
+  entità). Quelli senza indizi sono elencati a parte, da assegnare a mano.
+- **Collegati due volte**: lo stesso oggetto collegato sia da un'integrazione locale sia da
+  una cloud.
+- **Batterie scariche** (sotto il 20%) e **firmware da aggiornare**: solo avvisi, con il
+  collegamento alla pagina giusta di Home Assistant. L'add-on non installa aggiornamenti.
+
+Ogni modifica parte solo con un tuo tocco:
+
+- **Sposta in…** cambia l'area del dispositivo.
+- **Disattiva** spegne il dispositivo in Home Assistant e toglie le sue entità "non
+  disponibili".
+- **Elimina dispositivo** compare solo se l'integrazione lo consente. **Elimina entità**
+  rimuove dal registro le entità non più fornite.
+
+Prima di ogni modifica l'add-on rilegge lo stato attuale. Se nel frattempo è cambiato
+qualcosa (per esempio hai già spostato il dispositivo, o un dispositivo offline ha ripreso a
+rispondere) la modifica non parte.
+
+Spostamenti e disattivazioni si annullano con **Annulla**, anche dalle **Modifiche recenti**.
+Le eliminazioni chiedono conferma e non si annullano. Disattivare un dispositivo che comanda
+serrature, allarmi, sirene, valvole o un garage chiede conferma. Se il dispositivo o le
+entità sono usati da automazioni o script, la segnalazione li elenca e la conferma li
+ripete. Per le stanze sicure e per le entità non più fornite c'è anche il pulsante per
+applicare tutto insieme, dopo una conferma.
+
+**Ignora** nasconde una segnalazione finché non la riattivi dall'elenco in fondo alla
+pagina. Le batterie riappaiono ogni mese finché restano scariche, i firmware a ogni nuova
+versione.
+
 ## Impostazioni
 
 - **Privacy**: tre categorie escluse di default, riattivabili a tuo rischio (vedi sotto).
@@ -269,11 +320,15 @@ Per lo **studio dei dispositivi** Claude riceve solo i dati del modello:
 Non riceve mai nomi, aree o stati dei tuoi dispositivi, quindi le ricerche sul web non
 contengono nulla della casa. Le ricerche fatte restano visibili nella scheda.
 
-Conversazioni e schede sono salvate solo nell'add-on (cartella `/data`, inclusa nei backup
+La **Manutenzione** non invia nulla a Claude né ad altri servizi: legge registri, stati e
+storico di Home Assistant e calcola tutto nell'add-on.
+
+Conversazioni, schede e cronologia della Manutenzione sono salvate solo nell'add-on (cartella `/data`, inclusa nei backup
 di Home Assistant).
 
 ## Permessi
 
 L'add-on usa l'API di Home Assistant con i permessi del Supervisor (amministratore), perché
-deve leggere storici e tracce e, dopo la tua conferma, salvare automazioni. Il pannello è
+deve leggere storici e tracce e, dopo la tua conferma, salvare automazioni e modificare i
+registri dei dispositivi (area, disattivazione, eliminazione dalla Manutenzione). Il pannello è
 riservato agli amministratori e l'add-on non apre porte sulla rete.

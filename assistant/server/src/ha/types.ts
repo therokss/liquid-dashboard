@@ -23,6 +23,8 @@ export interface EntityEntry {
   original_name: string | null
   labels: string[]
   categories: Record<string, string>
+  /** integrazione che fornisce l'entità (null per quelle definite in YAML) */
+  config_entry_id?: string | null
 }
 
 export interface DeviceEntry {
@@ -40,6 +42,14 @@ export interface DeviceEntry {
   via_device_id: string | null
   sw_version: string | null
   labels: string[]
+  /** Dispositivo "figlio" (HA 2026.9+): senza produttore e modello, appartiene al padre. */
+  parent_device_id?: string | null
+}
+
+/** HA 2026.9 ha diviso i dispositivi condivisi da più integrazioni: id vecchio → dispositivi nuovi. */
+export interface CompositeSplit {
+  splitIds: string[]
+  primaryId: string | null
 }
 
 export interface AreaEntry {
@@ -89,6 +99,8 @@ export interface Registries {
   automationCategories: CategoryEntry[]
   /** entry_id → dominio dell'integrazione (mai il titolo: può contenere email o nomi). */
   configEntryDomain: Record<string, string>
+  /** Id dei vecchi dispositivi compositi (ancora validi nelle automazioni) → dispositivi divisi. */
+  compositeDevices?: Record<string, CompositeSplit>
   loadedAt: number
 }
 
@@ -118,6 +130,7 @@ export function toEntityEntry(raw: Record<string, unknown>): EntityEntry {
     original_name: str(raw.original_name),
     labels: strList(raw.labels),
     categories: Object.fromEntries(Object.entries(cats).filter(([, v]) => typeof v === 'string')) as Record<string, string>,
+    config_entry_id: str(raw.config_entry_id),
   }
 }
 
@@ -132,12 +145,25 @@ export function toDeviceEntry(raw: Record<string, unknown>): DeviceEntry {
     area_id: str(raw.area_id),
     disabled_by: str(raw.disabled_by),
     entry_type: str(raw.entry_type),
-    primary_config_entry: str(raw.primary_config_entry),
-    config_entries: strList(raw.config_entries),
+    // Dalla 2026.9 ogni dispositivo ha una sola integrazione (config_entry_id); i campi al
+    // plurale restano per compatibilità, e i dispositivi figli non li hanno affatto.
+    primary_config_entry: str(raw.primary_config_entry) ?? str(raw.config_entry_id),
+    config_entries: strList(raw.config_entries).length ? strList(raw.config_entries) : str(raw.config_entry_id) ? [str(raw.config_entry_id)!] : [],
     via_device_id: str(raw.via_device_id),
     sw_version: str(raw.sw_version),
     labels: strList(raw.labels),
+    parent_device_id: str(raw.parent_device_id),
   }
+}
+
+export function toCompositeSplits(raw: unknown): Record<string, CompositeSplit> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  const out: Record<string, CompositeSplit> = {}
+  for (const [id, v] of Object.entries(raw as Record<string, unknown>)) {
+    const x = v as { split_ids?: unknown; primary_id?: unknown }
+    out[id] = { splitIds: strList(x?.split_ids), primaryId: str(x?.primary_id) }
+  }
+  return out
 }
 
 export function toAreaEntry(raw: Record<string, unknown>): AreaEntry {

@@ -27,6 +27,11 @@ import { KbStore, type Card } from '../src/devices/kb.ts'
 import { DevicesService } from '../src/devices/service.ts'
 import { devicesRoutes } from '../src/devices/routes.ts'
 import { devicesHA } from './fakeDevices.ts'
+import { MaintenanceStore } from '../src/maintenance/store.ts'
+import { MaintenanceService } from '../src/maintenance/service.ts'
+import { maintenanceRoutes } from '../src/maintenance/routes.ts'
+import { collectMaintenance } from '../src/maintenance/collect.ts'
+import { maintenanceHome, M_NOW } from './fakeMaintenance.ts'
 
 // Anteprima dell'interfaccia senza Home Assistant né chiave API: casa sintetica e un Claude
 // simulato che risponde in streaming. Avvio: npm run preview (poi npm run dev:web).
@@ -321,6 +326,19 @@ const suggest = new SuggestService({
 const verifyStore = new VerifyStore(dir, () => new Date(VNOW))
 await verifyStore.load()
 const verify = new VerifyService({ store: verifyStore, ha, writer, settings, usage, options, stream: preview, count: async (p) => 2400 + JSON.stringify(p).length / 3, drafts, draftStore, chat, now: () => new Date(VNOW) })
+const mHome = maintenanceHome()
+const maintenanceStore = new MaintenanceStore(dir, () => M_NOW)
+await maintenanceStore.load()
+const maintenance = new MaintenanceService({
+  store: maintenanceStore,
+  ha: mHome.ha,
+  writer: mHome.writer,
+  now: () => M_NOW,
+  collect: async (h, manifests, now) => {
+    await sleep(900)
+    return collectMaintenance(h, manifests, now)
+  },
+})
 const server = createApp({
   routes: [
     ...buildRoutes({ mode: 'dev', conn: null, rest: new HARest({ mode: 'none', wsUrl: '', restBase: '', token: '' }), options, addon: null, usage }),
@@ -329,6 +347,7 @@ const server = createApp({
     ...suggestRoutes({ service: suggest, store: suggestStore, settings, usage, options, ha }),
     ...verifyRoutes({ service: verify, store: verifyStore, usage, options }),
     ...devicesRoutes({ service: devices, usage, options }),
+    ...maintenanceRoutes(maintenance),
   ],
   wwwDir: process.env.ASSISTANT_WWW_DIR ?? resolve(import.meta.dirname, '../../web/dist'),
   access: { mode: 'dev', isAdmin: async () => true },

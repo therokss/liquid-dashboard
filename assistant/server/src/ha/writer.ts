@@ -4,7 +4,8 @@ import type { HAState } from './types.ts'
 
 // Le UNICHE scritture verso Home Assistant, chiamate solo dal server dopo il tap di un
 // amministratore (mai da Claude): salvare/eliminare un'automazione con l'API REST dell'editor,
-// assegnarle la categoria "Claude", attivarla o disattivarla.
+// assegnarle la categoria "Claude", attivarla o disattivarla; dalla 0.7 (Manutenzione)
+// spostare, disattivare o eliminare dispositivi ed eliminare entità non più fornite.
 
 export class WriteError extends Error {
   constructor(readonly status: number, message: string) {
@@ -25,6 +26,15 @@ export interface AutomationWriter {
   setEnabled(entityId: string, enabled: boolean): Promise<void>
 }
 
+/** Registri dei dispositivi e delle entità (Manutenzione). */
+export interface RegistryWriter {
+  updateDevice(deviceId: string, patch: { area_id?: string | null; disabled_by?: 'user' | null }): Promise<void>
+  /** Solo se l'integrazione lo consente (supports_remove_device). */
+  removeDevice(deviceId: string, configEntryId: string): Promise<void>
+  /** Solo per entità che l'integrazione non fornisce più (attributo restored). */
+  removeEntity(entityId: string): Promise<void>
+}
+
 /** Creazione dell'interruttore di prova per i collaudi (una sola volta, vedi setup/testHelper.ts). */
 export interface HelperWriter {
   createInputBoolean(name: string, icon: string): Promise<{ id: string }>
@@ -35,7 +45,7 @@ function message(data: unknown, fallback: string): string {
   return typeof data === 'string' && data ? data : fallback
 }
 
-export class HAWriter implements AutomationWriter, HelperWriter {
+export class HAWriter implements AutomationWriter, HelperWriter, RegistryWriter {
   constructor(
     private readonly rest: HARest,
     private readonly conn: Pick<HAConnection, 'sendMessage'>,
@@ -92,6 +102,28 @@ export class HAWriter implements AutomationWriter, HelperWriter {
 
   async createInputBoolean(name: string, icon: string): Promise<{ id: string }> {
     return this.conn.sendMessage<{ id: string }>({ type: 'input_boolean/create', name, icon })
+  }
+
+  async updateDevice(deviceId: string, patch: { area_id?: string | null; disabled_by?: 'user' | null }): Promise<void> {
+    if (!/^[0-9a-f]{32}$/.test(deviceId)) throw new WriteError(400, `id di dispositivo non valido: ${deviceId}`)
+    await this.conn.sendMessage({ type: 'config/device_registry/update', device_id: deviceId, ...patch })
+  }
+
+  async removeDevice(deviceId: string, configEntryId: string): Promise<void> {
+    if (!/^[0-9a-f]{32}$/.test(deviceId)) throw new WriteError(400, `id di dispositivo non valido: ${deviceId}`)
+    try {
+      await this.conn.sendMessage({ type: 'config/device_registry/remove', device_id: deviceId }, 30_000)
+    } catch (err) {
+      // Prima della 2026.9 esiste solo il comando (ora deprecato) con la config entry.
+      const unknown = (err as { code?: unknown }).code === 'unknown_command' || /unknown command/i.test(err instanceof Error ? err.message : String(err))
+      if (!unknown) throw err
+      await this.conn.sendMessage({ type: 'config/device_registry/remove_config_entry', device_id: deviceId, config_entry_id: configEntryId }, 30_000)
+    }
+  }
+
+  async removeEntity(entityId: string): Promise<void> {
+    if (!/^[a-z_][a-z0-9_]*\.[a-z0-9_]+$/.test(entityId)) throw new WriteError(400, `entity_id non valido: ${entityId}`)
+    await this.conn.sendMessage({ type: 'config/entity_registry/remove', entity_id: entityId })
   }
 
   async setEnabled(entityId: string, enabled: boolean): Promise<void> {

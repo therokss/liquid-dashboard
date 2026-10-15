@@ -79,6 +79,15 @@ export async function collectVerify(ha: HAReader, opts: VerifyCollectOptions): P
   const registryIds = new Map<string, string>()
   for (const e of registries.entities) if (e.registry_id) registryIds.set(e.registry_id, e.entity_id)
   const devices = new Map(registries.devices.map((d) => [d.id, { name: d.name_by_user ?? d.name ?? d.id, disabled: Boolean(d.disabled_by) }]))
+  // Id dei dispositivi compositi di prima della 2026.9: HA li risolve ancora sui dispositivi
+  // divisi, quindi non sono "inesistenti". Disattivato solo se lo sono tutti i pezzi.
+  for (const [id, split] of Object.entries(registries.compositeDevices ?? {})) {
+    if (devices.has(id)) continue
+    const parts = split.splitIds.map((x) => devices.get(x)).filter((x): x is { name: string; disabled: boolean } => Boolean(x))
+    if (!parts.length) continue
+    const main = devices.get(split.primaryId ?? '') ?? parts[0]!
+    devices.set(id, { name: main.name, disabled: parts.every((p) => p.disabled) })
+  }
 
   // Automazioni: configurazione caricata e, per quelle con id, quella dell'editor (modificabilità).
   const autoStates = [...states.values()].filter((s) => domainOf(s.entity_id) === 'automation').sort((a, b) => (a.entity_id < b.entity_id ? -1 : 1))

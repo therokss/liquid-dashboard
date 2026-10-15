@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, CheckCheck, CheckCircle2, ChevronDown, ExternalLink, Globe, Layers, Lightbulb, Loader2, Search, Square, Trash2, AlertTriangle, ShieldCheck } from 'lucide-react'
+import { BookOpen, CheckCheck, CheckCircle2, ChevronDown, ExternalLink, Globe, Layers, Lightbulb, Loader2, Search, Square, Trash2, AlertTriangle, ShieldCheck, Wrench } from 'lucide-react'
 import { api, type ActiveStudy, type CatalogIntegration, type DeviceCard, type DeviceModel, type DevicesOverview, type StudyBatch } from '../api'
 import { Button, GlassCard, Section } from '../components/Glass'
 import { t, type TextKey } from '../i18n/it'
+import { MaintenanceView } from './MaintenancePage'
 
 // Dispositivi: catalogo dei modelli presenti in casa (uno per modello, anche se arriva da più
-// integrazioni), schede KB con le fonti, studio sul web di un modello alla volta.
+// integrazioni), schede KB con le fonti, studio sul web di un modello alla volta. Seconda
+// scheda: Manutenzione (MaintenancePage.tsx).
 
 type Filter = 'tutti' | 'scheda' | 'bozza' | 'senza'
 const FILTERS: Filter[] = ['tutti', 'scheda', 'bozza', 'senza']
@@ -358,7 +360,7 @@ function ModelRow({
   )
 }
 
-export function DevicesPage({ onOpenChat }: { onOpenChat: (conversationId: string) => void }) {
+function ModelsView({ onOpenChat }: { onOpenChat: (conversationId: string) => void }) {
   const [overview, setOverview] = useState<DevicesOverview | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -525,6 +527,41 @@ export function DevicesPage({ onOpenChat }: { onOpenChat: (conversationId: strin
           </ul>
         </Section>
       )}
+    </div>
+  )
+}
+
+type Tab = 'modelli' | 'manutenzione'
+const TAB_KEY = 'assistente.dispositivi.scheda'
+
+function savedTab(): Tab {
+  try {
+    return localStorage.getItem(TAB_KEY) === 'manutenzione' ? 'manutenzione' : 'modelli'
+  } catch {
+    return 'modelli'
+  }
+}
+
+export function DevicesPage({ onOpenChat }: { onOpenChat: (conversationId: string) => void }) {
+  const [tab, setTab] = useState<Tab>(savedTab)
+  const choose = (next: Tab) => {
+    setTab(next)
+    try {
+      localStorage.setItem(TAB_KEY, next)
+    } catch {
+      // archiviazione non disponibile: la scelta vale solo per questa visita
+    }
+  }
+  return (
+    <div className="as-page">
+      <div className="as-dev-tabs" role="tablist" aria-label={t('tabDevices')}>
+        {(['modelli', 'manutenzione'] as const).map((k) => (
+          <button key={k} type="button" role="tab" aria-selected={tab === k} className={`as-chip as-dev-filter as-dev-tab ${tab === k ? 'active' : ''}`} onClick={() => choose(k)}>
+            {k === 'modelli' ? <BookOpen size={14} /> : <Wrench size={14} />} {k === 'modelli' ? t('devTabModels') : t('devTabMaintenance')}
+          </button>
+        ))}
+      </div>
+      {tab === 'modelli' ? <ModelsView onOpenChat={onOpenChat} /> : <MaintenanceView />}
     </div>
   )
 }

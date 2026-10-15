@@ -39,15 +39,16 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
 - **CHANGELOG** solo in `claude_assistant/CHANGELOG.md` (quello in radice è di Liquid Dashboard).
 - Il repo è pubblico: nei test e negli esempi solo dati sintetici, mai dati della casa reale.
 - **Anteprima senza HA né chiave API**: `npm run preview` in `assistant/` (case sintetiche di
-  `test/fakeHome.ts`, `test/fakeVerify.ts` e `test/fakeDevices.ts` e un Claude simulato) dopo `npx vite build` in `web/`, oppure con
+  `test/fakeHome.ts`, `test/fakeVerify.ts`, `test/fakeDevices.ts` e `test/fakeMaintenance.ts` e un Claude simulato) dopo `npx vite build` in `web/`, oppure con
   `npm run dev:web` per l'hot reload.
 - Chat: prompt di sistema e tool sono congelati nell'intestazione di ogni conversazione
   (`/data/conversations/<id>.jsonl`, solo in aggiunta). Se cambi nomi o parametri dei tool
   incrementa `TOOLSET_VERSION` (`server/src/claude/tools/registry.ts`); se cambi il testo
   del prompt incrementa `PROMPT_VERSION`; aggiorna `SUPPORTED_TOOLSETS` con le versioni
   ancora eseguibili.
-- Scritture in HA solo da `server/src/ha/writer.ts`, chiamato da `drafts/service.ts` dopo il
-  tap dell'admin (route `/api/drafts/:id/apply|undo|discard`). I tool di Claude ricevono solo
+- Scritture in HA solo da `server/src/ha/writer.ts`, chiamato dopo il tap dell'admin da
+  `drafts/service.ts` (route `/api/drafts/:id/apply|undo|discard`) e da
+  `maintenance/service.ts` (registri dei dispositivi e delle entità). I tool di Claude ricevono solo
   `HAReader` (sola lettura, elenco chiuso di comandi in `ha/data.ts`).
 - Suggerisci (`server/src/suggest/`):
   - `collect.ts` legge il logbook a blocchi di un giorno e classifica le cause dai campi
@@ -89,3 +90,19 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
 
   Test con `test/fakeDevices.ts`, che verifica anche che nelle richieste non ci siano nomi
   della casa.
+- Manutenzione (`server/src/maintenance/`), senza Claude:
+  - `collect.ts` legge registri, stati, `config_entries/get` e `config_entries/flow/progress`.
+    Solo per i dispositivi che adesso non rispondono legge anche lo storico (30 giorni) e,
+    oltre lo storico, le statistiche giornaliere dei loro sensori. La copertura del recorder
+    si stima dal primo stato di `sun.sun`;
+  - `rules.ts` contiene le regole deterministiche. Un'entità con `restored: true` è orfana
+    solo se la sua integrazione è caricata: con l'integrazione in errore lo sono tutte;
+  - `service.ts` applica le azioni:
+    - rilegge lo stato prima di scrivere;
+    - "Annulla" vale solo per sposta e disattiva;
+    - le eliminazioni e i dispositivi di sicurezza richiedono `confirm`.
+
+  I dati stanno in `/data/maintenance/` (`last.json`, `ignored.json`, `history.jsonl`). Le
+  firme (`tipo:id dispositivo:…`) servono a "Ignora". Dalla 2026.9 ogni dispositivo ha una
+  sola integrazione (`config_entry_id`) e `config/device_registry/remove` sostituisce
+  `remove_config_entry`, che resta come ripiego. Test con `test/fakeMaintenance.ts`.
