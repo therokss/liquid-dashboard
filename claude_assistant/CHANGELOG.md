@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.6.1] — 2026-10-15
+### Corretto
+- Toccando una riga della pagina Dispositivi si "premeva" tutta la lista: l'effetto di
+  pressione delle card (rimpicciolimento) è tolto da tutte le card dell'add-on, che non sono
+  pulsanti.
+
 ## [0.6.0] — 2026-10-15
 ### Aggiunto
 - **Dispositivi**: una voce per ogni modello presente in casa, anche quando lo stesso oggetto

@@ -28947,7 +28947,7 @@ function publicOptions(o) {
 }
 
 // src/version.ts
-var VERSION2 = true ? "0.6.0" : "dev";
+var VERSION2 = true ? "0.6.1" : "dev";
 
 // src/routes.ts
 function buildRoutes(deps) {

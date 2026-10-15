@@ -42,6 +42,14 @@ body {
   padding: var(--space-lg);
 }
 
+/* Le card dell'Assistente sono contenitori, non pulsanti: niente effetto "premuto" della
+   Liquid Dashboard (scala e sfondo), che toccando una riga farebbe muovere tutta la lista. */
+.glass-card.as-card:active {
+  transform: none;
+  background: var(--glass-bg);
+  filter: none;
+}
+
 .as-section-head {
   display: flex;
   align-items: flex-start;
