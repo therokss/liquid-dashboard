@@ -140,7 +140,10 @@ export class ChatService {
     }
     await this.deps.store.append(conversationId, { type: 'message', ts: this.now().toISOString(), message: userMessage })
     if (conv.title === 'Nuova conversazione') {
-      const title = clean.replace(/\s+/g, ' ').slice(0, 60) + (clean.length > 60 ? '…' : '')
+      // Messaggi su più righe (aperti da Suggerisci, Verifica, Dispositivi): la prima riga è il titolo.
+      const first = clean.split('\n')[0]!.trim()
+      const base = (clean.includes('\n') && first.length >= 3 ? first : clean).replace(/\s+/g, ' ')
+      const title = base.slice(0, 60) + (base.length > 60 ? '…' : '')
       await this.deps.store.append(conversationId, { type: 'title', title })
     }
     conv.messages.push(userMessage)

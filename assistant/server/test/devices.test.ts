@@ -342,3 +342,35 @@ test('Studia tutti: uno alla volta, salta chi ha la scheda, si ferma dopo due er
   assert.deepEqual([b2.done, b2.failed, b2.pending.length, b2.stopped], [0, 0, 2, 'Fermato a mano.'])
   assert.equal(s2.service.activeStudy(), null)
 })
+
+test('Approva tutte e Idee di automazioni: chat già avviata con scheda e dispositivi del modello', async () => {
+  const fakeStudy = async () => ({
+    content: { ...(card([]) as Omit<Card, 'fonti'>), fonti: [{ url: A, titolo: 'Forum', aperta: true }] },
+    usage: { model: 'claude-opus-5-5', input: 10, output: 10, cacheRead: 0, cacheWrite: 0, costUsd: 0.2, fallback: false },
+    searches: 1,
+    fetches: 1,
+    queries: ['q'],
+    steps: 1,
+  })
+  const { service, kb } = await setup([], { study: fakeStudy as never })
+  await (await service.start(FP2, 'Demo', 'pagina')).done
+  await (await service.start(HUB, 'Demo', 'pagina')).done
+  await kb.save({ ...kb.get(HUB)!, status: 'approvata', approved: { at: NOW.toISOString(), by: 'Demo' } })
+
+  await assert.rejects(service.ideas(cardSlug(FP2), 'Demo'), (e: DevicesError) => e.code === 'chat_non_disponibile')
+  const sent: Array<{ id: string; text: string }> = []
+  service.attachChat({ create: async () => ({ id: 'c42' }), send: async (id, text) => void sent.push({ id, text }) })
+  assert.deepEqual(await service.ideas(cardSlug(FP2), 'Demo'), { conversationId: 'c42' })
+  const text = sent[0]!.text
+  assert.match(text, /^Idee per Aqara Presence Sensor FP2\n/)
+  assert.match(text, /\(ancora in bozza\)/)
+  assert.match(text, /Radar Demo Salotto \(Zona Demo Segreta\), device_id d_fp_hk/)
+  assert.match(text, /leggi_scheda_dispositivo/)
+  await assert.rejects(service.ideas('aqara__inesistente', 'Demo'), (e: DevicesError) => e.status === 404)
+
+  // Solo le bozze indicate; quelle già approvate e gli slug sconosciuti non contano.
+  assert.equal(await service.approveAll([cardSlug(FP2), cardSlug(HUB), 'shelly__nessuna'], 'Demo'), 1)
+  assert.equal(kb.get(FP2)?.status, 'approvata')
+  assert.equal(kb.get(FP2)?.approved?.by, 'Demo')
+  assert.equal(await service.approveAll([cardSlug(FP2)], 'Demo'), 0)
+})

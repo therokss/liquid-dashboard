@@ -28947,7 +28947,7 @@ function publicOptions(o) {
 }
 
 // src/version.ts
-var VERSION2 = true ? "0.6.2" : "dev";
+var VERSION2 = true ? "0.6.3" : "dev";
 
 // src/routes.ts
 function buildRoutes(deps) {
@@ -50670,7 +50670,9 @@ var ChatService = class {
     };
     await this.deps.store.append(conversationId, { type: "message", ts: this.now().toISOString(), message: userMessage });
     if (conv.title === "Nuova conversazione") {
-      const title = clean.replace(/\s+/g, " ").slice(0, 60) + (clean.length > 60 ? "\u2026" : "");
+      const first = clean.split("\n")[0].trim();
+      const base = (clean.includes("\n") && first.length >= 3 ? first : clean).replace(/\s+/g, " ");
+      const title = base.slice(0, 60) + (base.length > 60 ? "\u2026" : "");
       await this.deps.store.append(conversationId, { type: "title", title });
     }
     conv.messages.push(userMessage);
@@ -56705,6 +56707,8 @@ var DevicesService = class {
   failures = /* @__PURE__ */ new Map();
   chatStudies = /* @__PURE__ */ new Map();
   batch = null;
+  /** Collegata dopo la creazione: la chat a sua volta usa questo servizio per i tool. */
+  chat = null;
   features = { fallbacks: true };
   now;
   requireHA() {
@@ -56767,6 +56771,47 @@ var DevicesService = class {
     const next = { ...c, status: "approvata", approved: { at: this.now().toISOString(), by } };
     await this.deps.kb.save(next);
     return next;
+  }
+  /** Approva in un colpo le bozze indicate; ritorna quante. */
+  async approveAll(slugs, by) {
+    let n = 0;
+    for (const slug of new Set(slugs)) {
+      const c = this.deps.kb.bySlug(slug);
+      if (!c || c.status !== "bozza" || this.active?.info.key === c.key) continue;
+      await this.deps.kb.save({ ...c, status: "approvata", approved: { at: this.now().toISOString(), by } });
+      n += 1;
+    }
+    return n;
+  }
+  attachChat(chat) {
+    this.chat = chat;
+  }
+  /**
+   * "Idee di automazioni": apre una chat già avviata in cui Claude, dalla scheda e dai
+   * dispositivi della casa di quel modello, propone automazioni e prepara la bozza scelta.
+   */
+  async ideas(slug, by) {
+    if (!this.chat) throw new DevicesError(503, "chat_non_disponibile", "Chat non disponibile");
+    const card = this.deps.kb.bySlug(slug);
+    if (!card) throw new DevicesError(404, "scheda_inesistente", "Scheda non trovata");
+    const entry = (await this.catalog()).find((e) => e.key === card.key);
+    if (!entry) throw new DevicesError(404, "modello_inesistente", "Questo modello non \xE8 pi\xF9 tra i dispositivi della casa");
+    const label = modelLabel(entry.manufacturer, entry.model);
+    const shown = entry.devices.slice(0, 10);
+    const lines = [
+      `Idee per ${label}`,
+      "",
+      `Proponimi 2\u20133 automazioni utili per i dispositivi ${label} della casa, sfruttando quello che dice la scheda del modello${card.status === "bozza" ? " (ancora in bozza)" : ""}.`,
+      "",
+      "Dispositivi di questo modello:",
+      ...shown.map((d) => `- ${d.name}${d.area ? ` (${d.area})` : ""}, device_id ${d.id}`),
+      ...entry.devices.length > shown.length ? [`- \u2026 e altri ${entry.devices.length - shown.length}`] : [],
+      "",
+      "Leggi la scheda con leggi_scheda_dispositivo e i dispositivi con info_dispositivo, e guarda quali automazioni li usano gi\xE0 per non doppiarle. Per ogni idea spiega in una o due frasi cosa fa e perch\xE9 conviene con questo modello, poi chiedimi quale preparare: crea la bozza solo di quella che scelgo."
+    ];
+    const { id: conversationId } = await this.chat.create(by);
+    await this.chat.send(conversationId, lines.join("\n"));
+    return { conversationId };
   }
   async remove(slug) {
     const c = this.deps.kb.bySlug(slug);
@@ -57082,6 +57127,31 @@ function devicesRoutes(deps) {
       path: "/api/devices/cards/:slug/approve",
       auth: true,
       handler: ({ res, params, user }) => guard4(res, async () => sendJson(res, 200, { card: await service.approve(slug(params), who4(user)) }))
+    },
+    {
+      method: "POST",
+      path: "/api/devices/approve-all",
+      auth: true,
+      handler: ({ req, res, user }) => guard4(res, async () => {
+        const body = await readJsonBody(req);
+        const slugs = body.slugs;
+        if (!Array.isArray(slugs) || slugs.length > MAX_BATCH || !slugs.every((x) => typeof x === "string" && SLUG_RE.test(x))) throw new HttpError(400, "schede_non_valide");
+        sendJson(res, 200, { approved: await service.approveAll(slugs, who4(user)) });
+      })
+    },
+    {
+      method: "POST",
+      path: "/api/devices/cards/:slug/chat",
+      auth: true,
+      handler: ({ res, params, user }) => guard4(res, async () => {
+        try {
+          sendJson(res, 201, await service.ideas(slug(params), who4(user)));
+        } catch (err) {
+          const e = err;
+          if (!(err instanceof HttpError) && !(err instanceof DevicesError) && typeof e.status === "number" && typeof e.code === "string") sendJson(res, e.status, { error: e.code, message: String(e.message) });
+          else throw err;
+        }
+      })
     },
     {
       method: "DELETE",
@@ -57474,6 +57544,7 @@ async function main() {
   await kb.load();
   const devices = new DevicesService({ kb, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null });
   const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? void 0, devices });
+  devices.attachChat(chat);
   const count2 = client ? async (params) => (await client.beta.messages.countTokens(params)).input_tokens : null;
   const suggestStore = new SuggestStore(DATA_DIR);
   await suggestStore.load();

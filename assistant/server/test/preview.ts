@@ -293,6 +293,7 @@ const SHELLY_CARD: Card = {
 await kb.save(SHELLY_CARD)
 const devices = new DevicesService({ kb, ha: devicesHA(), settings, usage, options, stream: preview })
 const chat = new ChatService({ store, ha, settings, usage, options, stream: preview, drafts, devices })
+devices.attachChat(chat)
 const suggestStore = new SuggestStore(dir, () => new Date(NOW))
 await suggestStore.load()
 const suggest = new SuggestService({

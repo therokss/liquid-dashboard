@@ -92,7 +92,7 @@ export function App() {
           {session && tab === 'settings' && <SettingsPage onOpenDiagnostics={() => go('diagnostics')} />}
           {session && tab === 'suggest' && <SuggestPage onOpenChat={openChat} />}
           {session && tab === 'verify' && <VerifyPage onOpenChat={openChat} />}
-          {session && tab === 'devices' && <DevicesPage />}
+          {session && tab === 'devices' && <DevicesPage onOpenChat={openChat} />}
         </main>
 
         <nav className="as-tabbar glass-panel" aria-label="Sezioni">

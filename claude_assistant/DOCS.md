@@ -200,7 +200,14 @@ con **Ferma tutto**, quando la spesa del mese raggiunge la soglia di blocco o do
 studi di fila non riusciti. Mentre la coda è in corso, la chat non può avviare altri studi.
 
 Una scheda nuova è una **bozza**. Leggila e premi **Approva** se ti sembra corretta; puoi
-anche rifare lo studio o eliminarla.
+anche rifare lo studio o eliminarla. **Approva tutte** approva insieme le bozze dei modelli
+mostrati.
+
+**Idee di automazioni**, su ogni scheda, apre una chat già avviata. Claude legge la scheda
+e i tuoi dispositivi di quel modello e controlla quali automazioni li usano già. Poi propone
+2–3 automazioni adatte al modello (per esempio le zone e i tempi giusti per un sensore di
+presenza) e prepara la bozza di quella che scegli, da creare con un tocco come sempre. Le
+idee nascono in chat e non nello studio, perché lo studio sul web non vede la casa.
 
 In chat Claude conosce l'elenco delle schede e le legge quando la risposta dipende da come
 si comporta un modello (sensori di presenza, pulsanti, prese con misura di potenza…). Quando

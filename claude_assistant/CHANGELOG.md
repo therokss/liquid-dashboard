@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.6.3] — 2026-10-15
+### Aggiunto
+- **Idee di automazioni** su ogni scheda della pagina Dispositivi. Apre una chat in cui
+  Claude parte dalla scheda e dai dispositivi di quel modello e controlla le automazioni che
+  già li usano. Propone 2–3 automazioni e prepara la bozza di quella scelta.
+- **Approva tutte**: approva insieme le bozze dei modelli mostrati, dopo una conferma.
+### Modificato
+- Le chat aperte da Suggerisci, Verifica e Dispositivi prendono come titolo la prima riga del
+  messaggio (es. "Idee per Aqara Presence Sensor FP2").
+
 ## [0.6.2] — 2026-10-15
 ### Aggiunto
 - **Studia tutti** nella pagina Dispositivi: studia uno alla volta i modelli senza scheda tra

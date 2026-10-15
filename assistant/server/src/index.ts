@@ -81,6 +81,7 @@ async function main(): Promise<void> {
   await kb.load()
   const devices = new DevicesService({ kb, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null })
   const chat = new ChatService({ store, ha, settings, usage, options, stream: client ? sdkStreamer(client) : null, drafts: drafts ?? undefined, devices })
+  devices.attachChat(chat)
   // Preventivo gratuito: countTokens con lo stesso modello, prompt e schema della richiesta vera.
   const count = client
     ? async (params: Record<string, unknown>) => (await client.beta.messages.countTokens(params as unknown as Parameters<typeof client.beta.messages.countTokens>[0])).input_tokens

@@ -99,6 +99,34 @@ export function devicesRoutes(deps: DevicesRouteDeps): Route[] {
       handler: ({ res, params, user }) => guard(res, async () => sendJson(res, 200, { card: await service.approve(slug(params), who(user)) })),
     },
     {
+      method: 'POST',
+      path: '/api/devices/approve-all',
+      auth: true,
+      handler: ({ req, res, user }) =>
+        guard(res, async () => {
+          const body = await readJsonBody<{ slugs?: unknown }>(req)
+          const slugs = body.slugs
+          if (!Array.isArray(slugs) || slugs.length > MAX_BATCH || !slugs.every((x) => typeof x === 'string' && SLUG_RE.test(x))) throw new HttpError(400, 'schede_non_valide')
+          sendJson(res, 200, { approved: await service.approveAll(slugs as string[], who(user)) })
+        }),
+    },
+    {
+      method: 'POST',
+      path: '/api/devices/cards/:slug/chat',
+      auth: true,
+      handler: ({ res, params, user }) =>
+        guard(res, async () => {
+          try {
+            sendJson(res, 201, await service.ideas(slug(params), who(user)))
+          } catch (err) {
+            // Errori della chat (budget, chiave mancante…) con lo stesso formato.
+            const e = err as { status?: unknown; code?: unknown; message?: unknown }
+            if (!(err instanceof HttpError) && !(err instanceof DevicesError) && typeof e.status === 'number' && typeof e.code === 'string') sendJson(res, e.status, { error: e.code, message: String(e.message) })
+            else throw err
+          }
+        }),
+    },
+    {
       method: 'DELETE',
       path: '/api/devices/cards/:slug',
       auth: true,

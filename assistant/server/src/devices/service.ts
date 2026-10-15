@@ -6,6 +6,7 @@ import type { StreamFn } from '../claude/loop.ts'
 import type { UsageTotals } from '../claude/pricing.ts'
 import { describeClaudeError } from '../claude/client.ts'
 import type { DeviceKnowledge } from '../claude/tools/common.ts'
+import type { ChatStarter } from '../suggest/service.ts'
 import { log } from '../log.ts'
 import { buildCatalog, catalogDomains, loadManifests, manufacturerKey, modelKey, modelLabel, normalizeText, type CatalogEntry, type Manifest } from './catalog.ts'
 import { cardIndex, cardSlug, cardSummary, type Card, type CardSummary, type KbStore } from './kb.ts'
@@ -81,6 +82,8 @@ export class DevicesService implements DeviceKnowledge {
   private readonly failures = new Map<string, StudyFailure>()
   private readonly chatStudies = new Map<string, number>()
   private batch: StudyBatch | null = null
+  /** Collegata dopo la creazione: la chat a sua volta usa questo servizio per i tool. */
+  private chat: ChatStarter | null = null
   private readonly features = { fallbacks: true }
   private readonly now: () => Date
 
@@ -167,6 +170,50 @@ export class DevicesService implements DeviceKnowledge {
     const next: Card = { ...c, status: 'approvata', approved: { at: this.now().toISOString(), by } }
     await this.deps.kb.save(next)
     return next
+  }
+
+  /** Approva in un colpo le bozze indicate; ritorna quante. */
+  async approveAll(slugs: string[], by: string): Promise<number> {
+    let n = 0
+    for (const slug of new Set(slugs)) {
+      const c = this.deps.kb.bySlug(slug)
+      if (!c || c.status !== 'bozza' || this.active?.info.key === c.key) continue
+      await this.deps.kb.save({ ...c, status: 'approvata', approved: { at: this.now().toISOString(), by } })
+      n += 1
+    }
+    return n
+  }
+
+  attachChat(chat: ChatStarter): void {
+    this.chat = chat
+  }
+
+  /**
+   * "Idee di automazioni": apre una chat già avviata in cui Claude, dalla scheda e dai
+   * dispositivi della casa di quel modello, propone automazioni e prepara la bozza scelta.
+   */
+  async ideas(slug: string, by: string): Promise<{ conversationId: string }> {
+    if (!this.chat) throw new DevicesError(503, 'chat_non_disponibile', 'Chat non disponibile')
+    const card = this.deps.kb.bySlug(slug)
+    if (!card) throw new DevicesError(404, 'scheda_inesistente', 'Scheda non trovata')
+    const entry = (await this.catalog()).find((e) => e.key === card.key)
+    if (!entry) throw new DevicesError(404, 'modello_inesistente', 'Questo modello non è più tra i dispositivi della casa')
+    const label = modelLabel(entry.manufacturer, entry.model)
+    const shown = entry.devices.slice(0, 10)
+    const lines = [
+      `Idee per ${label}`,
+      '',
+      `Proponimi 2–3 automazioni utili per i dispositivi ${label} della casa, sfruttando quello che dice la scheda del modello${card.status === 'bozza' ? ' (ancora in bozza)' : ''}.`,
+      '',
+      'Dispositivi di questo modello:',
+      ...shown.map((d) => `- ${d.name}${d.area ? ` (${d.area})` : ''}, device_id ${d.id}`),
+      ...(entry.devices.length > shown.length ? [`- … e altri ${entry.devices.length - shown.length}`] : []),
+      '',
+      'Leggi la scheda con leggi_scheda_dispositivo e i dispositivi con info_dispositivo, e guarda quali automazioni li usano già per non doppiarle. Per ogni idea spiega in una o due frasi cosa fa e perché conviene con questo modello, poi chiedimi quale preparare: crea la bozza solo di quella che scelgo.',
+    ]
+    const { id: conversationId } = await this.chat.create(by)
+    await this.chat.send(conversationId, lines.join('\n'))
+    return { conversationId }
   }
 
   async remove(slug: string): Promise<void> {

@@ -493,5 +493,7 @@ export const api = {
   studyAll: (keys: string[]) => call<{ batch: StudyBatch }>('POST', 'api/devices/study-all', { keys }),
   stopStudy: () => call<{ stopped: boolean }>('POST', 'api/devices/study/stop', {}),
   approveCard: (slug: string) => call<{ card: DeviceCard }>('POST', `api/devices/cards/${slug}/approve`, {}),
+  approveAllCards: (slugs: string[]) => call<{ approved: number }>('POST', 'api/devices/approve-all', { slugs }),
+  deviceIdeas: (slug: string) => call<{ conversationId: string }>('POST', `api/devices/cards/${slug}/chat`, {}),
   deleteCard: (slug: string) => call<{ removed: boolean }>('DELETE', `api/devices/cards/${slug}`),
 }

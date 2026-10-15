@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, CheckCircle2, ChevronDown, ExternalLink, Globe, Layers, Loader2, Search, Square, Trash2, AlertTriangle, ShieldCheck } from 'lucide-react'
+import { BookOpen, CheckCheck, CheckCircle2, ChevronDown, ExternalLink, Globe, Layers, Lightbulb, Loader2, Search, Square, Trash2, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { api, type ActiveStudy, type CatalogIntegration, type DeviceCard, type DeviceModel, type DevicesOverview, type StudyBatch } from '../api'
 import { Button, GlassCard, Section } from '../components/Glass'
 import { t, type TextKey } from '../i18n/it'
@@ -193,15 +193,17 @@ function ModelRow({
   open,
   onToggle,
   onChanged,
+  onOpenChat,
 }: {
   entry: DeviceModel
   overview: DevicesOverview
   open: boolean
   onToggle: () => void
   onChanged: () => Promise<void>
+  onOpenChat: (conversationId: string) => void
 }) {
   const [card, setCard] = useState<DeviceCard | null>(null)
-  const [busy, setBusy] = useState<null | 'study' | 'approve' | 'delete'>(null)
+  const [busy, setBusy] = useState<null | 'study' | 'approve' | 'delete' | 'ideas'>(null)
   const [error, setError] = useState<string | null>(null)
   const summary = entry.card
   const studying = overview.active?.key === entry.key
@@ -220,6 +222,17 @@ function ModelRow({
       alive = false
     }
   }, [open, entry.slug, summary?.createdAt, summary?.status])
+
+  const ideas = async () => {
+    setBusy('ideas')
+    setError(null)
+    try {
+      onOpenChat((await api.deviceIdeas(entry.slug)).conversationId)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setBusy(null)
+    }
+  }
 
   const act = async (kind: 'study' | 'approve' | 'delete', fn: () => Promise<unknown>) => {
     setBusy(kind)
@@ -304,6 +317,11 @@ function ModelRow({
           {card && <CardView card={card} />}
 
           <div className="as-dev-actions">
+            {summary && (
+              <Button accent={summary.status === 'approvata'} disabled={busy !== null || !overview.configured} onClick={() => void ideas()}>
+                {busy === 'ideas' ? <Loader2 size={16} className="spin" /> : <Lightbulb size={16} />} {t('devIdeas')}
+              </Button>
+            )}
             {summary?.status === 'bozza' && (
               <Button accent disabled={busy !== null} onClick={() => void act('approve', () => api.approveCard(entry.slug))}>
                 {busy === 'approve' ? <Loader2 size={16} className="spin" /> : <CheckCircle2 size={16} />} {t('devApprove')}
@@ -333,14 +351,14 @@ function ModelRow({
               </button>
             )}
           </div>
-          {summary?.status === 'bozza' && <p className="as-probe-summary">{t('devDraftNote')}</p>}
+          {summary && <p className="as-probe-summary">{summary.status === 'bozza' ? `${t('devDraftNote')} ` : ''}{t('devIdeasNote')}</p>}
         </div>
       )}
     </li>
   )
 }
 
-export function DevicesPage() {
+export function DevicesPage({ onOpenChat }: { onOpenChat: (conversationId: string) => void }) {
   const [overview, setOverview] = useState<DevicesOverview | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -411,6 +429,19 @@ export function DevicesPage() {
       setBatchError(e instanceof Error ? e.message : String(e))
     }
   }
+  // "Approva tutte" vale per le bozze visibili (ricerca e filtri), esclusa quella in studio.
+  const toApprove = entries.filter((e) => e.card?.status === 'bozza' && overview?.active?.key !== e.key)
+  const approveAll = async () => {
+    if (!toApprove.length) return
+    if (!confirm(`${t('devApproveAllConfirm1')} ${toApprove.length} ${toApprove.length === 1 ? t('devCard1') : t('devCards')}?\n\n${t('devApproveAllConfirm2')}`)) return
+    setBatchError(null)
+    try {
+      await api.approveAllCards(toApprove.map((e) => e.slug))
+      await refresh()
+    } catch (e) {
+      setBatchError(e instanceof Error ? e.message : String(e))
+    }
+  }
   const lastBatch = overview?.batch && !overview.batch.running && overview.batch.finishedAt && Date.now() - Date.parse(overview.batch.finishedAt) < 24 * 3600_000 ? overview.batch : null
 
   return (
@@ -461,6 +492,11 @@ export function DevicesPage() {
               <Layers size={16} /> {t('devStudyAll')} ({toStudy.length})
               {toStudy.length > 0 && <span className="as-sug-estimate"> · {t('devAbout')} {usd(batchCost)}</span>}
             </Button>
+            {toApprove.length > 0 && (
+              <Button onClick={() => void approveAll()}>
+                <CheckCheck size={16} /> {t('devApproveAll')} ({toApprove.length})
+              </Button>
+            )}
             <span className="as-probe-summary">{query || filter !== 'tutti' ? t('devStudyAllFiltered') : t('devStudyAllHint')}</span>
           </div>
         )}
@@ -469,7 +505,9 @@ export function DevicesPage() {
         {overview && entries.length === 0 && <p className="as-probe-summary">{t('devEmpty')}</p>}
         <ul className="as-dev-list">
           {overview &&
-            entries.map((e) => <ModelRow key={e.key} entry={e} overview={overview} open={open === e.key} onToggle={() => setOpen(open === e.key ? null : e.key)} onChanged={refresh} />)}
+            entries.map((e) => (
+              <ModelRow key={e.key} entry={e} overview={overview} open={open === e.key} onToggle={() => setOpen(open === e.key ? null : e.key)} onChanged={refresh} onOpenChat={onOpenChat} />
+            ))}
         </ul>
       </GlassCard>
 
