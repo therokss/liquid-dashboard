@@ -275,3 +275,70 @@ test('chat: indice delle schede nel prompt, leggi_scheda_dispositivo, studia_dis
   assert.equal((await run('studia_dispositivo', { produttore: 'Shelly', modello: '2PM Gen4', motivo: 'chiesto' }, 'c2')).json.studiato, true)
   assert.equal(studies, 4)
 })
+
+test('Studia tutti: uno alla volta, salta chi ha la scheda, si ferma dopo due errori di fila o a mano', async () => {
+  const waitFor = async (cond: () => boolean) => {
+    for (let i = 0; i < 400 && !cond(); i++) await new Promise((r) => setTimeout(r, 5))
+    assert.ok(cond(), 'condizione non raggiunta')
+  }
+  const result = (costUsd = 0.2) => ({
+    content: { ...(card([]) as Omit<Card, 'fonti'>), fonti: [{ url: A, titolo: 'Forum', aperta: true }] },
+    usage: { model: 'claude-opus-5-5', input: 10, output: 10, cacheRead: 0, cacheWrite: 0, costUsd, fallback: false, searches: 1 },
+    searches: 1,
+    fetches: 1,
+    queries: ['q'],
+    steps: 1,
+  })
+  const seen: string[] = []
+  let running = 0
+  const fails = new Set([PM2])
+  const fakeStudy = async (req: { subject: StudySubject }) => {
+    running += 1
+    assert.equal(running, 1, 'mai due studi insieme')
+    seen.push(req.subject.model)
+    await new Promise((r) => setTimeout(r, 5))
+    running -= 1
+    const key = { 'Shelly 2PM Gen4': PM2, 'Presence Sensor FP2': FP2 }[req.subject.model] ?? HUB
+    if (fails.has(key)) throw new Error('errore simulato')
+    return result()
+  }
+  const { service, kb } = await setup([], { study: fakeStudy as never })
+  const batch = await service.startBatch([FP2, PM2, HUB, 'shelly|inesistente', FP2], 'Demo')
+  assert.equal(batch.total, 3)
+  await assert.rejects(service.startBatch([HUB], 'Demo'), (e: DevicesError) => e.code === 'gruppo_in_corso')
+  await waitFor(() => !batch.running)
+  assert.deepEqual([batch.done, batch.failed, batch.pending.length, batch.stopped], [2, 1, 0, undefined])
+  assert.equal(seen.length, 3)
+  assert.ok(kb.get(FP2) && kb.get(HUB) && !kb.get(PM2))
+  assert.equal((await service.overview()).batch?.done, 2)
+
+  // Di nuovo sugli stessi modelli: resta solo quello senza scheda.
+  const again = await service.startBatch([FP2, PM2, HUB], 'Demo')
+  assert.equal(again.total, 1)
+  await waitFor(() => !again.running)
+  fails.clear()
+  await kb.remove(FP2)
+  await kb.remove(HUB)
+  await assert.rejects(service.startBatch([HUB, FP2, PM2].filter((k) => kb.get(k)), 'Demo'), (e: DevicesError) => e.code === 'niente_da_studiare' || e.status === 400)
+
+  // Errori di fila: la coda si ferma.
+  fails.add(FP2).add(PM2).add(HUB)
+  const failing = await service.startBatch([FP2, PM2, HUB], 'Demo')
+  await waitFor(() => !failing.running)
+  assert.deepEqual([failing.done, failing.failed, failing.pending.length], [0, 2, 1])
+  assert.match(failing.stopped!, /2 studi di fila non riusciti/)
+
+  // Ferma: interrompe lo studio in corso e svuota la coda.
+  const slow = async (_req: unknown, deps: { signal: AbortSignal }) =>
+    new Promise<never>((_r, reject) => {
+      if (deps.signal.aborted) reject(new Error('annullato'))
+      deps.signal.addEventListener('abort', () => reject(new Error('annullato')))
+    })
+  const s2 = await setup([], { study: slow as never })
+  const b2 = await s2.service.startBatch([FP2, PM2, HUB], 'Demo')
+  await waitFor(() => s2.service.activeStudy() !== null)
+  assert.equal(s2.service.stop(), true)
+  await waitFor(() => b2.finishedAt !== undefined)
+  assert.deepEqual([b2.done, b2.failed, b2.pending.length, b2.stopped], [0, 0, 2, 'Fermato a mano.'])
+  assert.equal(s2.service.activeStudy(), null)
+})

@@ -1,7 +1,7 @@
 import { readJsonBody, sendJson, HttpError, type Route, type RouteContext } from '../http/server.ts'
 import type { UsageLedger } from '../claude/usage.ts'
 import type { Options } from '../options.ts'
-import { DevicesError, type DevicesService } from './service.ts'
+import { DevicesError, MAX_BATCH, type DevicesService } from './service.ts'
 import { SLUG_RE } from './kb.ts'
 
 export interface DevicesRouteDeps {
@@ -70,6 +70,20 @@ export function devicesRoutes(deps: DevicesRouteDeps): Route[] {
           // L'esito si legge da GET /api/devices (polling): qui basta non lasciare il rifiuto pendente.
           done.catch(() => undefined)
           sendJson(res, 202, { active: info })
+        }),
+    },
+    {
+      method: 'POST',
+      path: '/api/devices/study-all',
+      auth: true,
+      handler: ({ req, res, user }) =>
+        guard(res, async () => {
+          const body = await readJsonBody<{ keys?: unknown }>(req)
+          const keys = body.keys
+          if (!Array.isArray(keys) || keys.length === 0 || keys.length > MAX_BATCH || !keys.every((k) => typeof k === 'string' && KEY_RE.test(k))) {
+            throw new HttpError(400, 'modelli_non_validi')
+          }
+          sendJson(res, 202, { batch: await service.startBatch(keys as string[], who(user)) })
         }),
     },
     {

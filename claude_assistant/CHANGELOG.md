@@ -3,6 +3,18 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.6.2] — 2026-10-15
+### Aggiunto
+- **Studia tutti** nella pagina Dispositivi: studia uno alla volta i modelli senza scheda tra
+  quelli mostrati (ricerca e filtri decidono quali).
+  - Prima di partire chiede conferma, con numero di modelli, costo e durata stimati e spesa
+    del mese.
+  - La coda va avanti anche a pagina chiusa e mostra l'avanzamento.
+  - Si ferma con **Ferma tutto**, al budget di blocco o dopo due errori di fila.
+### Corretto
+- Uno studio fermato nei primi istanti, prima della richiesta a Claude, ora si interrompe
+  subito.
+
 ## [0.6.1] — 2026-10-15
 ### Corretto
 - Toccando una riga della pagina Dispositivi si "premeva" tutta la lista: l'effetto di

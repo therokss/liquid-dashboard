@@ -169,7 +169,7 @@ async function previewStudy(params: Parameters<StreamFn>[0], signal: AbortSignal
     if (signal.aborted) throw Object.assign(new Error('annullato'), { name: 'AbortError' })
   }
   const subject = JSON.parse(/<dispositivo>\n([\s\S]*?)\n<\/dispositivo>/.exec(String(params.messages[0]!.content))![1]!) as { produttore: string; modello: string; integrazioni_home_assistant: Array<{ documentazione?: string }> }
-  const name = `${subject.produttore} ${subject.modello}`
+  const name = subject.modello.toLowerCase().startsWith(subject.produttore.toLowerCase()) ? subject.modello : `${subject.produttore} ${subject.modello}`
   const forum = `https://community.home-assistant.io/t/${subject.modello.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-esperienze/101`
   const opus = { model: 'claude-opus-5-5', usage: { input_tokens: 6200, output_tokens: 1400, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, cache_creation: null, iterations: null, server_tool_use: { web_search_requests: 1, web_fetch_requests: 1 } } }
   if (params.messages.length === 1) {

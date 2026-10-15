@@ -192,6 +192,13 @@ degli studi già fatti. Mentre lavora vedi le ricerche che sta facendo e puoi fe
 scheda finiscono solo pagine davvero viste durante la ricerca: l'add-on scarta gli indirizzi
 inventati.
 
+**Studia tutti** mette in coda i modelli senza scheda tra quelli mostrati: con la ricerca e
+i filtri scegli quali, per esempio escludendo bridge e gruppi di altoparlanti. Prima di
+partire chiede conferma, mostrando il numero di modelli, il costo e la durata stimati e la
+spesa del mese. Gli studi vanno uno alla volta, anche se chiudi la pagina. La coda si ferma
+con **Ferma tutto**, quando la spesa del mese raggiunge la soglia di blocco o dopo due
+studi di fila non riusciti. Mentre la coda è in corso, la chat non può avviare altri studi.
+
 Una scheda nuova è una **bozza**. Leggila e premi **Approva** se ti sembra corretta; puoi
 anche rifare lo studio o eliminarla.
 

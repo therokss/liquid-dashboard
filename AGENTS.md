@@ -84,6 +84,8 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
     - all'API va solo `StudySubject` (mai nomi, aree o stati).
   - `service.ts` esegue uno studio alla volta, in memoria, e fornisce l'indice e i tool alla
     chat (`leggi_scheda_dispositivo`, `studia_dispositivo`, con tetto per conversazione).
+    "Studia tutti" (`startBatch`) è una coda sul server che usa lo stesso `start`, uno alla
+    volta. Si ferma con `stop`, al budget di blocco o dopo 2 errori di fila.
 
   Test con `test/fakeDevices.ts`, che verifica anche che nelle richieste non ci siano nomi
   della casa.

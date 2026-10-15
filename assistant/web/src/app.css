@@ -922,3 +922,7 @@ body {
 .as-dev-queries li { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
 .as-dev-queries svg { flex-shrink: 0; }
 .as-dev-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
+.as-dev-batch { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-md); margin-bottom: var(--space-sm); }
+.as-dev-batch .as-probe-summary { flex: 1 1 220px; }
+.as-dev-batch-line { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+.as-dev-batch-line svg, .as-note > svg { flex-shrink: 0; }

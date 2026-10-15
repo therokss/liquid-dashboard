@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, CheckCircle2, ChevronDown, ExternalLink, Globe, Loader2, Search, Square, Trash2, AlertTriangle, ShieldCheck } from 'lucide-react'
-import { api, type ActiveStudy, type CatalogIntegration, type DeviceCard, type DeviceModel, type DevicesOverview } from '../api'
+import { BookOpen, CheckCircle2, ChevronDown, ExternalLink, Globe, Layers, Loader2, Search, Square, Trash2, AlertTriangle, ShieldCheck } from 'lucide-react'
+import { api, type ActiveStudy, type CatalogIntegration, type DeviceCard, type DeviceModel, type DevicesOverview, type StudyBatch } from '../api'
 import { Button, GlassCard, Section } from '../components/Glass'
 import { t, type TextKey } from '../i18n/it'
 
@@ -33,10 +33,40 @@ function hostOf(u: string): string {
   }
 }
 
-function StudyProgress({ active, onStop }: { active: ActiveStudy; onStop: () => void }) {
+const minutes = (ms: number) => Math.max(1, Math.round(ms / 60_000))
+
+function BatchLine({ batch }: { batch: StudyBatch }) {
+  const n = batch.done + batch.failed + (batch.running ? 1 : 0)
+  return (
+    <p className="as-dev-batch-line">
+      <Layers size={14} /> {t('devBatchProgress')} {Math.min(n, batch.total)} {t('devOf')} {batch.total} · {batch.done} {batch.done === 1 ? t('devCard1') : t('devCards')}
+      {batch.failed > 0 && ` · ${batch.failed} ${t('devBatchFailed')}`}
+    </p>
+  )
+}
+
+function StudyProgress({ active, batch, onStop }: { active: ActiveStudy | null; batch: StudyBatch | null; onStop: () => void }) {
+  const running = batch?.running ? batch : null
+  if (!active) {
+    // Tra un modello e l'altro della coda.
+    if (!running) return null
+    return (
+      <div className="as-sug-progress">
+        <div className="as-sug-progress-head">
+          <Loader2 size={16} className="spin" />
+          <span>{t('devBatchNext')}</span>
+          <button type="button" className="glass-btn as-btn as-btn-small" onClick={onStop}>
+            <Square size={14} /> {t('devStopAll')}
+          </button>
+        </div>
+        <BatchLine batch={running} />
+      </div>
+    )
+  }
   const p = active.progress
   return (
     <div className="as-sug-progress">
+      {running && <BatchLine batch={running} />}
       <div className="as-sug-progress-head">
         <Loader2 size={16} className="spin" />
         <span>
@@ -45,7 +75,7 @@ function StudyProgress({ active, onStop }: { active: ActiveStudy; onStop: () => 
           {active.origin === 'chat' && ` · ${t('devFromChat')}`}
         </span>
         <button type="button" className="glass-btn as-btn as-btn-small" onClick={onStop}>
-          <Square size={14} /> {t('sugStop')}
+          <Square size={14} /> {running ? t('devStopAll') : t('sugStop')}
         </button>
       </div>
       <div className="as-budget-bar">
@@ -281,7 +311,7 @@ function ModelRow({
             )}
             <Button
               accent={!summary}
-              disabled={busy !== null || !overview.configured || overview.active !== null || overview.budget.level === 'bloccato'}
+              disabled={busy !== null || !overview.configured || overview.active !== null || Boolean(overview.batch?.running) || overview.budget.level === 'bloccato'}
               onClick={() => void act('study', () => api.studyDevice(entry.key))}
             >
               {busy === 'study' ? <Loader2 size={16} className="spin" /> : <Globe size={16} />} {summary ? t('devRestudy') : t('devStudy')}
@@ -334,7 +364,7 @@ export function DevicesPage() {
   // Durante uno studio si aggiorna la pagina finché non finisce (anche se avviato dalla chat).
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current)
-    if (!overview?.active) return
+    if (!overview?.active && !overview?.batch?.running) return
     timer.current = setTimeout(() => void refresh(), 1500)
     return () => {
       if (timer.current) clearTimeout(timer.current)
@@ -356,6 +386,32 @@ export function DevicesPage() {
 
   const cards = overview?.entries.filter((e) => e.card) ?? []
   const approved = cards.filter((e) => e.card?.status === 'approvata').length
+  // "Studia tutti" vale per i modelli visibili (ricerca e filtri) che non hanno ancora la scheda.
+  const toStudy = entries.filter((e) => !e.card && overview?.active?.key !== e.key)
+  const busy = Boolean(overview?.active || overview?.batch?.running)
+  const batchCost = overview ? toStudy.length * overview.estimateUsd : 0
+  const [batchError, setBatchError] = useState<string | null>(null)
+
+  const studyAll = async () => {
+    if (!overview || !toStudy.length) return
+    const b = overview.budget
+    const lines = [
+      `${t('devBatchConfirm1')} ${toStudy.length} ${toStudy.length === 1 ? t('devModel1') : t('devModels')}?`,
+      `${t('devBatchCost')} ${usd(batchCost)} · ${t('devBatchTime')} ${minutes(toStudy.length * overview.estimateMs)} ${t('devMinutes')}.`,
+      `${t('devBatchSpent')} ${usd(b.spentUsd)}${b.warnUsd > 0 ? ` (${t('devBatchWarn')} ${usd(b.warnUsd)})` : ''}${b.blockUsd > 0 ? `, ${t('devBatchBlock')} ${usd(b.blockUsd)}` : ''}.`,
+      ...(b.warnUsd > 0 && b.spentUsd + batchCost > b.warnUsd ? [t('devBatchOverWarn')] : []),
+      t('devBatchConfirm2'),
+    ]
+    if (!confirm(lines.join('\n\n'))) return
+    setBatchError(null)
+    try {
+      await api.studyAll(toStudy.map((e) => e.key))
+      await refresh()
+    } catch (e) {
+      setBatchError(e instanceof Error ? e.message : String(e))
+    }
+  }
+  const lastBatch = overview?.batch && !overview.batch.running && overview.batch.finishedAt && Date.now() - Date.parse(overview.batch.finishedAt) < 24 * 3600_000 ? overview.batch : null
 
   return (
     <div className="as-page">
@@ -372,7 +428,17 @@ export function DevicesPage() {
         {overview && !overview.configured && <p className="as-note warning">{t('devNoKey')}</p>}
         {overview?.budget.level === 'bloccato' && <p className="as-note error">{t('devBudget')}</p>}
         {error && <p className="as-error">{error}</p>}
-        {overview?.active && <StudyProgress active={overview.active} onStop={() => void api.stopStudy().then(refresh, () => undefined)} />}
+        {overview && (overview.active || overview.batch?.running) && (
+          <StudyProgress active={overview.active} batch={overview.batch} onStop={() => void api.stopStudy().then(refresh, () => undefined)} />
+        )}
+        {lastBatch && (
+          <p className={`as-note ${lastBatch.stopped ? 'warning' : 'info'}`}>
+            <Layers size={14} /> {t('devBatchDone')}: {lastBatch.done} {lastBatch.done === 1 ? t('devCard1') : t('devCards')}
+            {lastBatch.failed > 0 && `, ${lastBatch.failed} ${t('devBatchFailed')}`}
+            {lastBatch.pending.length > 0 && `, ${lastBatch.pending.length} ${t('devBatchLeft')}`}
+            {lastBatch.stopped && ` · ${lastBatch.stopped}`}
+          </p>
+        )}
       </Section>
 
       <GlassCard className="as-section">
@@ -389,6 +455,16 @@ export function DevicesPage() {
             ))}
           </div>
         </div>
+        {overview && (
+          <div className="as-dev-batch">
+            <Button disabled={busy || toStudy.length === 0 || !overview.configured || overview.budget.level === 'bloccato'} onClick={() => void studyAll()}>
+              <Layers size={16} /> {t('devStudyAll')} ({toStudy.length})
+              {toStudy.length > 0 && <span className="as-sug-estimate"> · {t('devAbout')} {usd(batchCost)}</span>}
+            </Button>
+            <span className="as-probe-summary">{query || filter !== 'tutti' ? t('devStudyAllFiltered') : t('devStudyAllHint')}</span>
+          </div>
+        )}
+        {batchError && <p className="as-error">{batchError}</p>}
         {!overview && !error && <p className="text-body">{t('loading')}</p>}
         {overview && entries.length === 0 && <p className="as-probe-summary">{t('devEmpty')}</p>}
         <ul className="as-dev-list">

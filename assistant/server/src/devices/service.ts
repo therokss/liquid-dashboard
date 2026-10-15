@@ -38,6 +38,21 @@ export interface StudyFailure {
   costUsd: number
 }
 
+/** "Studia tutti": coda di modelli studiati uno alla volta, sul server. */
+export interface StudyBatch {
+  by: string
+  startedAt: string
+  total: number
+  done: number
+  failed: number
+  /** modelli ancora da studiare, nell'ordine */
+  pending: string[]
+  running: boolean
+  finishedAt?: string
+  /** perché si è fermato prima della fine */
+  stopped?: string
+}
+
 export interface DevicesServiceDeps {
   kb: KbStore
   ha: HAReader | null
@@ -54,6 +69,10 @@ const CATALOG_TTL_MS = 5 * 60_000
 /** Studi che Claude può avviare in una conversazione (solo su richiesta esplicita). */
 export const CHAT_STUDY_CAP = 2
 const DEFAULT_ESTIMATE_USD = 0.3
+const DEFAULT_ESTIMATE_MS = 90_000
+export const MAX_BATCH = 200
+/** Errori di fila dopo cui la coda si ferma (chiave revocata, rete giù, limiti dell'API…). */
+const BATCH_MAX_FAILURES_IN_A_ROW = 2
 
 export class DevicesService implements DeviceKnowledge {
   private cache: { at: number; consents: string; entries: CatalogEntry[] } | null = null
@@ -61,6 +80,7 @@ export class DevicesService implements DeviceKnowledge {
   private active: { info: ActiveStudy; controller: AbortController; done: Promise<Card> } | null = null
   private readonly failures = new Map<string, StudyFailure>()
   private readonly chatStudies = new Map<string, number>()
+  private batch: StudyBatch | null = null
   private readonly features = { fallbacks: true }
   private readonly now: () => Date
 
@@ -101,6 +121,16 @@ export class DevicesService implements DeviceKnowledge {
     return costs.length ? costs.reduce((a, b) => a + b, 0) / costs.length : DEFAULT_ESTIMATE_USD
   }
 
+  /** Durata attesa di uno studio, per stimare quella di "Studia tutti". */
+  estimateMs(): number {
+    const ms = this.deps.kb
+      .list()
+      .map((c) => c.study.durationMs)
+      .filter((x) => x > 0)
+      .slice(-10)
+    return ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : DEFAULT_ESTIMATE_MS
+  }
+
   /** Indice compatto delle schede per il prompt della chat. */
   index(): string {
     return cardIndex(this.deps.kb.list())
@@ -121,7 +151,9 @@ export class DevicesService implements DeviceKnowledge {
         .filter((c) => !keys.has(c.key))
         .map((c) => ({ key: c.key, manufacturer: c.manufacturer, model: c.model, card: cardSummary(c) })),
       active: this.activeStudy(),
+      batch: this.batch,
       estimateUsd: Math.round(this.estimateUsd() * 100) / 100,
+      estimateMs: Math.round(this.estimateMs()),
     }
   }
 
@@ -144,10 +176,77 @@ export class DevicesService implements DeviceKnowledge {
     await this.deps.kb.remove(c.key)
   }
 
+  /** Ferma lo studio in corso e, se c'è, la coda di "Studia tutti". */
   stop(): boolean {
-    if (!this.active) return false
-    this.active.controller.abort()
-    return true
+    let stopped = false
+    if (this.batch?.running) {
+      this.batch.running = false
+      this.batch.stopped = 'Fermato a mano.'
+      stopped = true
+    }
+    if (this.active) {
+      this.active.controller.abort()
+      stopped = true
+    }
+    return stopped
+  }
+
+  /** "Studia tutti": i modelli indicati senza scheda, uno alla volta, anche a pagina chiusa. */
+  async startBatch(keys: string[], by: string): Promise<StudyBatch> {
+    if (!this.deps.stream) throw new DevicesError(503, 'chiave_mancante', "Chiave API Anthropic non configurata nelle opzioni dell'add-on")
+    this.requireHA()
+    if (this.batch?.running) throw new DevicesError(409, 'gruppo_in_corso', 'È già in corso uno studio di gruppo.')
+    if (this.active) throw new DevicesError(409, 'studio_in_corso', `È già in corso lo studio di ${modelLabel(this.active.info.manufacturer, this.active.info.model)}: attendi che finisca.`)
+    const budget = this.deps.usage.status(this.deps.options)
+    if (budget.level === 'bloccato') {
+      throw new DevicesError(429, 'budget_superato', `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): lo studio non parte.`)
+    }
+    const known = new Set((await this.catalog()).map((e) => e.key))
+    const pending = [...new Set(keys)].filter((k) => known.has(k) && !this.deps.kb.get(k)).slice(0, MAX_BATCH)
+    if (!pending.length) throw new DevicesError(400, 'niente_da_studiare', 'I modelli scelti hanno già tutti una scheda.')
+    const batch: StudyBatch = { by, startedAt: this.now().toISOString(), total: pending.length, done: 0, failed: 0, pending, running: true }
+    this.batch = batch
+    log.info(`Studio di gruppo avviato da ${by}: ${pending.length} modelli`)
+    void this.runBatch(batch)
+    return batch
+  }
+
+  private async runBatch(batch: StudyBatch): Promise<void> {
+    let inARow = 0
+    while (batch.running && batch.pending.length) {
+      if (this.deps.usage.status(this.deps.options).level === 'bloccato') {
+        batch.stopped = 'Budget mensile raggiunto.'
+        break
+      }
+      const key = batch.pending[0]!
+      let done: Promise<Card>
+      try {
+        done = (await this.start(key, batch.by, 'pagina')).done
+      } catch (err) {
+        if (err instanceof DevicesError && err.code === 'studio_in_corso') {
+          // Uno studio avviato dalla chat tra un modello e l'altro: si aspetta che finisca.
+          await this.active?.done.catch(() => undefined)
+          continue
+        }
+        done = Promise.reject(err)
+      }
+      batch.pending.shift()
+      try {
+        await done
+        batch.done += 1
+        inARow = 0
+      } catch (err) {
+        if (!batch.running) break
+        batch.failed += 1
+        if (++inARow >= BATCH_MAX_FAILURES_IN_A_ROW) {
+          batch.stopped = `Fermato dopo ${inARow} studi di fila non riusciti: ${err instanceof Error ? err.message : String(err)}`
+          break
+        }
+      }
+    }
+    batch.running = false
+    batch.finishedAt = this.now().toISOString()
+    log.info(`Studio di gruppo concluso: ${batch.done} schede, ${batch.failed} non riusciti, ${batch.pending.length} rimasti${batch.stopped ? ` (${batch.stopped})` : ''}`)
   }
 
   /** Avvia lo studio di un modello del catalogo; `done` si risolve con la scheda salvata. */
@@ -221,6 +320,8 @@ export class DevicesService implements DeviceKnowledge {
     const { options } = this.deps
     try {
       const subject = studySubject(entry, await this.triggerTypes(ha, entry))
+      // Fermato mentre leggeva i trigger: non si parte nemmeno.
+      if (signal.aborted) throw new StudyError('annullato', 'Studio annullato.')
       const result = await (this.deps.study ?? runStudy)(
         { model: options.analysisModel, effort: options.devicesEffort, subject },
         {

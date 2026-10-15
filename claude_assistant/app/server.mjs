@@ -28947,7 +28947,7 @@ function publicOptions(o) {
 }
 
 // src/version.ts
-var VERSION2 = true ? "0.6.1" : "dev";
+var VERSION2 = true ? "0.6.2" : "dev";
 
 // src/routes.ts
 function buildRoutes(deps) {
@@ -56690,6 +56690,9 @@ var DevicesError = class extends Error {
 var CATALOG_TTL_MS = 5 * 6e4;
 var CHAT_STUDY_CAP = 2;
 var DEFAULT_ESTIMATE_USD = 0.3;
+var DEFAULT_ESTIMATE_MS = 9e4;
+var MAX_BATCH = 200;
+var BATCH_MAX_FAILURES_IN_A_ROW = 2;
 var DevicesService = class {
   constructor(deps) {
     this.deps = deps;
@@ -56701,6 +56704,7 @@ var DevicesService = class {
   active = null;
   failures = /* @__PURE__ */ new Map();
   chatStudies = /* @__PURE__ */ new Map();
+  batch = null;
   features = { fallbacks: true };
   now;
   requireHA() {
@@ -56728,6 +56732,11 @@ var DevicesService = class {
     const costs = this.deps.kb.list().map((c) => c.study.costUsd).filter((x) => x > 0).slice(-10);
     return costs.length ? costs.reduce((a, b) => a + b, 0) / costs.length : DEFAULT_ESTIMATE_USD;
   }
+  /** Durata attesa di uno studio, per stimare quella di "Studia tutti". */
+  estimateMs() {
+    const ms2 = this.deps.kb.list().map((c) => c.study.durationMs).filter((x) => x > 0).slice(-10);
+    return ms2.length ? ms2.reduce((a, b) => a + b, 0) / ms2.length : DEFAULT_ESTIMATE_MS;
+  }
   /** Indice compatto delle schede per il prompt della chat. */
   index() {
     return cardIndex(this.deps.kb.list());
@@ -56744,7 +56753,9 @@ var DevicesService = class {
       // Schede di modelli non più presenti (dispositivo rimosso o escluso per privacy).
       orphans: this.deps.kb.list().filter((c) => !keys.has(c.key)).map((c) => ({ key: c.key, manufacturer: c.manufacturer, model: c.model, card: cardSummary(c) })),
       active: this.activeStudy(),
-      estimateUsd: Math.round(this.estimateUsd() * 100) / 100
+      batch: this.batch,
+      estimateUsd: Math.round(this.estimateUsd() * 100) / 100,
+      estimateMs: Math.round(this.estimateMs())
     };
   }
   card(slug) {
@@ -56763,10 +56774,74 @@ var DevicesService = class {
     if (this.active?.info.key === c.key) throw new DevicesError(409, "studio_in_corso", "Lo studio di questo modello \xE8 in corso.");
     await this.deps.kb.remove(c.key);
   }
+  /** Ferma lo studio in corso e, se c'è, la coda di "Studia tutti". */
   stop() {
-    if (!this.active) return false;
-    this.active.controller.abort();
-    return true;
+    let stopped = false;
+    if (this.batch?.running) {
+      this.batch.running = false;
+      this.batch.stopped = "Fermato a mano.";
+      stopped = true;
+    }
+    if (this.active) {
+      this.active.controller.abort();
+      stopped = true;
+    }
+    return stopped;
+  }
+  /** "Studia tutti": i modelli indicati senza scheda, uno alla volta, anche a pagina chiusa. */
+  async startBatch(keys, by) {
+    if (!this.deps.stream) throw new DevicesError(503, "chiave_mancante", "Chiave API Anthropic non configurata nelle opzioni dell'add-on");
+    this.requireHA();
+    if (this.batch?.running) throw new DevicesError(409, "gruppo_in_corso", "\xC8 gi\xE0 in corso uno studio di gruppo.");
+    if (this.active) throw new DevicesError(409, "studio_in_corso", `\xC8 gi\xE0 in corso lo studio di ${modelLabel(this.active.info.manufacturer, this.active.info.model)}: attendi che finisca.`);
+    const budget = this.deps.usage.status(this.deps.options);
+    if (budget.level === "bloccato") {
+      throw new DevicesError(429, "budget_superato", `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): lo studio non parte.`);
+    }
+    const known = new Set((await this.catalog()).map((e) => e.key));
+    const pending = [...new Set(keys)].filter((k) => known.has(k) && !this.deps.kb.get(k)).slice(0, MAX_BATCH);
+    if (!pending.length) throw new DevicesError(400, "niente_da_studiare", "I modelli scelti hanno gi\xE0 tutti una scheda.");
+    const batch = { by, startedAt: this.now().toISOString(), total: pending.length, done: 0, failed: 0, pending, running: true };
+    this.batch = batch;
+    log.info(`Studio di gruppo avviato da ${by}: ${pending.length} modelli`);
+    void this.runBatch(batch);
+    return batch;
+  }
+  async runBatch(batch) {
+    let inARow = 0;
+    while (batch.running && batch.pending.length) {
+      if (this.deps.usage.status(this.deps.options).level === "bloccato") {
+        batch.stopped = "Budget mensile raggiunto.";
+        break;
+      }
+      const key = batch.pending[0];
+      let done;
+      try {
+        done = (await this.start(key, batch.by, "pagina")).done;
+      } catch (err) {
+        if (err instanceof DevicesError && err.code === "studio_in_corso") {
+          await this.active?.done.catch(() => void 0);
+          continue;
+        }
+        done = Promise.reject(err);
+      }
+      batch.pending.shift();
+      try {
+        await done;
+        batch.done += 1;
+        inARow = 0;
+      } catch (err) {
+        if (!batch.running) break;
+        batch.failed += 1;
+        if (++inARow >= BATCH_MAX_FAILURES_IN_A_ROW) {
+          batch.stopped = `Fermato dopo ${inARow} studi di fila non riusciti: ${err instanceof Error ? err.message : String(err)}`;
+          break;
+        }
+      }
+    }
+    batch.running = false;
+    batch.finishedAt = this.now().toISOString();
+    log.info(`Studio di gruppo concluso: ${batch.done} schede, ${batch.failed} non riusciti, ${batch.pending.length} rimasti${batch.stopped ? ` (${batch.stopped})` : ""}`);
   }
   /** Avvia lo studio di un modello del catalogo; `done` si risolve con la scheda salvata. */
   async start(key, by, origin) {
@@ -56834,6 +56909,7 @@ var DevicesService = class {
     const { options } = this.deps;
     try {
       const subject = studySubject(entry, await this.triggerTypes(ha, entry));
+      if (signal.aborted) throw new StudyError("annullato", "Studio annullato.");
       const result = await (this.deps.study ?? runStudy)(
         { model: options.analysisModel, effort: options.devicesEffort, subject },
         {
@@ -56980,6 +57056,19 @@ function devicesRoutes(deps) {
         const { info, done } = await service.start(body.key, who4(user), "pagina");
         done.catch(() => void 0);
         sendJson(res, 202, { active: info });
+      })
+    },
+    {
+      method: "POST",
+      path: "/api/devices/study-all",
+      auth: true,
+      handler: ({ req, res, user }) => guard4(res, async () => {
+        const body = await readJsonBody(req);
+        const keys = body.keys;
+        if (!Array.isArray(keys) || keys.length === 0 || keys.length > MAX_BATCH || !keys.every((k) => typeof k === "string" && KEY_RE.test(k))) {
+          throw new HttpError(400, "modelli_non_validi");
+        }
+        sendJson(res, 202, { batch: await service.startBatch(keys, who4(user)) });
       })
     },
     {

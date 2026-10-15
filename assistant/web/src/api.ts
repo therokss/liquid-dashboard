@@ -367,11 +367,25 @@ export interface ActiveStudy {
   costUsd: number
 }
 
+export interface StudyBatch {
+  by: string
+  startedAt: string
+  total: number
+  done: number
+  failed: number
+  pending: string[]
+  running: boolean
+  finishedAt?: string
+  stopped?: string
+}
+
 export interface DevicesOverview {
   entries: DeviceModel[]
   orphans: Array<{ key: string; manufacturer: string; model: string; card: CardSummary }>
   active: ActiveStudy | null
+  batch: StudyBatch | null
   estimateUsd: number
+  estimateMs: number
   budget: Budget
   model: string
   effort: string
@@ -476,6 +490,7 @@ export const api = {
   devices: () => getJson<DevicesOverview>('api/devices'),
   deviceCard: (slug: string) => getJson<{ card: DeviceCard }>(`api/devices/cards/${slug}`),
   studyDevice: (key: string) => call<{ active: ActiveStudy }>('POST', 'api/devices/study', { key }),
+  studyAll: (keys: string[]) => call<{ batch: StudyBatch }>('POST', 'api/devices/study-all', { keys }),
   stopStudy: () => call<{ stopped: boolean }>('POST', 'api/devices/study/stop', {}),
   approveCard: (slug: string) => call<{ card: DeviceCard }>('POST', `api/devices/cards/${slug}/approve`, {}),
   deleteCard: (slug: string) => call<{ removed: boolean }>('DELETE', `api/devices/cards/${slug}`),
