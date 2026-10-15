@@ -21698,7 +21698,7 @@ var require_createNode = __commonJS({
       if (value instanceof String || value instanceof Number || value instanceof Boolean || typeof BigInt !== "undefined" && value instanceof BigInt) {
         value = value.valueOf();
       }
-      const { aliasDuplicateObjects, onAnchor, onTagObj, schema: schema2, sourceObjects } = ctx;
+      const { aliasDuplicateObjects, onAnchor, onTagObj, schema: schema3, sourceObjects } = ctx;
       let ref = void 0;
       if (aliasDuplicateObjects && value && typeof value === "object") {
         ref = sourceObjects.get(value);
@@ -21712,7 +21712,7 @@ var require_createNode = __commonJS({
       }
       if (tagName?.startsWith("!!"))
         tagName = defaultTagPrefix + tagName.slice(2);
-      let tagObj = findTagObject(value, tagName, schema2.tags);
+      let tagObj = findTagObject(value, tagName, schema3.tags);
       if (!tagObj) {
         if (value && typeof value.toJSON === "function") {
           value = value.toJSON();
@@ -21723,7 +21723,7 @@ var require_createNode = __commonJS({
             ref.node = node3;
           return node3;
         }
-        tagObj = value instanceof Map ? schema2[identity.MAP] : Symbol.iterator in Object(value) ? schema2[identity.SEQ] : schema2[identity.MAP];
+        tagObj = value instanceof Map ? schema3[identity.MAP] : Symbol.iterator in Object(value) ? schema3[identity.SEQ] : schema3[identity.MAP];
       }
       if (onTagObj) {
         onTagObj(tagObj);
@@ -21749,7 +21749,7 @@ var require_Collection = __commonJS({
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema2, path4, value) {
+    function collectionFromPath(schema3, path4, value) {
       let v = value;
       for (let i = path4.length - 1; i >= 0; --i) {
         const k = path4[i];
@@ -21767,16 +21767,16 @@ var require_Collection = __commonJS({
         onAnchor: () => {
           throw new Error("This should not happen, please report a bug.");
         },
-        schema: schema2,
+        schema: schema3,
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
     var isEmptyPath = (path4) => path4 == null || typeof path4 === "object" && !!path4[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
-      constructor(type, schema2) {
+      constructor(type, schema3) {
         super(type);
         Object.defineProperty(this, "schema", {
-          value: schema2,
+          value: schema3,
           configurable: true,
           enumerable: false,
           writable: true
@@ -21787,11 +21787,11 @@ var require_Collection = __commonJS({
        *
        * @param schema - If defined, overwrites the original's schema
        */
-      clone(schema2) {
+      clone(schema3) {
         const copy = Object.create(Object.getPrototypeOf(this), Object.getOwnPropertyDescriptors(this));
-        if (schema2)
-          copy.schema = schema2;
-        copy.items = copy.items.map((it) => identity.isNode(it) || identity.isPair(it) ? it.clone(schema2) : it);
+        if (schema3)
+          copy.schema = schema3;
+        copy.items = copy.items.map((it) => identity.isNode(it) || identity.isPair(it) ? it.clone(schema3) : it);
         if (this.range)
           copy.range = this.range.slice();
         return copy;
@@ -22743,12 +22743,12 @@ var require_Pair = __commonJS({
         this.key = key;
         this.value = value;
       }
-      clone(schema2) {
+      clone(schema3) {
         let { key, value } = this;
         if (identity.isNode(key))
-          key = key.clone(schema2);
+          key = key.clone(schema3);
         if (identity.isNode(value))
-          value = value.clone(schema2);
+          value = value.clone(schema3);
         return new _Pair(key, value);
       }
       toJSON(_, ctx) {
@@ -22941,17 +22941,17 @@ var require_YAMLMap = __commonJS({
       static get tagName() {
         return "tag:yaml.org,2002:map";
       }
-      constructor(schema2) {
-        super(identity.MAP, schema2);
+      constructor(schema3) {
+        super(identity.MAP, schema3);
         this.items = [];
       }
       /**
        * A generic collection parsing method that can be extended
        * to other node classes that inherit from YAMLMap
        */
-      static from(schema2, obj, ctx) {
+      static from(schema3, obj, ctx) {
         const { keepUndefined, replacer } = ctx;
-        const map2 = new this(schema2);
+        const map2 = new this(schema3);
         const add2 = (key, value) => {
           if (typeof replacer === "function")
             value = replacer.call(obj, key, value);
@@ -22967,8 +22967,8 @@ var require_YAMLMap = __commonJS({
           for (const key of Object.keys(obj))
             add2(key, obj[key]);
         }
-        if (typeof schema2.sortMapEntries === "function") {
-          map2.items.sort(schema2.sortMapEntries);
+        if (typeof schema3.sortMapEntries === "function") {
+          map2.items.sort(schema3.sortMapEntries);
         }
         return map2;
       }
@@ -23075,7 +23075,7 @@ var require_map = __commonJS({
           onError("Expected a mapping for this tag");
         return map3;
       },
-      createNode: (schema2, obj, ctx) => YAMLMap.YAMLMap.from(schema2, obj, ctx)
+      createNode: (schema3, obj, ctx) => YAMLMap.YAMLMap.from(schema3, obj, ctx)
     };
     exports.map = map2;
   }
@@ -23095,8 +23095,8 @@ var require_YAMLSeq = __commonJS({
       static get tagName() {
         return "tag:yaml.org,2002:seq";
       }
-      constructor(schema2) {
-        super(identity.SEQ, schema2);
+      constructor(schema3) {
+        super(identity.SEQ, schema3);
         this.items = [];
       }
       add(value) {
@@ -23171,9 +23171,9 @@ var require_YAMLSeq = __commonJS({
           onComment
         });
       }
-      static from(schema2, obj, ctx) {
+      static from(schema3, obj, ctx) {
         const { replacer } = ctx;
-        const seq = new this(schema2);
+        const seq = new this(schema3);
         if (obj && Symbol.iterator in Object(obj)) {
           let i = 0;
           for (let it of obj) {
@@ -23213,7 +23213,7 @@ var require_seq = __commonJS({
           onError("Expected a sequence for this tag");
         return seq2;
       },
-      createNode: (schema2, obj, ctx) => YAMLSeq.YAMLSeq.from(schema2, obj, ctx)
+      createNode: (schema3, obj, ctx) => YAMLSeq.YAMLSeq.from(schema3, obj, ctx)
     };
     exports.seq = seq;
   }
@@ -23409,7 +23409,7 @@ var require_schema = __commonJS({
     var bool = require_bool();
     var float = require_float();
     var int2 = require_int();
-    var schema2 = [
+    var schema3 = [
       map2.map,
       seq.seq,
       string4.string,
@@ -23422,7 +23422,7 @@ var require_schema = __commonJS({
       float.floatExp,
       float.float
     ];
-    exports.schema = schema2;
+    exports.schema = schema3;
   }
 });
 
@@ -23488,8 +23488,8 @@ var require_schema2 = __commonJS({
         return str5;
       }
     };
-    var schema2 = [map2.map, seq.seq].concat(jsonScalars, jsonError);
-    exports.schema = schema2;
+    var schema3 = [map2.map, seq.seq].concat(jsonScalars, jsonError);
+    exports.schema = schema3;
   }
 });
 
@@ -23593,9 +23593,9 @@ ${cn.comment}` : item.comment;
         onError("Expected a sequence for this tag");
       return seq;
     }
-    function createPairs(schema2, iterable, ctx) {
+    function createPairs(schema3, iterable, ctx) {
       const { replacer } = ctx;
-      const pairs2 = new YAMLSeq.YAMLSeq(schema2);
+      const pairs2 = new YAMLSeq.YAMLSeq(schema3);
       pairs2.tag = "tag:yaml.org,2002:pairs";
       let i = 0;
       if (iterable && Symbol.iterator in Object(iterable))
@@ -23680,8 +23680,8 @@ var require_omap = __commonJS({
         }
         return map2;
       }
-      static from(schema2, iterable, ctx) {
-        const pairs$1 = pairs.createPairs(schema2, iterable, ctx);
+      static from(schema3, iterable, ctx) {
+        const pairs$1 = pairs.createPairs(schema3, iterable, ctx);
         const omap2 = new this();
         omap2.items = pairs$1.items;
         return omap2;
@@ -23708,7 +23708,7 @@ var require_omap = __commonJS({
         }
         return Object.assign(new YAMLOMap(), pairs$1);
       },
-      createNode: (schema2, iterable, ctx) => YAMLOMap.from(schema2, iterable, ctx)
+      createNode: (schema3, iterable, ctx) => YAMLOMap.from(schema3, iterable, ctx)
     };
     exports.YAMLOMap = YAMLOMap;
     exports.omap = omap;
@@ -23883,8 +23883,8 @@ var require_set = __commonJS({
     var Pair = require_Pair();
     var YAMLMap = require_YAMLMap();
     var YAMLSet = class _YAMLSet extends YAMLMap.YAMLMap {
-      constructor(schema2) {
-        super(schema2);
+      constructor(schema3) {
+        super(schema3);
         this.tag = _YAMLSet.tag;
       }
       add(key) {
@@ -23928,9 +23928,9 @@ var require_set = __commonJS({
         else
           throw new Error("Set items must all have null values");
       }
-      static from(schema2, iterable, ctx) {
+      static from(schema3, iterable, ctx) {
         const { replacer } = ctx;
-        const set3 = new this(schema2);
+        const set3 = new this(schema3);
         if (iterable && Symbol.iterator in Object(iterable))
           for (let value of iterable) {
             if (typeof replacer === "function")
@@ -23947,7 +23947,7 @@ var require_set = __commonJS({
       nodeClass: YAMLSet,
       default: false,
       tag: "tag:yaml.org,2002:set",
-      createNode: (schema2, iterable, ctx) => YAMLSet.from(schema2, iterable, ctx),
+      createNode: (schema3, iterable, ctx) => YAMLSet.from(schema3, iterable, ctx),
       resolve(map2, onError) {
         if (identity.isMap(map2)) {
           if (map2.hasAllNullValues(true))
@@ -24069,7 +24069,7 @@ var require_schema3 = __commonJS({
     var pairs = require_pairs();
     var set2 = require_set();
     var timestamp = require_timestamp();
-    var schema2 = [
+    var schema3 = [
       map2.map,
       seq.seq,
       string4.string,
@@ -24092,7 +24092,7 @@ var require_schema3 = __commonJS({
       timestamp.floatTime,
       timestamp.timestamp
     ];
-    exports.schema = schema2;
+    exports.schema = schema3;
   }
 });
 
@@ -24107,7 +24107,7 @@ var require_tags = __commonJS({
     var bool = require_bool();
     var float = require_float();
     var int2 = require_int();
-    var schema2 = require_schema();
+    var schema3 = require_schema();
     var schema$1 = require_schema2();
     var binary = require_binary();
     var merge2 = require_merge();
@@ -24117,7 +24117,7 @@ var require_tags = __commonJS({
     var set2 = require_set();
     var timestamp = require_timestamp();
     var schemas = /* @__PURE__ */ new Map([
-      ["core", schema2.schema],
+      ["core", schema3.schema],
       ["failsafe", [map2.map, seq.seq, string4.string]],
       ["json", schema$1.schema],
       ["yaml11", schema$2.schema],
@@ -24201,9 +24201,9 @@ var require_Schema = __commonJS({
     var tags = require_tags();
     var sortMapEntriesByKey = (a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
     var Schema = class _Schema {
-      constructor({ compat, customTags, merge: merge2, resolveKnownTags, schema: schema2, sortMapEntries, toStringDefaults }) {
+      constructor({ compat, customTags, merge: merge2, resolveKnownTags, schema: schema3, sortMapEntries, toStringDefaults }) {
         this.compat = Array.isArray(compat) ? tags.getTags(compat, "compat") : compat ? tags.getTags(null, compat) : null;
-        this.name = typeof schema2 === "string" && schema2 || "core";
+        this.name = typeof schema3 === "string" && schema3 || "core";
         this.knownTags = resolveKnownTags ? tags.coreKnownTags : {};
         this.tags = tags.getTags(customTags, this.name, merge2);
         this.toStringOptions = toStringDefaults ?? null;
@@ -25792,11 +25792,11 @@ var require_compose_scalar = __commonJS({
         scalar.comment = comment;
       return scalar;
     }
-    function findScalarTagByName(schema2, value, tagName, tagToken, onError) {
+    function findScalarTagByName(schema3, value, tagName, tagToken, onError) {
       if (tagName === "!")
-        return schema2[identity.SCALAR];
+        return schema3[identity.SCALAR];
       const matchWithTest = [];
-      for (const tag of schema2.tags) {
+      for (const tag of schema3.tags) {
         if (!tag.collection && tag.tag === tagName) {
           if (tag.default && tag.test)
             matchWithTest.push(tag);
@@ -25807,18 +25807,18 @@ var require_compose_scalar = __commonJS({
       for (const tag of matchWithTest)
         if (tag.test?.test(value))
           return tag;
-      const kt = schema2.knownTags[tagName];
+      const kt = schema3.knownTags[tagName];
       if (kt && !kt.collection) {
-        schema2.tags.push(Object.assign({}, kt, { default: false, test: void 0 }));
+        schema3.tags.push(Object.assign({}, kt, { default: false, test: void 0 }));
         return kt;
       }
       onError(tagToken, "TAG_RESOLVE_FAILED", `Unresolved tag: ${tagName}`, tagName !== "tag:yaml.org,2002:str");
-      return schema2[identity.SCALAR];
+      return schema3[identity.SCALAR];
     }
-    function findScalarTagByTest({ atKey, directives, schema: schema2 }, value, token, onError) {
-      const tag = schema2.tags.find((tag2) => (tag2.default === true || atKey && tag2.default === "key") && tag2.test?.test(value)) || schema2[identity.SCALAR];
-      if (schema2.compat) {
-        const compat = schema2.compat.find((tag2) => tag2.default && tag2.test?.test(value)) ?? schema2[identity.SCALAR];
+    function findScalarTagByTest({ atKey, directives, schema: schema3 }, value, token, onError) {
+      const tag = schema3.tags.find((tag2) => (tag2.default === true || atKey && tag2.default === "key") && tag2.test?.test(value)) || schema3[identity.SCALAR];
+      if (schema3.compat) {
+        const compat = schema3.compat.find((tag2) => tag2.default && tag2.test?.test(value)) ?? schema3[identity.SCALAR];
         if (tag.tag !== compat.tag) {
           const ts = directives.tagString(tag.tag);
           const cs = directives.tagString(compat.tag);
@@ -28947,7 +28947,7 @@ function publicOptions(o) {
 }
 
 // src/version.ts
-var VERSION2 = true ? "0.6.3" : "dev";
+var VERSION2 = true ? "0.6.4" : "dev";
 
 // src/routes.ts
 function buildRoutes(deps) {
@@ -29541,7 +29541,7 @@ function formatDuration(ms2) {
 }
 
 // src/claude/prompt.ts
-var PROMPT_VERSION = 4;
+var PROMPT_VERSION = 5;
 var YAML_RULES = `- Sintassi attuale: \`triggers:\`, \`conditions:\`, \`actions:\` al plurale; nei trigger \`trigger: state\` (non \`platform:\`); nelle azioni \`action: light.turn_on\` (non \`service:\`).
 - Preferisci trigger su entity_id (state, numeric_state; event sulle entit\xE0 \`event.*\` per i pulsanti) ai trigger \`device\`, che usano id opachi e si rompono sostituendo il dispositivo.
 - Con sensori di presenza o movimento che oscillano usa \`for:\` nei trigger di spegnimento.
@@ -29565,6 +29565,7 @@ function instructions(s2) {
 - Se proponi_automazione respinge la bozza, correggi gli errori indicati e riprova; dopo 3 tentativi falliti spiega all'utente il problema invece di insistere.
 - Una bozza per volta, salvo richiesta esplicita. Dopo la proposta riassumi in 1\u20132 frasi cosa fa e cosa controllare; non ripetere lo YAML nel testo: \xE8 gi\xE0 nella scheda.
 - Le azioni su serrature, apriporta, allarmi, sirene, valvole e garage richiedono la doppia conferma dell'utente: spiega rischi e condizioni di sicurezza.
+- Notifiche: prima di proporre un'automazione che avvisa qualcuno, chiedi all'utente su quale dispositivo inviarla, elencando le opzioni di elenca_notifiche (telefoni e tablet con l'app, Alexa, notifica nell'interfaccia di Home Assistant\u2026), anche pi\xF9 di una. Non sceglierlo tu e non usare notify.notify. Salta la domanda solo se l'utente ha gi\xE0 indicato il dispositivo in questa conversazione.
 
 # Come lavorare
 - Stati, storici, configurazioni delle automazioni e tracce si leggono SOLO con gli strumenti. L'inventario qui sotto descrive la struttura della casa all'apertura della chat, senza stati.
@@ -30276,7 +30277,7 @@ function assertNotEqual(val) {
   return val;
 }
 function toZod() {
-  return (schema2) => schema2;
+  return (schema3) => schema3;
 }
 function assertIs(_arg) {
 }
@@ -30369,8 +30370,8 @@ function rawShape(def) {
   const desc = Object.getOwnPropertyDescriptor(def, "shape");
   return desc?.get ? desc.get.raw : desc?.value;
 }
-function sourceShape(schema2) {
-  return rawShape(schema2._zod.def) ?? schema2._zod.def.shape;
+function sourceShape(schema3) {
+  return rawShape(schema3._zod.def) ?? schema3._zod.def.shape;
 }
 function deferProp(target, key, getter) {
   Object.defineProperty(target, key, {
@@ -30423,8 +30424,8 @@ function mergeDefs(...defs) {
   }
   return Object.defineProperties({}, mergedDescriptors);
 }
-function cloneDef(schema2) {
-  return mergeDefs(schema2._zod.def);
+function cloneDef(schema3) {
+  return mergeDefs(schema3._zod.def);
 }
 function getElementAtPath(obj, path4) {
   if (!path4)
@@ -30646,19 +30647,19 @@ var BIGINT_FORMAT_RANGES = {
   int64: [/* @__PURE__ */ BigInt("-9223372036854775808"), /* @__PURE__ */ BigInt("9223372036854775807")],
   uint64: [/* @__PURE__ */ BigInt(0), /* @__PURE__ */ BigInt("18446744073709551615")]
 };
-function pick(schema2, mask) {
-  const currDef = schema2._zod.def;
+function pick(schema3, mask) {
+  const currDef = schema3._zod.def;
   const checks = currDef.checks;
   const hasChecks = checks && checks.length > 0;
   if (hasChecks) {
     throw new Error(".pick() cannot be used on object schemas containing refinements");
   }
   const newShape = {};
-  mirrorShape(newShape, schema2, maskedKeys(schema2, mask));
-  return clone(schema2, mergeDefs(currDef, { shape: newShape, checks: [] }));
+  mirrorShape(newShape, schema3, maskedKeys(schema3, mask));
+  return clone(schema3, mergeDefs(currDef, { shape: newShape, checks: [] }));
 }
-function maskedKeys(schema2, mask) {
-  const raw = sourceShape(schema2);
+function maskedKeys(schema3, mask) {
+  const raw = sourceShape(schema3);
   const keys = [];
   for (const key of Reflect.ownKeys(mask)) {
     if (!Object.getOwnPropertyDescriptor(raw, key)?.enumerable) {
@@ -30669,45 +30670,45 @@ function maskedKeys(schema2, mask) {
   }
   return keys;
 }
-function omit(schema2, mask) {
-  const currDef = schema2._zod.def;
+function omit(schema3, mask) {
+  const currDef = schema3._zod.def;
   const checks = currDef.checks;
   const hasChecks = checks && checks.length > 0;
   if (hasChecks) {
     throw new Error(".omit() cannot be used on object schemas containing refinements");
   }
-  const omitted = new Set(maskedKeys(schema2, mask));
+  const omitted = new Set(maskedKeys(schema3, mask));
   const newShape = {};
-  mirrorShape(newShape, schema2, Reflect.ownKeys(sourceShape(schema2)).filter((key) => !omitted.has(key)));
-  return clone(schema2, mergeDefs(currDef, { shape: newShape, checks: [] }));
+  mirrorShape(newShape, schema3, Reflect.ownKeys(sourceShape(schema3)).filter((key) => !omitted.has(key)));
+  return clone(schema3, mergeDefs(currDef, { shape: newShape, checks: [] }));
 }
-function extend(schema2, shape) {
+function extend(schema3, shape) {
   if (!isPlainObject(shape)) {
     throw new Error("Invalid input to extend: expected a plain object");
   }
-  const checks = schema2._zod.def.checks;
+  const checks = schema3._zod.def.checks;
   const hasChecks = checks && checks.length > 0;
   if (hasChecks) {
-    const existingShape = sourceShape(schema2);
+    const existingShape = sourceShape(schema3);
     for (const key of Reflect.ownKeys(shape)) {
       if (Object.getOwnPropertyDescriptor(existingShape, key) !== void 0) {
         throw new Error("Cannot overwrite keys on object schemas containing refinements. Use `.safeExtend()` instead.");
       }
     }
   }
-  return clone(schema2, mergeDefs(schema2._zod.def, { shape: extended(schema2, shape) }));
+  return clone(schema3, mergeDefs(schema3._zod.def, { shape: extended(schema3, shape) }));
 }
-function extended(schema2, shape) {
+function extended(schema3, shape) {
   const newShape = {};
-  mirrorShape(newShape, schema2, Reflect.ownKeys(sourceShape(schema2)));
+  mirrorShape(newShape, schema3, Reflect.ownKeys(sourceShape(schema3)));
   mirrorProps(newShape, shape);
   return newShape;
 }
-function safeExtend(schema2, shape) {
+function safeExtend(schema3, shape) {
   if (!isPlainObject(shape)) {
     throw new Error("Invalid input to safeExtend: expected a plain object");
   }
-  return clone(schema2, mergeDefs(schema2._zod.def, { shape: extended(schema2, shape) }));
+  return clone(schema3, mergeDefs(schema3._zod.def, { shape: extended(schema3, shape) }));
 }
 function merge(a, b) {
   if (!b?._zod?.def) {
@@ -30728,26 +30729,26 @@ function merge(a, b) {
   });
   return clone(a, def);
 }
-function partial(Class2, schema2, mask, name = "partial") {
-  const currDef = schema2._zod.def;
+function partial(Class2, schema3, mask, name = "partial") {
+  const currDef = schema3._zod.def;
   const checks = currDef.checks;
   const hasChecks = checks && checks.length > 0;
   if (hasChecks) {
     throw new Error(`.${name}() cannot be used on object schemas containing refinements`);
   }
-  const selected = mask ? new Set(maskedKeys(schema2, mask)) : void 0;
+  const selected = mask ? new Set(maskedKeys(schema3, mask)) : void 0;
   const newShape = {};
-  mirrorShape(newShape, schema2, Reflect.ownKeys(sourceShape(schema2)), Class2 && ((value, key) => selected && !selected.has(key) ? value : new Class2({ type: "optional", innerType: value })));
-  return clone(schema2, mergeDefs(schema2._zod.def, { shape: newShape, checks: [] }));
+  mirrorShape(newShape, schema3, Reflect.ownKeys(sourceShape(schema3)), Class2 && ((value, key) => selected && !selected.has(key) ? value : new Class2({ type: "optional", innerType: value })));
+  return clone(schema3, mergeDefs(schema3._zod.def, { shape: newShape, checks: [] }));
 }
-function required(Class2, schema2, mask) {
-  const selected = mask ? new Set(maskedKeys(schema2, mask)) : void 0;
+function required(Class2, schema3, mask) {
+  const selected = mask ? new Set(maskedKeys(schema3, mask)) : void 0;
   const newShape = {};
-  mirrorShape(newShape, schema2, Reflect.ownKeys(sourceShape(schema2)), (value, key) => (
+  mirrorShape(newShape, schema3, Reflect.ownKeys(sourceShape(schema3)), (value, key) => (
     // overwrite with non-optional
     selected && !selected.has(key) ? value : new Class2({ type: "nonoptional", innerType: value })
   ));
-  return clone(schema2, mergeDefs(schema2._zod.def, { shape: newShape }));
+  return clone(schema3, mergeDefs(schema3._zod.def, { shape: newShape }));
 }
 function aborted(x, startIndex = 0) {
   if (x.aborted === true)
@@ -31352,9 +31353,9 @@ function finalizeParams(callee, params) {
   return { callee: params?.callee ?? callee, Err: params?.Err };
 }
 var _parse = (_Err) => {
-  const fn = (schema2, value, _ctx, _params) => {
+  const fn = (schema3, value, _ctx, _params) => {
     const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
-    const result = schema2._zod.run({ value, issues: [] }, ctx);
+    const result = schema3._zod.run({ value, issues: [] }, ctx);
     if (result instanceof Promise) {
       throw new $ZodAsyncError();
     }
@@ -31369,9 +31370,9 @@ var _parse = (_Err) => {
 };
 var parse = /* @__PURE__ */ _parse($ZodRealError);
 var _parseAsync = (_Err) => {
-  const fn = async (schema2, value, _ctx, params) => {
+  const fn = async (schema3, value, _ctx, params) => {
     const ctx = _ctx ? { ..._ctx, async: true } : { async: true };
-    let result = schema2._zod.run({ value, issues: [] }, ctx);
+    let result = schema3._zod.run({ value, issues: [] }, ctx);
     if (result instanceof Promise)
       result = await result;
     if (result.issues.length) {
@@ -31384,9 +31385,9 @@ var _parseAsync = (_Err) => {
   return fn;
 };
 var parseAsync = /* @__PURE__ */ _parseAsync($ZodRealError);
-var _safeParse = (_Err) => (schema2, value, _ctx) => {
+var _safeParse = (_Err) => (schema3, value, _ctx) => {
   const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
-  const result = schema2._zod.run({ value, issues: [] }, ctx);
+  const result = schema3._zod.run({ value, issues: [] }, ctx);
   if (result instanceof Promise) {
     throw new $ZodAsyncError();
   }
@@ -31412,9 +31413,9 @@ function failure(Err, issues, ctx) {
     }
   };
 }
-var _safeParseAsync = (_Err) => async (schema2, value, _ctx) => {
+var _safeParseAsync = (_Err) => async (schema3, value, _ctx) => {
   const ctx = _ctx ? { ..._ctx, async: true } : { async: true };
-  let result = schema2._zod.run({ value, issues: [] }, ctx);
+  let result = schema3._zod.run({ value, issues: [] }, ctx);
   if (result instanceof Promise)
     result = await result;
   return result.issues.length ? failure(_Err, result.issues, ctx) : { success: true, data: result.value };
@@ -31422,88 +31423,88 @@ var _safeParseAsync = (_Err) => async (schema2, value, _ctx) => {
 var safeParseAsync = /* @__PURE__ */ _safeParseAsync($ZodRealError);
 var COMPILE_INVALID = /* @__PURE__ */ Symbol.for("zod.compile.invalid");
 var COMPILE_FALLBACK = /* @__PURE__ */ Symbol.for("zod.compile.fallback");
-var validate = ((schema2, value, _ctx) => {
-  const validator = schema2._zod.bag.validator;
+var validate = ((schema3, value, _ctx) => {
+  const validator = schema3._zod.bag.validator;
   if (validator !== void 0) {
     if (validator(value) !== COMPILE_INVALID)
       return true;
     if (validator.definite === true && _ctx === void 0)
       return false;
   }
-  return validateFallback(schema2, value, _ctx);
+  return validateFallback(schema3, value, _ctx);
 });
-function validateFallback(schema2, value, _ctx) {
+function validateFallback(schema3, value, _ctx) {
   const ctx = _ctx ? { ..._ctx, async: false, abortEarly: true } : { async: false, abortEarly: true };
-  const fallbackRun = schema2._zod.bag.fallbackRun;
+  const fallbackRun = schema3._zod.bag.fallbackRun;
   let result;
   if (fallbackRun) {
     ctx[COMPILE_FALLBACK] = true;
     result = fallbackRun({ value, issues: [] }, ctx);
   } else {
-    result = schema2._zod.run({ value, issues: [] }, ctx);
+    result = schema3._zod.run({ value, issues: [] }, ctx);
   }
   if (result instanceof Promise) {
     throw new $ZodAsyncError();
   }
   return result.issues.length === 0;
 }
-var validateAsync = async (schema2, value, _ctx) => {
+var validateAsync = async (schema3, value, _ctx) => {
   const ctx = _ctx ? { ..._ctx, async: true, abortEarly: true } : { async: true, abortEarly: true };
-  let result = schema2._zod.run({ value, issues: [] }, ctx);
+  let result = schema3._zod.run({ value, issues: [] }, ctx);
   if (result instanceof Promise)
     result = await result;
   return result.issues.length === 0;
 };
 var _encode = (_Err) => {
   const parse3 = _parse(_Err);
-  const fn = (schema2, value, _ctx, _params) => {
+  const fn = (schema3, value, _ctx, _params) => {
     const ctx = _ctx ? { ..._ctx, direction: "backward" } : { direction: "backward" };
-    return parse3(schema2, value, ctx, finalizeParams(fn, _params));
+    return parse3(schema3, value, ctx, finalizeParams(fn, _params));
   };
   return fn;
 };
 var encode2 = /* @__PURE__ */ _encode($ZodRealError);
 var _decode = (_Err) => {
   const parse3 = _parse(_Err);
-  const fn = (schema2, value, _ctx, _params) => {
-    return parse3(schema2, value, _ctx, finalizeParams(fn, _params));
+  const fn = (schema3, value, _ctx, _params) => {
+    return parse3(schema3, value, _ctx, finalizeParams(fn, _params));
   };
   return fn;
 };
 var decode = /* @__PURE__ */ _decode($ZodRealError);
 var _encodeAsync = (_Err) => {
   const parseAsync3 = _parseAsync(_Err);
-  const fn = async (schema2, value, _ctx, _params) => {
+  const fn = async (schema3, value, _ctx, _params) => {
     const ctx = _ctx ? { ..._ctx, direction: "backward" } : { direction: "backward" };
-    return await parseAsync3(schema2, value, ctx, finalizeParams(fn, _params));
+    return await parseAsync3(schema3, value, ctx, finalizeParams(fn, _params));
   };
   return fn;
 };
 var encodeAsync = /* @__PURE__ */ _encodeAsync($ZodRealError);
 var _decodeAsync = (_Err) => {
   const parseAsync3 = _parseAsync(_Err);
-  const fn = async (schema2, value, _ctx, _params) => {
-    return await parseAsync3(schema2, value, _ctx, finalizeParams(fn, _params));
+  const fn = async (schema3, value, _ctx, _params) => {
+    return await parseAsync3(schema3, value, _ctx, finalizeParams(fn, _params));
   };
   return fn;
 };
 var decodeAsync = /* @__PURE__ */ _decodeAsync($ZodRealError);
-var _safeEncode = (_Err) => (schema2, value, _ctx) => {
+var _safeEncode = (_Err) => (schema3, value, _ctx) => {
   const ctx = _ctx ? { ..._ctx, direction: "backward" } : { direction: "backward" };
-  return _safeParse(_Err)(schema2, value, ctx);
+  return _safeParse(_Err)(schema3, value, ctx);
 };
 var safeEncode = /* @__PURE__ */ _safeEncode($ZodRealError);
-var _safeDecode = (_Err) => (schema2, value, _ctx) => {
-  return _safeParse(_Err)(schema2, value, _ctx);
+var _safeDecode = (_Err) => (schema3, value, _ctx) => {
+  return _safeParse(_Err)(schema3, value, _ctx);
 };
 var safeDecode = /* @__PURE__ */ _safeDecode($ZodRealError);
-var _safeEncodeAsync = (_Err) => async (schema2, value, _ctx) => {
+var _safeEncodeAsync = (_Err) => async (schema3, value, _ctx) => {
   const ctx = _ctx ? { ..._ctx, direction: "backward" } : { direction: "backward" };
-  return _safeParseAsync(_Err)(schema2, value, ctx);
+  return _safeParseAsync(_Err)(schema3, value, ctx);
 };
 var safeEncodeAsync = /* @__PURE__ */ _safeEncodeAsync($ZodRealError);
-var _safeDecodeAsync = (_Err) => async (schema2, value, _ctx) => {
-  return _safeParseAsync(_Err)(schema2, value, _ctx);
+var _safeDecodeAsync = (_Err) => async (schema3, value, _ctx) => {
+  return _safeParseAsync(_Err)(schema3, value, _ctx);
 };
 var safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync($ZodRealError);
 
@@ -32119,8 +32120,8 @@ var $ZodCheckProperties = /* @__PURE__ */ $constructor("$ZodCheckProperties", (i
     entries ?? (entries = Reflect.ownKeys(def.shape).map((key) => [key, def.shape[key]]));
     const input2 = payload.value;
     let proms;
-    for (const [key, schema2] of entries) {
-      const result = schema2._zod.run({ value: input2[key], issues: [] }, {});
+    for (const [key, schema3] of entries) {
+      const result = schema3._zod.run({ value: input2[key], issues: [] }, {});
       if (result instanceof Promise) {
         proms ?? (proms = []);
         proms.push(result.then((result2) => handleCheckPropertyResult(result2, payload, key)));
@@ -33214,10 +33215,10 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
       const id = ids[key];
       const k = typeof key === "symbol" ? `syms[${syms.indexOf(key)}]` : esc(key);
       const isPresent = `${k} in input`;
-      const schema2 = shape[key];
-      const optin = schema2?._zod?.optin;
+      const schema3 = shape[key];
+      const optin = schema3?._zod?.optin;
       const isOptionalIn = optin !== void 0;
-      const isOptionalOut = schema2?._zod?.optout === "optional";
+      const isOptionalOut = schema3?._zod?.optout === "optional";
       doc.write(`const ${id} = ${parseStr(k)};`);
       if (isOptionalIn && isOptionalOut) {
         const assign = optin === "optional" ? `${id}_present` : `${id}.value !== undefined || ${id}_present`;
@@ -34396,8 +34397,8 @@ function handleReadonlyResult(payload) {
     payload.value = Object.freeze(payload.value);
   return payload;
 }
-function leafPattern(schema2) {
-  const def = schema2._zod.def;
+function leafPattern(schema3) {
+  const def = schema3._zod.def;
   let pattern = def.pattern;
   let isInt = !!def.format?.includes("int");
   let minimum;
@@ -34420,13 +34421,13 @@ function leafPattern(schema2) {
     return "(?!)";
   if (minimum !== void 0 || maximum !== void 0)
     return string({ minimum, maximum }).source;
-  const own2 = schema2._zod.pattern;
+  const own2 = schema3._zod.pattern;
   return (isInt && own2 === number ? integer : own2)?.source;
 }
-function partPattern(schema2) {
-  const def = schema2._zod.def;
-  const own2 = schema2._zod.pattern?.source;
-  const inner = def.innerType ?? schema2._zod.innerType;
+function partPattern(schema3) {
+  const def = schema3._zod.def;
+  const own2 = schema3._zod.pattern?.source;
+  const inner = def.innerType ?? schema3._zod.innerType;
   if (inner) {
     const before = inner._zod.pattern?.source;
     const after = partPattern(inner);
@@ -34440,7 +34441,7 @@ function partPattern(schema2) {
     if (sources.every(Boolean))
       return `^(${sources.map((s2) => cleanRegex(s2)).join("|")})$`;
   }
-  return leafPattern(schema2);
+  return leafPattern(schema3);
 }
 var $ZodTemplateLiteral = /* @__PURE__ */ $constructor("$ZodTemplateLiteral", (inst, def) => {
   $ZodType.init(inst, def);
@@ -42470,11 +42471,11 @@ var $ZodRegistry = class {
     this._map = /* @__PURE__ */ new WeakMap();
     this._idmap = /* @__PURE__ */ new Map();
   }
-  add(schema2, ..._meta) {
+  add(schema3, ..._meta) {
     const meta3 = _meta[0];
-    this._map.set(schema2, meta3);
+    this._map.set(schema3, meta3);
     if (meta3 && typeof meta3 === "object" && "id" in meta3) {
-      this._idmap.set(meta3.id, schema2);
+      this._idmap.set(meta3.id, schema3);
     }
     return this;
   }
@@ -42483,26 +42484,26 @@ var $ZodRegistry = class {
     this._idmap = /* @__PURE__ */ new Map();
     return this;
   }
-  remove(schema2) {
-    const meta3 = this._map.get(schema2);
+  remove(schema3) {
+    const meta3 = this._map.get(schema3);
     if (meta3 && typeof meta3 === "object" && "id" in meta3) {
       this._idmap.delete(meta3.id);
     }
-    this._map.delete(schema2);
+    this._map.delete(schema3);
     return this;
   }
-  get(schema2) {
-    const p = schema2._zod.parent;
+  get(schema3) {
+    const p = schema3._zod.parent;
     if (p) {
       const pm = { ...this.get(p) ?? {} };
       delete pm.id;
-      const f = { ...pm, ...this._map.get(schema2) };
+      const f = { ...pm, ...this._map.get(schema3) };
       return Object.keys(f).length ? f : void 0;
     }
-    return this._map.get(schema2);
+    return this._map.get(schema3);
   }
-  has(schema2) {
-    return this._map.has(schema2);
+  has(schema3) {
+    return this._map.has(schema3);
   }
 };
 function registry2() {
@@ -42527,31 +42528,31 @@ var ZodCompileUnsupportedError = class extends Error {
     this.islandable = islandable;
   }
 };
-function compileValidator(schema2, parser) {
+function compileValidator(schema3, parser) {
   try {
-    return compileFn(schema2, { assertOnly: true });
+    return compileFn(schema3, { assertOnly: true });
   } catch {
     return parser;
   }
 }
-function compile(schema2, options) {
+function compile(schema3, options) {
   try {
-    const parser = compileFn(schema2);
-    const clone2 = withParser(schema2, parser);
-    clone2._zod.bag.validator = compileValidator(schema2, parser);
+    const parser = compileFn(schema3);
+    const clone2 = withParser(schema3, parser);
+    clone2._zod.bag.validator = compileValidator(schema3, parser);
     return clone2;
   } catch (err) {
     if (options?.strict)
       throw err;
-    return schema2;
+    return schema3;
   }
 }
-function withParser(schema2, parser) {
-  if (isRecursiveSchema(schema2)) {
+function withParser(schema3, parser) {
+  if (isRecursiveSchema(schema3)) {
     throw new ZodCompileUnsupportedError("a schema whose subtree contains a reference cycle");
   }
-  const clone2 = clone(schema2);
-  const liveRun = schema2._zod.run;
+  const clone2 = clone(schema3);
+  const liveRun = schema3._zod.run;
   const originalRun = liveRun.__originalRun ?? liveRun;
   const wrapped = (payload, ctx) => {
     if (ctx?.async || ctx?.direction === "backward" || ctx?.skipChecks || ctx?.[FALLBACK_FLAG]) {
@@ -42574,7 +42575,7 @@ function withParser(schema2, parser) {
   clone2._zod.bag.validator = parser;
   clone2._zod.run = wrapped;
   if (!liveRun.__originalRun)
-    installCompiledUserMethods(clone2, schema2, parser);
+    installCompiledUserMethods(clone2, schema3, parser);
   return clone2;
 }
 function installCompiledUserMethods(target, source, parser) {
@@ -42601,10 +42602,10 @@ function installCompiledUserMethods(target, source, parser) {
     };
   }
 }
-function compileFn(schema2, options) {
+function compileFn(schema3, options) {
   let recursive2 = true;
   try {
-    recursive2 = isRecursiveSchema(schema2);
+    recursive2 = isRecursiveSchema(schema3);
   } catch {
   }
   if (recursive2) {
@@ -42617,7 +42618,7 @@ function compileFn(schema2, options) {
     definite: true
   };
   const doc = new Doc(["input"]);
-  const outputAccessor = generateCheck(doc, ctx, schema2, "input", !options?.assertOnly);
+  const outputAccessor = generateCheck(doc, ctx, schema3, "input", !options?.assertOnly);
   doc.write(outputAccessor === null ? `return true;` : `return ${outputAccessor};`);
   const constantNames = ["INVALID", ...ctx.constants.keys()];
   const constantValues = [INVALID, ...ctx.constants.values()];
@@ -42657,20 +42658,20 @@ function addUserConstant(ctx, fn) {
 function newVar(ctx) {
   return `v${ctx.varCounter++}`;
 }
-function runtimeRun(schema2, value) {
-  const result = schema2._zod.run({ value, issues: [] }, {});
+function runtimeRun(schema3, value) {
+  const result = schema3._zod.run({ value, issues: [] }, {});
   if (result && typeof result.then === "function")
     return INVALID;
   const r = result;
   return r.issues.length === 0 ? r.value : INVALID;
 }
-function compileChild(doc, ctx, schema2, accessor, needsValue = true) {
+function compileChild(doc, ctx, schema3, accessor, needsValue = true) {
   const contentLen = doc.content.length;
   const constantCount = ctx.constants.size;
   const constantCounter = ctx.constantCounter;
   const varCounter = ctx.varCounter;
   try {
-    return generateCheck(doc, ctx, schema2, accessor, needsValue);
+    return generateCheck(doc, ctx, schema3, accessor, needsValue);
   } catch (err) {
     if (!(err instanceof ZodCompileUnsupportedError) || !err.islandable)
       throw err;
@@ -42682,12 +42683,12 @@ function compileChild(doc, ctx, schema2, accessor, needsValue = true) {
     }
     ctx.constantCounter = constantCounter;
     ctx.varCounter = varCounter;
-    return emitRuntimeIsland(doc, ctx, schema2, accessor);
+    return emitRuntimeIsland(doc, ctx, schema3, accessor);
   }
 }
-function emitRuntimeIsland(doc, ctx, schema2, accessor) {
+function emitRuntimeIsland(doc, ctx, schema3, accessor) {
   ctx.definite = false;
-  const schemaConst = addConstant(ctx, schema2);
+  const schemaConst = addConstant(ctx, schema3);
   const runConst = addConstant(ctx, runtimeRun);
   const outVar = newVar(ctx);
   doc.write(`const ${outVar} = ${runConst}(${schemaConst}, ${accessor});`);
@@ -42702,8 +42703,8 @@ var WHEN_DEFAULTED_CHECKS = /* @__PURE__ */ new Set([
   "min_length",
   "length_equals"
 ]);
-function generateChecks(doc, ctx, schema2, accessor) {
-  const schemaChecks = schema2._zod.def.checks;
+function generateChecks(doc, ctx, schema3, accessor) {
+  const schemaChecks = schema3._zod.def.checks;
   if (!schemaChecks || schemaChecks.length === 0)
     return accessor;
   let currentAccessor = accessor;
@@ -43078,8 +43079,8 @@ function generateStringFormatCheck(doc, ctx, def, accessor, needsValue = true) {
   }
   return accessor;
 }
-function generateCheck(doc, ctx, schema2, accessor, needsValue = true) {
-  const def = schema2._zod.def;
+function generateCheck(doc, ctx, schema3, accessor, needsValue = true) {
+  const def = schema3._zod.def;
   const type = def.type;
   if (def.coerce) {
     throw new ZodCompileUnsupportedError(`coercion (z.coerce.${type}())`);
@@ -43088,16 +43089,16 @@ function generateCheck(doc, ctx, schema2, accessor, needsValue = true) {
   let typeAccessor;
   switch (type) {
     case "string":
-      typeAccessor = generateStringCheck(doc, ctx, schema2, accessor, buildsValue);
+      typeAccessor = generateStringCheck(doc, ctx, schema3, accessor, buildsValue);
       break;
     case "number":
-      typeAccessor = generateNumberCheck(doc, schema2, accessor);
+      typeAccessor = generateNumberCheck(doc, schema3, accessor);
       break;
     case "boolean":
       typeAccessor = generateBooleanCheck(doc, accessor);
       break;
     case "bigint":
-      typeAccessor = generateBigIntCheck(doc, schema2, accessor);
+      typeAccessor = generateBigIntCheck(doc, schema3, accessor);
       break;
     case "symbol":
       typeAccessor = generateSymbolCheck(doc, accessor);
@@ -43126,79 +43127,79 @@ function generateCheck(doc, ctx, schema2, accessor, needsValue = true) {
       typeAccessor = generateDateCheck(doc, accessor);
       break;
     case "object":
-      typeAccessor = generateObjectCheck(doc, ctx, schema2, accessor, buildsValue);
+      typeAccessor = generateObjectCheck(doc, ctx, schema3, accessor, buildsValue);
       break;
     case "optional":
-      typeAccessor = generateOptionalCheck(doc, ctx, schema2, accessor, buildsValue);
+      typeAccessor = generateOptionalCheck(doc, ctx, schema3, accessor, buildsValue);
       break;
     case "nullable":
-      typeAccessor = generateNullableCheck(doc, ctx, schema2, accessor, buildsValue);
+      typeAccessor = generateNullableCheck(doc, ctx, schema3, accessor, buildsValue);
       break;
     case "array":
-      typeAccessor = generateArrayCheck(doc, ctx, schema2, accessor, buildsValue);
+      typeAccessor = generateArrayCheck(doc, ctx, schema3, accessor, buildsValue);
       break;
     case "literal":
-      typeAccessor = generateLiteralCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateLiteralCheck(doc, ctx, schema3, accessor);
       break;
     case "enum":
-      typeAccessor = generateEnumCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateEnumCheck(doc, ctx, schema3, accessor);
       break;
     case "readonly": {
-      const innerOut = generateWrapperCheck(doc, ctx, schema2, accessor);
+      const innerOut = generateWrapperCheck(doc, ctx, schema3, accessor);
       const frozenVar = newVar(ctx);
       doc.write(`const ${frozenVar} = Object.freeze(${innerOut});`);
       typeAccessor = frozenVar;
       break;
     }
     case "success":
-      generateWrapperCheck(doc, ctx, schema2, accessor);
+      generateWrapperCheck(doc, ctx, schema3, accessor);
       typeAccessor = "true";
       break;
     case "default":
     case "prefault":
-      typeAccessor = generateDefaultCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateDefaultCheck(doc, ctx, schema3, accessor);
       break;
     case "nonoptional":
-      typeAccessor = generateNonOptionalCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateNonOptionalCheck(doc, ctx, schema3, accessor);
       break;
     case "tuple":
-      typeAccessor = generateTupleCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateTupleCheck(doc, ctx, schema3, accessor);
       break;
     case "union":
-      typeAccessor = generateUnionCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateUnionCheck(doc, ctx, schema3, accessor);
       break;
     case "intersection":
-      typeAccessor = generateIntersectionCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateIntersectionCheck(doc, ctx, schema3, accessor);
       break;
     case "record":
-      typeAccessor = generateRecordCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateRecordCheck(doc, ctx, schema3, accessor);
       break;
     case "map":
-      typeAccessor = generateMapCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateMapCheck(doc, ctx, schema3, accessor);
       break;
     case "set":
-      typeAccessor = generateSetCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateSetCheck(doc, ctx, schema3, accessor);
       break;
     case "file":
       typeAccessor = generateFileCheck(doc, accessor);
       break;
     case "template_literal":
-      typeAccessor = generateTemplateLiteralCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateTemplateLiteralCheck(doc, ctx, schema3, accessor);
       break;
     case "lazy":
-      typeAccessor = generateLazyCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateLazyCheck(doc, ctx, schema3, accessor);
       break;
     case "pipe":
-      typeAccessor = generatePipeCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generatePipeCheck(doc, ctx, schema3, accessor);
       break;
     case "custom":
-      typeAccessor = generateCustomCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateCustomCheck(doc, ctx, schema3, accessor);
       break;
     case "transform":
-      typeAccessor = generateTransformCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateTransformCheck(doc, ctx, schema3, accessor);
       break;
     case "catch":
-      typeAccessor = generateCatchCheck(doc, ctx, schema2, accessor);
+      typeAccessor = generateCatchCheck(doc, ctx, schema3, accessor);
       break;
     default: {
       void type;
@@ -43207,18 +43208,18 @@ function generateCheck(doc, ctx, schema2, accessor, needsValue = true) {
   }
   if (typeAccessor === null)
     return null;
-  return generateChecks(doc, ctx, schema2, typeAccessor);
+  return generateChecks(doc, ctx, schema3, typeAccessor);
 }
-function generateStringCheck(doc, ctx, schema2, accessor, needsValue = true) {
+function generateStringCheck(doc, ctx, schema3, accessor, needsValue = true) {
   doc.write(`if (typeof ${accessor} !== "string") return INVALID;`);
-  const def = schema2._zod.def;
+  const def = schema3._zod.def;
   if (def.format === void 0)
     return accessor;
   return generateStringFormatCheck(doc, ctx, def, accessor, needsValue);
 }
-function generateNumberCheck(doc, schema2, accessor) {
+function generateNumberCheck(doc, schema3, accessor) {
   doc.write(`if (typeof ${accessor} !== "number" || !Number.isFinite(${accessor})) return INVALID;`);
-  const def = schema2._zod.def;
+  const def = schema3._zod.def;
   if (def.check === "number_format" && def.format) {
     generateNumberFormatCheck(doc, { format: def.format }, accessor);
   }
@@ -43228,9 +43229,9 @@ function generateBooleanCheck(doc, accessor) {
   doc.write(`if (typeof ${accessor} !== "boolean") return INVALID;`);
   return accessor;
 }
-function generateBigIntCheck(doc, schema2, accessor) {
+function generateBigIntCheck(doc, schema3, accessor) {
   doc.write(`if (typeof ${accessor} !== "bigint") return INVALID;`);
-  const def = schema2._zod.def;
+  const def = schema3._zod.def;
   if (def.format) {
     switch (def.format) {
       case "int64":
@@ -43267,8 +43268,8 @@ function generateDateCheck(doc, accessor) {
   doc.write(`if (!(${accessor} instanceof Date) || Number.isNaN(${accessor}.getTime())) return INVALID;`);
   return accessor;
 }
-function generateObjectCheck(doc, ctx, schema2, accessor, buildsValue = true) {
-  const def = schema2._zod.def;
+function generateObjectCheck(doc, ctx, schema3, accessor, buildsValue = true) {
+  const def = schema3._zod.def;
   doc.write(`if (typeof ${accessor} !== "object" || ${accessor} === null || Array.isArray(${accessor})) return INVALID;`);
   const shape = def.shape;
   const keys = Object.keys(shape);
@@ -43386,9 +43387,9 @@ function generateObjectCheck(doc, ctx, schema2, accessor, buildsValue = true) {
   }
   return outputVar;
 }
-function generateOptionalCheck(doc, ctx, schema2, accessor, buildsValue = true) {
-  const def = schema2._zod.def;
-  if (isExactOptional(schema2)) {
+function generateOptionalCheck(doc, ctx, schema3, accessor, buildsValue = true) {
+  const def = schema3._zod.def;
+  if (isExactOptional(schema3)) {
     return generateCheck(doc, ctx, def.innerType, accessor, buildsValue);
   }
   if (def.innerType._zod.optin === "defaulted") {
@@ -43425,16 +43426,16 @@ function generateOptionalCheck(doc, ctx, schema2, accessor, buildsValue = true) 
   doc.write(`}`);
   return outputVar;
 }
-function isExactOptional(schema2) {
-  return schema2._zod.traits?.has("$ZodExactOptional") === true;
+function isExactOptional(schema3) {
+  return schema3._zod.traits?.has("$ZodExactOptional") === true;
 }
-function requiresPresenceCheck(schema2) {
-  return schema2._zod.optin === void 0 && fastPathAcceptsAbsence(schema2);
+function requiresPresenceCheck(schema3) {
+  return schema3._zod.optin === void 0 && fastPathAcceptsAbsence(schema3);
 }
-function fastPathAcceptsAbsence(schema2) {
-  if (schema2._zod.def.coerce)
+function fastPathAcceptsAbsence(schema3) {
+  if (schema3._zod.def.coerce)
     return true;
-  const def = schema2._zod.def;
+  const def = schema3._zod.def;
   switch (def.type) {
     case "any":
     case "unknown":
@@ -43469,7 +43470,7 @@ function fastPathAcceptsAbsence(schema2) {
     case "literal":
       return !!def.values?.includes(void 0);
     case "enum":
-      return !!schema2._zod.values?.has(void 0);
+      return !!schema3._zod.values?.has(void 0);
     case "optional":
     case "nullable":
     case "readonly":
@@ -43489,14 +43490,14 @@ function fastPathAcceptsAbsence(schema2) {
       return true;
   }
 }
-function dropsWhenAbsent(schema2) {
-  return schema2._zod.optin === "optional" && schema2._zod.optout === "optional";
+function dropsWhenAbsent(schema3) {
+  return schema3._zod.optin === "optional" && schema3._zod.optout === "optional";
 }
-function mayOmitUndefined(schema2) {
-  return (schema2._zod.optin !== "defaulted" || schema2._zod.optout === "optional") && mayOutputUndefined(schema2);
+function mayOmitUndefined(schema3) {
+  return (schema3._zod.optin !== "defaulted" || schema3._zod.optout === "optional") && mayOutputUndefined(schema3);
 }
-function mayOutputUndefined(schema2) {
-  const def = schema2._zod.def;
+function mayOutputUndefined(schema3) {
+  const def = schema3._zod.def;
   switch (def.type) {
     case "string":
     case "number":
@@ -43520,7 +43521,7 @@ function mayOutputUndefined(schema2) {
     case "literal":
       return !!def.values?.includes(void 0);
     case "enum":
-      return !!schema2._zod.values?.has(void 0);
+      return !!schema3._zod.values?.has(void 0);
     case "optional":
       return true;
     case "nullable":
@@ -43537,8 +43538,8 @@ function mayOutputUndefined(schema2) {
       return true;
   }
 }
-function generateNullableCheck(doc, ctx, schema2, accessor, buildsValue = true) {
-  const def = schema2._zod.def;
+function generateNullableCheck(doc, ctx, schema3, accessor, buildsValue = true) {
+  const def = schema3._zod.def;
   const outputVar = buildsValue ? newVar(ctx) : null;
   if (outputVar)
     doc.write(`let ${outputVar} = null;`);
@@ -43551,8 +43552,8 @@ function generateNullableCheck(doc, ctx, schema2, accessor, buildsValue = true) 
   doc.write(`}`);
   return outputVar;
 }
-function generateArrayCheck(doc, ctx, schema2, accessor, buildsValue = true) {
-  const def = schema2._zod.def;
+function generateArrayCheck(doc, ctx, schema3, accessor, buildsValue = true) {
+  const def = schema3._zod.def;
   doc.write(`if (!Array.isArray(${accessor})) return INVALID;`);
   const outputVar = buildsValue ? newVar(ctx) : null;
   const iVar = newVar(ctx);
@@ -43569,8 +43570,8 @@ function generateArrayCheck(doc, ctx, schema2, accessor, buildsValue = true) {
   doc.write(`}`);
   return outputVar;
 }
-function generateLiteralCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateLiteralCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   const values = def.values;
   if (values.length !== 1) {
     const literalSet = addConstant(ctx, new Set(values));
@@ -43598,8 +43599,8 @@ function generateLiteralCheck(doc, ctx, schema2, accessor) {
   }
   return accessor;
 }
-function generateEnumCheck(doc, ctx, schema2, accessor) {
-  const values = schema2._zod.values;
+function generateEnumCheck(doc, ctx, schema3, accessor) {
+  const values = schema3._zod.values;
   if (!values) {
     throw new ZodCompileUnsupportedError("enum schema without enumerated values");
   }
@@ -43607,15 +43608,15 @@ function generateEnumCheck(doc, ctx, schema2, accessor) {
   doc.write(`if (!${enumSet}.has(${accessor})) return INVALID;`);
   return accessor;
 }
-function generateWrapperCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateWrapperCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   return generateCheck(doc, ctx, def.innerType, accessor);
 }
-function generateDefaultCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
-  const descriptor = Object.getOwnPropertyDescriptor(schema2._zod.def, "defaultValue");
-  const defaultGetter = descriptor ? () => schema2._zod.def.defaultValue : void 0;
-  if (schema2._zod.def.type === "prefault") {
+function generateDefaultCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
+  const descriptor = Object.getOwnPropertyDescriptor(schema3._zod.def, "defaultValue");
+  const defaultGetter = descriptor ? () => schema3._zod.def.defaultValue : void 0;
+  if (schema3._zod.def.type === "prefault") {
     if (!defaultGetter) {
       return generateCheck(doc, ctx, def.innerType, accessor);
     }
@@ -43651,16 +43652,16 @@ function generateDefaultCheck(doc, ctx, schema2, accessor) {
   }
   return outputVar;
 }
-function generateNonOptionalCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateNonOptionalCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   const innerOutput = generateCheck(doc, ctx, def.innerType, accessor);
   const outputVar = newVar(ctx);
   doc.write(`const ${outputVar} = ${innerOutput};`);
   doc.write(`if (${outputVar} === undefined) return INVALID;`);
   return outputVar;
 }
-function generateTupleCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateTupleCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   const items = def.items;
   const rest = def.rest;
   doc.write(`if (!Array.isArray(${accessor})) return INVALID;`);
@@ -43734,8 +43735,8 @@ function getTupleOptStart2(items, key) {
   }
   return 0;
 }
-function generateUnionCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateUnionCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   const options = def.options;
   if (def.discriminator) {
     return generateDiscriminatedUnionCheck(doc, ctx, def, accessor);
@@ -43835,8 +43836,8 @@ function literalEquality(ctx, accessor, value) {
   }
   throw new ZodCompileUnsupportedError(`literal discriminator value ${String(value)}`);
 }
-function generateIntersectionCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateIntersectionCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   ctx.definite = false;
   const leftOutput = compileChild(doc, ctx, def.left, accessor);
   const rightOutput = compileChild(doc, ctx, def.right, accessor);
@@ -43846,8 +43847,8 @@ function generateIntersectionCheck(doc, ctx, schema2, accessor) {
   doc.write(`if (!${mergedVar}.valid) return INVALID;`);
   return `${mergedVar}.data`;
 }
-function generateRecordCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateRecordCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   const isPlainObjectConst = addConstant(ctx, isPlainObject);
   doc.write(`if (!${isPlainObjectConst}(${accessor})) return INVALID;`);
   const outputVar = newVar(ctx);
@@ -43950,8 +43951,8 @@ function literalPropertyKey(ctx, key) {
     return esc(key);
   return addConstant(ctx, key);
 }
-function generateMapCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateMapCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   doc.write(`if (!(${accessor} instanceof Map)) return INVALID;`);
   const outputVar = newVar(ctx);
   const kVar = newVar(ctx);
@@ -43966,8 +43967,8 @@ function generateMapCheck(doc, ctx, schema2, accessor) {
   doc.write(`}`);
   return outputVar;
 }
-function generateSetCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateSetCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   doc.write(`if (!(${accessor} instanceof Set)) return INVALID;`);
   const outputVar = newVar(ctx);
   const valVar = newVar(ctx);
@@ -43984,9 +43985,9 @@ function generateFileCheck(doc, accessor) {
   doc.write(`if (!(${accessor} instanceof File)) return INVALID;`);
   return accessor;
 }
-function generateTemplateLiteralCheck(doc, ctx, schema2, accessor) {
+function generateTemplateLiteralCheck(doc, ctx, schema3, accessor) {
   doc.write(`if (typeof ${accessor} !== "string") return INVALID;`);
-  const pattern = schema2._zod.pattern;
+  const pattern = schema3._zod.pattern;
   if (pattern) {
     const patternConst = addConstant(ctx, pattern);
     doc.write(`${patternConst}.lastIndex = 0;`);
@@ -43994,8 +43995,8 @@ function generateTemplateLiteralCheck(doc, ctx, schema2, accessor) {
   }
   return accessor;
 }
-function generateLazyCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateLazyCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   const getterConst = addUserConstant(ctx, def.getter);
   const cacheConst = addConstant(ctx, { parser: null });
   doc.write(`if (!${cacheConst}.parser) {`);
@@ -44014,8 +44015,8 @@ function generateLazyCheck(doc, ctx, schema2, accessor) {
   doc.write(`if (${outputVar} === INVALID) return INVALID;`);
   return outputVar;
 }
-function generatePipeCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generatePipeCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   const inputOutput = generateCheck(doc, ctx, def.in, accessor);
   if (def.transform) {
     if (isAsyncFunction(def.transform)) {
@@ -44041,8 +44042,8 @@ function generatePipeCheck(doc, ctx, schema2, accessor) {
 function isAsyncFunction(fn) {
   return typeof fn === "function" && (fn.constructor.name === "AsyncFunction" || fn[Symbol.toStringTag] === "AsyncFunction");
 }
-function generateCustomCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateCustomCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   if (def.fn) {
     if (isAsyncFunction(def.fn)) {
       throw new ZodCompileAsyncError("z.compile: async custom predicates are not supported");
@@ -44067,8 +44068,8 @@ function runtimeCatch(innerSchema, catchValue, value) {
     return r.value;
   return catchValue();
 }
-function generateCatchCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateCatchCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   if (!def.catchValue[CONSTANT_CATCH]) {
     throw new ZodCompileUnsupportedError("catch with a callback (only a constant catch value compiles)", false);
   }
@@ -44090,8 +44091,8 @@ function generateCatchCheck(doc, ctx, schema2, accessor) {
   doc.write(`}`);
   return outputVar;
 }
-function generateTransformCheck(doc, ctx, schema2, accessor) {
-  const def = schema2._zod.def;
+function generateTransformCheck(doc, ctx, schema3, accessor) {
+  const def = schema3._zod.def;
   if (def.transform) {
     if (isAsyncFunction(def.transform)) {
       throw new ZodCompileAsyncError("z.compile: async transforms are not supported");
@@ -44766,11 +44767,11 @@ function _endsWith(suffix, params) {
   });
 }
 // @__NO_SIDE_EFFECTS__
-function _property(property, schema2, params) {
+function _property(property, schema3, params) {
   return new $ZodCheckProperty({
     check: "property",
     property,
-    schema: schema2,
+    schema: schema3,
     ...normalizeParams(params)
   });
 }
@@ -45026,23 +45027,23 @@ function _promise(Class2, innerType) {
 function _custom(Class2, fn, _params) {
   const norm = normalizeParams(_params);
   norm.abort ?? (norm.abort = true);
-  const schema2 = new Class2({
+  const schema3 = new Class2({
     type: "custom",
     check: "custom",
     fn,
     ...norm
   });
-  return schema2;
+  return schema3;
 }
 // @__NO_SIDE_EFFECTS__
 function _refine(Class2, fn, _params) {
-  const schema2 = new Class2({
+  const schema3 = new Class2({
     type: "custom",
     check: "custom",
     fn,
     ...normalizeParams(_params)
   });
-  return schema2;
+  return schema3;
 }
 // @__NO_SIDE_EFFECTS__
 function _superRefine(fn, params) {
@@ -45208,8 +45209,8 @@ function initializeContext(params) {
     external: params?.external ?? void 0
   };
 }
-function handleUnrepresentable(schema2, ctx, json2, params, message2) {
-  const result = typeof ctx.unrepresentable === "function" ? ctx.unrepresentable({ zodSchema: schema2, path: params.path, message: message2 }) : ctx.unrepresentable;
+function handleUnrepresentable(schema3, ctx, json2, params, message2) {
+  const result = typeof ctx.unrepresentable === "function" ? ctx.unrepresentable({ zodSchema: schema3, path: params.path, message: message2 }) : ctx.unrepresentable;
   if (result === "any")
     return false;
   if (result === void 0 || result === "throw")
@@ -45217,42 +45218,42 @@ function handleUnrepresentable(schema2, ctx, json2, params, message2) {
   Object.assign(json2, result);
   return true;
 }
-function processSchema(schema2, ctx, _params = { path: [], schemaPath: [] }) {
+function processSchema(schema3, ctx, _params = { path: [], schemaPath: [] }) {
   var _a4;
-  const def = schema2._zod.def;
-  const seen = ctx.seen.get(schema2);
+  const def = schema3._zod.def;
+  const seen = ctx.seen.get(schema3);
   if (seen) {
     seen.count++;
-    const isCycle = _params.schemaPath.includes(schema2);
+    const isCycle = _params.schemaPath.includes(schema3);
     if (isCycle) {
       seen.cycle = _params.path;
     }
     return seen.schema;
   }
   const result = { schema: {}, count: 1, cycle: void 0, path: _params.path };
-  ctx.seen.set(schema2, result);
+  ctx.seen.set(schema3, result);
   ctx.sharedDefsExtractedFor = void 0;
   ctx.sharedEmitDoneFor = void 0;
-  const overrideSchema = schema2._zod.toJSONSchema?.();
+  const overrideSchema = schema3._zod.toJSONSchema?.();
   if (overrideSchema) {
     result.schema = overrideSchema;
   } else {
     const params = {
       ..._params,
-      schemaPath: [..._params.schemaPath, schema2],
+      schemaPath: [..._params.schemaPath, schema3],
       path: _params.path
     };
-    if (schema2._zod.processJSONSchema) {
-      schema2._zod.processJSONSchema(ctx, result.schema, params);
+    if (schema3._zod.processJSONSchema) {
+      schema3._zod.processJSONSchema(ctx, result.schema, params);
     } else {
       const _json = result.schema;
       const processor = ctx.processors[def.type];
       if (!processor) {
         throw new Error(`[toJSONSchema]: Non-representable type encountered: ${def.type}`);
       }
-      processor(schema2, ctx, _json, params);
+      processor(schema3, ctx, _json, params);
     }
-    const parent = schema2._zod.parent;
+    const parent = schema3._zod.parent;
     if (parent) {
       if (!result.ref)
         result.ref = parent;
@@ -45260,24 +45261,24 @@ function processSchema(schema2, ctx, _params = { path: [], schemaPath: [] }) {
       ctx.seen.get(parent).isParent = true;
     }
   }
-  const meta3 = ctx.metadataRegistry.get(schema2);
+  const meta3 = ctx.metadataRegistry.get(schema3);
   if (meta3)
     assignProps(result.schema, meta3);
-  if (ctx.io === "input" && isTransforming(schema2)) {
+  if (ctx.io === "input" && isTransforming(schema3)) {
     delete result.schema.examples;
     delete result.schema.default;
   }
   if (ctx.io === "input" && "_prefault" in result.schema)
     (_a4 = result.schema).default ?? (_a4.default = result.schema._prefault);
   delete result.schema._prefault;
-  const _result = ctx.seen.get(schema2);
+  const _result = ctx.seen.get(schema3);
   return _result.schema;
 }
 function encodeJSONPointerSegment(segment) {
   return segment.replace(/~/g, "~0").replace(/\//g, "~1");
 }
-function extractDefs(ctx, schema2) {
-  const root = ctx.seen.get(schema2);
+function extractDefs(ctx, schema3) {
+  const root = ctx.seen.get(schema3);
   if (!root)
     throw new Error("Unprocessed schema. This is a bug in Zod.");
   if (ctx.external && ctx.sharedDefsExtractedFor === ctx.external)
@@ -45322,11 +45323,11 @@ function extractDefs(ctx, schema2) {
     seen.def = { ...seen.schema };
     if (defId)
       seen.defId = defId;
-    const schema3 = seen.schema;
-    for (const key in schema3) {
-      delete schema3[key];
+    const schema4 = seen.schema;
+    for (const key in schema4) {
+      delete schema4[key];
     }
-    schema3.$ref = ref;
+    schema4.$ref = ref;
   };
   if (ctx.cycles === "throw") {
     for (const entry of ctx.seen.entries()) {
@@ -45340,13 +45341,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   for (const entry of ctx.seen.entries()) {
     const seen = entry[1];
-    if (schema2 === entry[0]) {
+    if (schema3 === entry[0]) {
       extractToDef(entry);
       continue;
     }
     if (ctx.external) {
       const ext = ctx.external.registry.get(entry[0])?.id;
-      if (schema2 !== entry[0] && ext) {
+      if (schema3 !== entry[0] && ext) {
         extractToDef(entry);
         continue;
       }
@@ -45369,9 +45370,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   if (ctx.external)
     ctx.sharedDefsExtractedFor = ctx.external;
 }
-function compactTypeUnion(schema2) {
-  const options = schema2.anyOf;
-  if (!Array.isArray(options) || options.length === 0 || schema2.type !== void 0)
+function compactTypeUnion(schema3) {
+  const options = schema3.anyOf;
+  if (!Array.isArray(options) || options.length === 0 || schema3.type !== void 0)
     return;
   const types = [];
   for (const option of options) {
@@ -45389,8 +45390,8 @@ function compactTypeUnion(schema2) {
         types.push(member);
     }
   }
-  delete schema2.anyOf;
-  schema2.type = types.length === 1 ? types[0] : types;
+  delete schema3.anyOf;
+  schema3.type = types.length === 1 ? types[0] : types;
 }
 var FOLDABLE_KEYS = /* @__PURE__ */ new Set(["type", "properties", "required", "additionalProperties"]);
 var UNION_KEYS = ["oneOf", "anyOf"];
@@ -45477,16 +45478,16 @@ function foldIntersection(json2) {
   delete json2.allOf;
   assignProps(json2, folded);
 }
-function finalize(ctx, schema2) {
-  const root = ctx.seen.get(schema2);
+function finalize(ctx, schema3) {
+  const root = ctx.seen.get(schema3);
   if (!root)
     throw new Error("Unprocessed schema. This is a bug in Zod.");
   const flattenRef = (zodSchema) => {
     const seen = ctx.seen.get(zodSchema);
     if (seen.ref === null)
       return;
-    const schema3 = seen.def ?? seen.schema;
-    const _cached = { ...schema3 };
+    const schema4 = seen.def ?? seen.schema;
+    const _cached = { ...schema4 };
     const ref = seen.ref;
     seen.ref = null;
     if (ref) {
@@ -45494,28 +45495,28 @@ function finalize(ctx, schema2) {
       const refSeen = ctx.seen.get(ref);
       const refSchema = refSeen.schema;
       if (refSchema.$ref && (ctx.target === "draft-07" || ctx.target === "draft-04" || ctx.target === "openapi-3.0")) {
-        schema3.allOf = schema3.allOf ?? [];
-        schema3.allOf.push(refSchema);
+        schema4.allOf = schema4.allOf ?? [];
+        schema4.allOf.push(refSchema);
       } else {
-        assignProps(schema3, refSchema);
+        assignProps(schema4, refSchema);
       }
-      assignProps(schema3, _cached);
+      assignProps(schema4, _cached);
       const isParentRef = zodSchema._zod.parent === ref;
       if (isParentRef) {
-        for (const key in schema3) {
+        for (const key in schema4) {
           if (key === "$ref" || key === "allOf")
             continue;
           if (!(key in _cached)) {
-            delete schema3[key];
+            delete schema4[key];
           }
         }
       }
       if (refSchema.$ref && refSeen.def) {
-        for (const key in schema3) {
+        for (const key in schema4) {
           if (key === "$ref" || key === "allOf")
             continue;
-          if (key in refSeen.def && JSON.stringify(schema3[key]) === JSON.stringify(refSeen.def[key])) {
-            delete schema3[key];
+          if (key in refSeen.def && JSON.stringify(schema4[key]) === JSON.stringify(refSeen.def[key])) {
+            delete schema4[key];
           }
         }
       }
@@ -45525,13 +45526,13 @@ function finalize(ctx, schema2) {
       flattenRef(parent);
       const parentSeen = ctx.seen.get(parent);
       if (parentSeen?.schema.$ref) {
-        schema3.$ref = parentSeen.schema.$ref;
+        schema4.$ref = parentSeen.schema.$ref;
         if (parentSeen.def) {
-          for (const key in schema3) {
+          for (const key in schema4) {
             if (key === "$ref" || key === "allOf")
               continue;
-            if (key in parentSeen.def && JSON.stringify(schema3[key]) === JSON.stringify(parentSeen.def[key])) {
-              delete schema3[key];
+            if (key in parentSeen.def && JSON.stringify(schema4[key]) === JSON.stringify(parentSeen.def[key])) {
+              delete schema4[key];
             }
           }
         }
@@ -45539,7 +45540,7 @@ function finalize(ctx, schema2) {
     }
     ctx.override({
       zodSchema,
-      jsonSchema: schema3,
+      jsonSchema: schema4,
       path: seen.path ?? []
     });
   };
@@ -45585,13 +45586,13 @@ function finalize(ctx, schema2) {
   } else {
   }
   if (ctx.external?.uri) {
-    const id = ctx.external.registry.get(schema2)?.id;
+    const id = ctx.external.registry.get(schema3)?.id;
     if (!id)
       throw new Error("Schema is missing an `id` property");
     result.$id = ctx.external.uri(id);
   }
   assignProps(result, root.defId ? root.schema : root.def ?? root.schema);
-  const rootMetaId = ctx.metadataRegistry.get(schema2)?.id;
+  const rootMetaId = ctx.metadataRegistry.get(schema3)?.id;
   if (rootMetaId !== void 0 && result.id === rootMetaId)
     delete result.id;
   const defs = ctx.external?.defs ?? {};
@@ -45621,10 +45622,10 @@ function finalize(ctx, schema2) {
     const finalized = JSON.parse(JSON.stringify(result));
     Object.defineProperty(finalized, "~standard", {
       value: {
-        ...schema2["~standard"],
+        ...schema3["~standard"],
         jsonSchema: {
-          input: createStandardJSONSchemaMethod(schema2, "input", ctx.processors),
-          output: createStandardJSONSchemaMethod(schema2, "output", ctx.processors)
+          input: createStandardJSONSchemaMethod(schema3, "input", ctx.processors),
+          output: createStandardJSONSchemaMethod(schema3, "output", ctx.processors)
         }
       },
       enumerable: false,
@@ -45688,18 +45689,18 @@ function isTransforming(_schema, _ctx) {
   }
   return false;
 }
-var createToJSONSchemaMethod = (schema2, processors = {}) => (params) => {
+var createToJSONSchemaMethod = (schema3, processors = {}) => (params) => {
   const ctx = initializeContext({ ...params, processors });
-  processSchema(schema2, ctx);
-  extractDefs(ctx, schema2);
-  return finalize(ctx, schema2);
+  processSchema(schema3, ctx);
+  extractDefs(ctx, schema3);
+  return finalize(ctx, schema3);
 };
-var createStandardJSONSchemaMethod = (schema2, io, processors = {}) => (params) => {
+var createStandardJSONSchemaMethod = (schema3, io, processors = {}) => (params) => {
   const { libraryOptions, target } = params ?? {};
   const ctx = initializeContext({ ...libraryOptions ?? {}, target, io, processors });
-  processSchema(schema2, ctx);
-  extractDefs(ctx, schema2);
-  return finalize(ctx, schema2);
+  processSchema(schema3, ctx);
+  extractDefs(ctx, schema3);
+  return finalize(ctx, schema3);
 };
 
 // ../node_modules/zod/v4/core/json-schema-processors.js
@@ -45763,13 +45764,13 @@ var contributors = {
   },
   mime_type: (agg, def) => intersectMime(agg, def.mime)
 };
-function aggregateChecks(schema2) {
+function aggregateChecks(schema3) {
   const agg = {};
-  const def = schema2._zod.def;
-  const list = schema2._zod.traits.has("$ZodCheck") ? [schema2, ...def.checks ?? []] : def.checks ?? [];
+  const def = schema3._zod.def;
+  const list = schema3._zod.traits.has("$ZodCheck") ? [schema3, ...def.checks ?? []] : def.checks ?? [];
   for (const ch of list)
     contributors[ch._zod.def.check]?.(agg, ch._zod.def);
-  const bag = schema2._zod.bag;
+  const bag = schema3._zod.bag;
   if (bag.minimum !== void 0)
     narrowMin(agg, "minimum", bag.minimum);
   if (bag.exclusiveMinimum !== void 0)
@@ -45804,10 +45805,10 @@ var exactPatterns = /* @__PURE__ */ new Map([
   [base64urlCharset, base64url]
 ]);
 var exactPattern = (p) => exactPatterns.get(p) ?? p;
-var stringProcessor = (schema2, ctx, _json, _params) => {
+var stringProcessor = (schema3, ctx, _json, _params) => {
   const json2 = _json;
   json2.type = "string";
-  const { minimum, maximum, format, patterns, contentEncoding, laxFormat } = aggregateChecks(schema2);
+  const { minimum, maximum, format, patterns, contentEncoding, laxFormat } = aggregateChecks(schema3);
   if (typeof minimum === "number")
     json2.minLength = minimum;
   if (typeof maximum === "number")
@@ -45836,9 +45837,9 @@ var stringProcessor = (schema2, ctx, _json, _params) => {
     }
   }
 };
-var numberProcessor = (schema2, ctx, _json, params) => {
+var numberProcessor = (schema3, ctx, _json, params) => {
   const json2 = _json;
-  const { minimum, maximum, multipleOf, exclusiveMaximum, exclusiveMinimum, isInt } = aggregateChecks(schema2);
+  const { minimum, maximum, multipleOf, exclusiveMaximum, exclusiveMinimum, isInt } = aggregateChecks(schema3);
   json2.type = isInt ? "integer" : "number";
   const exMin = typeof exclusiveMinimum === "number" && exclusiveMinimum >= (minimum ?? Number.NEGATIVE_INFINITY);
   const exMax = typeof exclusiveMaximum === "number" && exclusiveMaximum <= (maximum ?? Number.POSITIVE_INFINITY);
@@ -45869,7 +45870,7 @@ var numberProcessor = (schema2, ctx, _json, params) => {
       if (Number.isFinite(divisor) && divisor !== 0)
         divisors.add(Math.abs(divisor));
       else
-        handleUnrepresentable(schema2, ctx, json2, params, `A multipleOf divisor of ${divisor} cannot be represented in JSON Schema`);
+        handleUnrepresentable(schema3, ctx, json2, params, `A multipleOf divisor of ${divisor} cannot be represented in JSON Schema`);
     }
     const [first, ...rest] = divisors;
     if (first !== void 0)
@@ -45881,11 +45882,11 @@ var numberProcessor = (schema2, ctx, _json, params) => {
 var booleanProcessor = (_schema, _ctx, json2, _params) => {
   json2.type = "boolean";
 };
-var bigintProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "BigInt cannot be represented in JSON Schema");
+var bigintProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "BigInt cannot be represented in JSON Schema");
 };
-var symbolProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "Symbols cannot be represented in JSON Schema");
+var symbolProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "Symbols cannot be represented in JSON Schema");
 };
 var nullProcessor = (_schema, ctx, json2, _params) => {
   if (ctx.target === "openapi-3.0") {
@@ -45896,11 +45897,11 @@ var nullProcessor = (_schema, ctx, json2, _params) => {
     json2.type = "null";
   }
 };
-var undefinedProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "Undefined cannot be represented in JSON Schema");
+var undefinedProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "Undefined cannot be represented in JSON Schema");
 };
-var voidProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "Void cannot be represented in JSON Schema");
+var voidProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "Void cannot be represented in JSON Schema");
 };
 var neverProcessor = (_schema, _ctx, json2, _params) => {
   json2.not = {};
@@ -45909,11 +45910,11 @@ var anyProcessor = (_schema, _ctx, _json, _params) => {
 };
 var unknownProcessor = (_schema, _ctx, _json, _params) => {
 };
-var dateProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "Date cannot be represented in JSON Schema");
+var dateProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "Date cannot be represented in JSON Schema");
 };
-var enumProcessor = (schema2, _ctx, json2, _params) => {
-  const def = schema2._zod.def;
+var enumProcessor = (schema3, _ctx, json2, _params) => {
+  const def = schema3._zod.def;
   const values = getEnumValues(def.entries);
   if (values.length === 0) {
     json2.not = {};
@@ -45925,8 +45926,8 @@ var enumProcessor = (schema2, _ctx, json2, _params) => {
     json2.type = "string";
   json2.enum = values;
 };
-var literalProcessor = (schema2, ctx, json2, params) => {
-  const def = schema2._zod.def;
+var literalProcessor = (schema3, ctx, json2, params) => {
+  const def = schema3._zod.def;
   if (def.values.length === 0) {
     json2.not = {};
     return;
@@ -45934,10 +45935,10 @@ var literalProcessor = (schema2, ctx, json2, params) => {
   const vals = [];
   for (const val of def.values) {
     if (val === void 0) {
-      if (handleUnrepresentable(schema2, ctx, json2, params, "Literal `undefined` cannot be represented in JSON Schema"))
+      if (handleUnrepresentable(schema3, ctx, json2, params, "Literal `undefined` cannot be represented in JSON Schema"))
         return;
     } else if (typeof val === "bigint") {
-      if (handleUnrepresentable(schema2, ctx, json2, params, "BigInt literals cannot be represented in JSON Schema"))
+      if (handleUnrepresentable(schema3, ctx, json2, params, "BigInt literals cannot be represented in JSON Schema"))
         return;
       vals.push(Number(val));
     } else {
@@ -45965,23 +45966,23 @@ var literalProcessor = (schema2, ctx, json2, params) => {
     json2.enum = vals;
   }
 };
-var nanProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "NaN cannot be represented in JSON Schema");
+var nanProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "NaN cannot be represented in JSON Schema");
 };
-var templateLiteralProcessor = (schema2, _ctx, json2, _params) => {
+var templateLiteralProcessor = (schema3, _ctx, json2, _params) => {
   const _json = json2;
-  const pattern = schema2._zod.pattern;
+  const pattern = schema3._zod.pattern;
   if (!pattern)
     throw new Error("Pattern not found in template literal");
   _json.type = "string";
   _json.pattern = pattern.source;
 };
-var fileProcessor = (schema2, _ctx, json2, _params) => {
+var fileProcessor = (schema3, _ctx, json2, _params) => {
   const _json = json2;
   _json.type = "string";
   _json.format = "binary";
   _json.contentEncoding = "binary";
-  const { minimum, maximum, mime } = aggregateChecks(schema2);
+  const { minimum, maximum, mime } = aggregateChecks(schema3);
   if (minimum !== void 0)
     _json.minLength = minimum;
   if (maximum !== void 0)
@@ -45998,25 +45999,25 @@ var fileProcessor = (schema2, _ctx, json2, _params) => {
 var successProcessor = (_schema, _ctx, json2, _params) => {
   json2.type = "boolean";
 };
-var customProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "Custom types cannot be represented in JSON Schema");
+var customProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "Custom types cannot be represented in JSON Schema");
 };
-var functionProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "Function types cannot be represented in JSON Schema");
+var functionProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "Function types cannot be represented in JSON Schema");
 };
-var transformProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "Transforms cannot be represented in JSON Schema");
+var transformProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "Transforms cannot be represented in JSON Schema");
 };
-var mapProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "Map cannot be represented in JSON Schema");
+var mapProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "Map cannot be represented in JSON Schema");
 };
-var setProcessor = (schema2, ctx, json2, params) => {
-  handleUnrepresentable(schema2, ctx, json2, params, "Set cannot be represented in JSON Schema");
+var setProcessor = (schema3, ctx, json2, params) => {
+  handleUnrepresentable(schema3, ctx, json2, params, "Set cannot be represented in JSON Schema");
 };
-var arrayProcessor = (schema2, ctx, _json, params) => {
+var arrayProcessor = (schema3, ctx, _json, params) => {
   const json2 = _json;
-  const def = schema2._zod.def;
-  const { minimum, maximum } = aggregateChecks(schema2);
+  const def = schema3._zod.def;
+  const { minimum, maximum } = aggregateChecks(schema3);
   if (typeof minimum === "number")
     json2.minItems = minimum;
   if (typeof maximum === "number")
@@ -46027,22 +46028,22 @@ var arrayProcessor = (schema2, ctx, _json, params) => {
     path: [...params.path, "items"]
   });
 };
-function inputOptin(schema2) {
-  const def = schema2._zod.def;
+function inputOptin(schema3) {
+  const def = schema3._zod.def;
   if (def.type === "pipe" && def.in._zod.traits.has("$ZodTransform")) {
     return inputOptin(def.out);
   }
   if (def.type === "catch") {
     return inputOptin(def.innerType);
   }
-  return schema2._zod.optin;
+  return schema3._zod.optin;
 }
-var objectProcessor = (schema2, ctx, _json, params) => {
+var objectProcessor = (schema3, ctx, _json, params) => {
   const json2 = _json;
-  const def = schema2._zod.def;
+  const def = schema3._zod.def;
   const shape = def.shape;
   const symbolKeys = Object.getOwnPropertySymbols(shape);
-  if (symbolKeys.length && handleUnrepresentable(schema2, ctx, json2, params, "Symbol keys cannot be represented in JSON Schema")) {
+  if (symbolKeys.length && handleUnrepresentable(schema3, ctx, json2, params, "Symbol keys cannot be represented in JSON Schema")) {
     return;
   }
   json2.type = "object";
@@ -46075,8 +46076,8 @@ var objectProcessor = (schema2, ctx, _json, params) => {
     });
   }
 };
-var unionProcessor = (schema2, ctx, json2, params) => {
-  const def = schema2._zod.def;
+var unionProcessor = (schema3, ctx, json2, params) => {
+  const def = schema3._zod.def;
   const isExclusive = def.inclusive === false;
   const options = def.options.map((x, i) => processSchema(x, ctx, {
     ...params,
@@ -46088,8 +46089,8 @@ var unionProcessor = (schema2, ctx, json2, params) => {
     json2.anyOf = options;
   }
 };
-var intersectionProcessor = (schema2, ctx, json2, params) => {
-  const def = schema2._zod.def;
+var intersectionProcessor = (schema3, ctx, json2, params) => {
+  const def = schema3._zod.def;
   const a = processSchema(def.left, ctx, {
     ...params,
     path: [...params.path, "allOf", 0]
@@ -46106,9 +46107,9 @@ var intersectionProcessor = (schema2, ctx, json2, params) => {
   json2.allOf = allOf;
   ctx.intersections.push(allOf);
 };
-var tupleProcessor = (schema2, ctx, _json, params) => {
+var tupleProcessor = (schema3, ctx, _json, params) => {
   const json2 = _json;
-  const def = schema2._zod.def;
+  const def = schema3._zod.def;
   json2.type = "array";
   const prefixPath = ctx.target === "draft-2020-12" ? "prefixItems" : "items";
   const restPath = ctx.target === "draft-2020-12" ? "items" : ctx.target === "openapi-3.0" ? "items" : "additionalItems";
@@ -46164,7 +46165,7 @@ var tupleProcessor = (schema2, ctx, _json, params) => {
     if (isClosed)
       json2.maxItems = maxItems;
   }
-  const { minimum, maximum } = aggregateChecks(schema2);
+  const { minimum, maximum } = aggregateChecks(schema3);
   if (typeof minimum === "number")
     json2.minItems = minimum;
   if (typeof maximum === "number")
@@ -46233,9 +46234,9 @@ function rewriteKeyNames(ctx) {
     }
   }
 }
-var recordProcessor = (schema2, ctx, _json, params) => {
+var recordProcessor = (schema3, ctx, _json, params) => {
   const json2 = _json;
-  const def = schema2._zod.def;
+  const def = schema3._zod.def;
   json2.type = "object";
   const keyType = def.keyType;
   const patterns = aggregateChecks(keyType).patterns;
@@ -46260,7 +46261,7 @@ var recordProcessor = (schema2, ctx, _json, params) => {
         pendingRecords.set(ctx, pending);
         ctx.deferred.push(() => rewriteKeyNames(ctx));
       }
-      pending.push(schema2);
+      pending.push(schema3);
     }
     json2.additionalProperties = processSchema(def.valueType, ctx, {
       ...params,
@@ -46276,10 +46277,10 @@ var recordProcessor = (schema2, ctx, _json, params) => {
     }
   }
 };
-var nullableProcessor = (schema2, ctx, json2, params) => {
-  const def = schema2._zod.def;
+var nullableProcessor = (schema3, ctx, json2, params) => {
+  const def = schema3._zod.def;
   const inner = processSchema(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema2);
+  const seen = ctx.seen.get(schema3);
   if (ctx.target === "openapi-3.0") {
     seen.ref = def.innerType;
     json2.nullable = true;
@@ -46287,14 +46288,14 @@ var nullableProcessor = (schema2, ctx, json2, params) => {
     json2.anyOf = [inner, { type: "null" }];
   }
 };
-var nonoptionalProcessor = (schema2, ctx, _json, params) => {
-  const def = schema2._zod.def;
+var nonoptionalProcessor = (schema3, ctx, _json, params) => {
+  const def = schema3._zod.def;
   processSchema(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema2);
+  const seen = ctx.seen.get(schema3);
   seen.ref = def.innerType;
 };
 var UNREPRESENTABLE_DEFAULT = /* @__PURE__ */ Symbol();
-function serializeDefaultValue(value, schema2, ctx, json2, params) {
+function serializeDefaultValue(value, schema3, ctx, json2, params) {
   let unrepresentable = false;
   const serialized = JSON.stringify(value, (_, val) => {
     if (typeof val !== "bigint")
@@ -46304,74 +46305,74 @@ function serializeDefaultValue(value, schema2, ctx, json2, params) {
   });
   if (!unrepresentable)
     return JSON.parse(serialized);
-  handleUnrepresentable(schema2, ctx, json2, params, "BigInt defaults cannot be represented in JSON Schema");
+  handleUnrepresentable(schema3, ctx, json2, params, "BigInt defaults cannot be represented in JSON Schema");
   return UNREPRESENTABLE_DEFAULT;
 }
-var defaultProcessor = (schema2, ctx, json2, params) => {
-  const def = schema2._zod.def;
+var defaultProcessor = (schema3, ctx, json2, params) => {
+  const def = schema3._zod.def;
   processSchema(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema2);
+  const seen = ctx.seen.get(schema3);
   seen.ref = def.innerType;
-  const value = serializeDefaultValue(def.defaultValue, schema2, ctx, json2, params);
+  const value = serializeDefaultValue(def.defaultValue, schema3, ctx, json2, params);
   if (value !== UNREPRESENTABLE_DEFAULT)
     json2.default = value;
 };
-var prefaultProcessor = (schema2, ctx, json2, params) => {
-  const def = schema2._zod.def;
+var prefaultProcessor = (schema3, ctx, json2, params) => {
+  const def = schema3._zod.def;
   processSchema(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema2);
+  const seen = ctx.seen.get(schema3);
   seen.ref = def.innerType;
   if (ctx.io !== "input")
     return;
-  const value = serializeDefaultValue(def.defaultValue, schema2, ctx, json2, params);
+  const value = serializeDefaultValue(def.defaultValue, schema3, ctx, json2, params);
   if (value !== UNREPRESENTABLE_DEFAULT)
     json2._prefault = value;
 };
-var catchProcessor = (schema2, ctx, json2, params) => {
-  const def = schema2._zod.def;
+var catchProcessor = (schema3, ctx, json2, params) => {
+  const def = schema3._zod.def;
   processSchema(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema2);
+  const seen = ctx.seen.get(schema3);
   seen.ref = def.innerType;
   let catchValue;
   try {
     catchValue = def.catchValue(void 0);
   } catch {
-    handleUnrepresentable(schema2, ctx, json2, params, "Dynamic catch values are not supported in JSON Schema");
+    handleUnrepresentable(schema3, ctx, json2, params, "Dynamic catch values are not supported in JSON Schema");
     return;
   }
   json2.default = catchValue;
 };
-var pipeProcessor = (schema2, ctx, _json, params) => {
-  const def = schema2._zod.def;
+var pipeProcessor = (schema3, ctx, _json, params) => {
+  const def = schema3._zod.def;
   const inIsTransform = def.in._zod.traits.has("$ZodTransform");
   const innerType = ctx.io === "input" ? inIsTransform ? def.out : def.in : def.out;
   processSchema(innerType, ctx, params);
-  const seen = ctx.seen.get(schema2);
+  const seen = ctx.seen.get(schema3);
   seen.ref = innerType;
 };
-var readonlyProcessor = (schema2, ctx, json2, params) => {
-  const def = schema2._zod.def;
+var readonlyProcessor = (schema3, ctx, json2, params) => {
+  const def = schema3._zod.def;
   processSchema(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema2);
+  const seen = ctx.seen.get(schema3);
   seen.ref = def.innerType;
   json2.readOnly = true;
 };
-var promiseProcessor = (schema2, ctx, _json, params) => {
-  const def = schema2._zod.def;
+var promiseProcessor = (schema3, ctx, _json, params) => {
+  const def = schema3._zod.def;
   processSchema(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema2);
+  const seen = ctx.seen.get(schema3);
   seen.ref = def.innerType;
 };
-var optionalProcessor = (schema2, ctx, _json, params) => {
-  const def = schema2._zod.def;
+var optionalProcessor = (schema3, ctx, _json, params) => {
+  const def = schema3._zod.def;
   processSchema(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema2);
+  const seen = ctx.seen.get(schema3);
   seen.ref = def.innerType;
 };
-var lazyProcessor = (schema2, ctx, _json, params) => {
-  const innerType = schema2._zod.innerType;
+var lazyProcessor = (schema3, ctx, _json, params) => {
+  const innerType = schema3._zod.innerType;
   processSchema(innerType, ctx, params);
-  const seen = ctx.seen.get(schema2);
+  const seen = ctx.seen.get(schema3);
   seen.ref = innerType;
 };
 var allProcessors = {
@@ -46421,8 +46422,8 @@ function toJSONSchema(input2, params) {
     const ctx2 = initializeContext({ ...params, processors: allProcessors });
     const defs = {};
     for (const entry of registry3._idmap.entries()) {
-      const [_, schema2] = entry;
-      processSchema(schema2, ctx2);
+      const [_, schema3] = entry;
+      processSchema(schema3, ctx2);
     }
     const schemas = {};
     const external = {
@@ -46432,9 +46433,9 @@ function toJSONSchema(input2, params) {
     };
     ctx2.external = external;
     for (const entry of registry3._idmap.entries()) {
-      const [key, schema2] = entry;
-      extractDefs(ctx2, schema2);
-      assignProp(schemas, key, finalize(ctx2, schema2));
+      const [key, schema3] = entry;
+      extractDefs(ctx2, schema3);
+      assignProp(schemas, key, finalize(ctx2, schema3));
     }
     if (Object.keys(defs).length > 0) {
       const defsSegment = ctx2.target === "draft-2020-12" ? "$defs" : "definitions";
@@ -46503,14 +46504,14 @@ var JSONSchemaGenerator = class {
    * Process a schema to prepare it for JSON Schema generation.
    * This must be called before emit().
    */
-  process(schema2, _params = { path: [], schemaPath: [] }) {
-    return processSchema(schema2, this.ctx, _params);
+  process(schema3, _params = { path: [], schemaPath: [] }) {
+    return processSchema(schema3, this.ctx, _params);
   }
   /**
    * Emit the final JSON Schema after processing.
    * Must call process() first.
    */
-  emit(schema2, _params) {
+  emit(schema3, _params) {
     if (_params) {
       if (_params.cycles)
         this.ctx.cycles = _params.cycles;
@@ -46521,8 +46522,8 @@ var JSONSchemaGenerator = class {
     }
     this.ctx.sharedDefsExtractedFor = void 0;
     this.ctx.sharedEmitDoneFor = void 0;
-    extractDefs(this.ctx, schema2);
-    const result = finalize(this.ctx, schema2);
+    extractDefs(this.ctx, schema3);
+    const result = finalize(this.ctx, schema3);
     const { "~standard": _, ...plainResult } = result;
     return plainResult;
   }
@@ -47615,8 +47616,8 @@ var ZodArray = /* @__PURE__ */ $constructor("ZodArray", (inst, def) => {
 function array(element, params) {
   return _array(ZodArray, element, params);
 }
-function keyof(schema2) {
-  const shape = schema2._zod.def.shape;
+function keyof(schema3) {
+  const shape = schema3._zod.def.shape;
   return _enum2(Object.keys(shape));
 }
 var ZodObject = /* @__PURE__ */ $constructor("ZodObject", (inst, def) => {
@@ -48264,11 +48265,11 @@ function json(params) {
   });
   return jsonSchema2;
 }
-function preprocess(fn, schema2) {
+function preprocess(fn, schema3) {
   return new ZodPreprocess({
     type: "pipe",
     in: transform(fn),
-    out: schema2
+    out: schema3
   });
 }
 
@@ -48400,8 +48401,8 @@ var RECOGNIZED_KEYS = /* @__PURE__ */ new Set([
   "nullable",
   "readOnly"
 ]);
-function detectVersion(schema2, defaultTarget) {
-  const $schema = schema2.$schema;
+function detectVersion(schema3, defaultTarget) {
+  const $schema = schema3.$schema;
   if ($schema === "https://json-schema.org/draft/2020-12/schema") {
     return "draft-2020-12";
   }
@@ -48629,27 +48630,27 @@ function getTupleRest(restSchema, ctx) {
   return convertSchema(restSchema, ctx);
 }
 var fullTime = /^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
-function convertBaseSchema(schema2, ctx) {
-  if (schema2.not !== void 0) {
-    if (typeof schema2.not === "object" && Object.keys(schema2.not).length === 0) {
+function convertBaseSchema(schema3, ctx) {
+  if (schema3.not !== void 0) {
+    if (typeof schema3.not === "object" && Object.keys(schema3.not).length === 0) {
       return z.never();
     }
     throw new Error("not is not supported in Zod (except { not: {} } for never)");
   }
-  if (schema2.unevaluatedItems !== void 0) {
+  if (schema3.unevaluatedItems !== void 0) {
     throw new Error("unevaluatedItems is not supported");
   }
-  if (schema2.unevaluatedProperties !== void 0) {
+  if (schema3.unevaluatedProperties !== void 0) {
     throw new Error("unevaluatedProperties is not supported");
   }
-  if (schema2.if !== void 0 || schema2.then !== void 0 || schema2.else !== void 0) {
+  if (schema3.if !== void 0 || schema3.then !== void 0 || schema3.else !== void 0) {
     throw new Error("Conditional schemas (if/then/else) are not supported");
   }
-  if (schema2.dependentSchemas !== void 0 || schema2.dependentRequired !== void 0) {
+  if (schema3.dependentSchemas !== void 0 || schema3.dependentRequired !== void 0) {
     throw new Error("dependentSchemas and dependentRequired are not supported");
   }
-  if (schema2.$ref) {
-    const refPath = schema2.$ref;
+  if (schema3.$ref) {
+    const refPath = schema3.$ref;
     if (ctx.refs.has(refPath)) {
       return ctx.refs.get(refPath);
     }
@@ -48668,9 +48669,9 @@ function convertBaseSchema(schema2, ctx) {
     ctx.processing.delete(refPath);
     return zodSchema2;
   }
-  if (schema2.enum !== void 0) {
-    const enumValues = schema2.enum;
-    if (ctx.version === "openapi-3.0" && schema2.nullable === true && enumValues.length === 1 && enumValues[0] === null) {
+  if (schema3.enum !== void 0) {
+    const enumValues = schema3.enum;
+    if (ctx.version === "openapi-3.0" && schema3.nullable === true && enumValues.length === 1 && enumValues[0] === null) {
       return z.null();
     }
     if (enumValues.length === 0) {
@@ -48688,13 +48689,13 @@ function convertBaseSchema(schema2, ctx) {
     }
     return z.union([literalSchemas[0], literalSchemas[1], ...literalSchemas.slice(2)]);
   }
-  if (schema2.const !== void 0) {
-    return z.literal(schema2.const);
+  if (schema3.const !== void 0) {
+    return z.literal(schema3.const);
   }
-  const type = schema2.type;
+  const type = schema3.type;
   if (Array.isArray(type)) {
     const typeSchemas = type.map((t) => {
-      const typeSchema = { ...schema2, type: t };
+      const typeSchema = { ...schema3, type: t };
       return convertBaseSchema(typeSchema, ctx);
     });
     if (typeSchemas.length === 0) {
@@ -48712,8 +48713,8 @@ function convertBaseSchema(schema2, ctx) {
   switch (type) {
     case "string": {
       let stringSchema = z.string();
-      if (schema2.format) {
-        const format = schema2.format;
+      if (schema3.format) {
+        const format = schema3.format;
         if (format === "email") {
           stringSchema = stringSchema.check(z.email());
         } else if (format === "uri" || format === "uri-reference") {
@@ -48768,14 +48769,14 @@ function convertBaseSchema(schema2, ctx) {
           stringSchema = stringSchema.check(z.ksuid());
         }
       }
-      if (typeof schema2.minLength === "number") {
-        stringSchema = stringSchema.min(schema2.minLength);
+      if (typeof schema3.minLength === "number") {
+        stringSchema = stringSchema.min(schema3.minLength);
       }
-      if (typeof schema2.maxLength === "number") {
-        stringSchema = stringSchema.max(schema2.maxLength);
+      if (typeof schema3.maxLength === "number") {
+        stringSchema = stringSchema.max(schema3.maxLength);
       }
-      if (schema2.pattern) {
-        stringSchema = stringSchema.regex(new RegExp(schema2.pattern));
+      if (schema3.pattern) {
+        stringSchema = stringSchema.regex(new RegExp(schema3.pattern));
       }
       zodSchema = stringSchema;
       break;
@@ -48783,24 +48784,24 @@ function convertBaseSchema(schema2, ctx) {
     case "number":
     case "integer": {
       let numberSchema = type === "integer" ? z.number().int() : z.number();
-      if (typeof schema2.minimum === "number" && schema2.exclusiveMinimum !== true) {
-        numberSchema = numberSchema.min(schema2.minimum);
+      if (typeof schema3.minimum === "number" && schema3.exclusiveMinimum !== true) {
+        numberSchema = numberSchema.min(schema3.minimum);
       }
-      if (typeof schema2.maximum === "number" && schema2.exclusiveMaximum !== true) {
-        numberSchema = numberSchema.max(schema2.maximum);
+      if (typeof schema3.maximum === "number" && schema3.exclusiveMaximum !== true) {
+        numberSchema = numberSchema.max(schema3.maximum);
       }
-      if (typeof schema2.exclusiveMinimum === "number") {
-        numberSchema = numberSchema.gt(schema2.exclusiveMinimum);
-      } else if (schema2.exclusiveMinimum === true && typeof schema2.minimum === "number") {
-        numberSchema = numberSchema.gt(schema2.minimum);
+      if (typeof schema3.exclusiveMinimum === "number") {
+        numberSchema = numberSchema.gt(schema3.exclusiveMinimum);
+      } else if (schema3.exclusiveMinimum === true && typeof schema3.minimum === "number") {
+        numberSchema = numberSchema.gt(schema3.minimum);
       }
-      if (typeof schema2.exclusiveMaximum === "number") {
-        numberSchema = numberSchema.lt(schema2.exclusiveMaximum);
-      } else if (schema2.exclusiveMaximum === true && typeof schema2.maximum === "number") {
-        numberSchema = numberSchema.lt(schema2.maximum);
+      if (typeof schema3.exclusiveMaximum === "number") {
+        numberSchema = numberSchema.lt(schema3.exclusiveMaximum);
+      } else if (schema3.exclusiveMaximum === true && typeof schema3.maximum === "number") {
+        numberSchema = numberSchema.lt(schema3.maximum);
       }
-      if (typeof schema2.multipleOf === "number") {
-        numberSchema = numberSchema.multipleOf(schema2.multipleOf);
+      if (typeof schema3.multipleOf === "number") {
+        numberSchema = numberSchema.multipleOf(schema3.multipleOf);
       }
       zodSchema = numberSchema;
       break;
@@ -48815,15 +48816,15 @@ function convertBaseSchema(schema2, ctx) {
     }
     case "object": {
       const shape = {};
-      const properties = schema2.properties || {};
-      const requiredSet = new Set(schema2.required || []);
-      const additionalSchema = typeof schema2.additionalProperties === "object" ? convertSchema(schema2.additionalProperties, ctx) : void 0;
+      const properties = schema3.properties || {};
+      const requiredSet = new Set(schema3.required || []);
+      const additionalSchema = typeof schema3.additionalProperties === "object" ? convertSchema(schema3.additionalProperties, ctx) : void 0;
       for (const [key, propSchema] of Object.entries(properties)) {
         const propZodSchema = convertSchema(propSchema, ctx);
         assignProp(shape, key, requiredSet.has(key) ? propZodSchema : propZodSchema.optional());
       }
-      if (schema2.patternProperties) {
-        const patternProps = schema2.patternProperties;
+      if (schema3.patternProperties) {
+        const patternProps = schema3.patternProperties;
         const patternKeys = Object.keys(patternProps);
         const looseRecords = [];
         for (const pattern of patternKeys) {
@@ -48847,7 +48848,7 @@ function convertBaseSchema(schema2, ctx) {
           }
           zodSchema = result;
         }
-        if (schema2.additionalProperties === false) {
+        if (schema3.additionalProperties === false) {
           const propertyKeys = Object.keys(shape);
           const patterns = patternKeys.map((p) => new RegExp(p));
           const basePatternSchema = zodSchema;
@@ -48874,7 +48875,7 @@ function convertBaseSchema(schema2, ctx) {
         }
       } else {
         const objectSchema = z.object(shape);
-        if (schema2.additionalProperties === false) {
+        if (schema3.additionalProperties === false) {
           zodSchema = objectSchema.strict();
         } else if (additionalSchema) {
           zodSchema = objectSchema.catchall(additionalSchema);
@@ -48882,13 +48883,13 @@ function convertBaseSchema(schema2, ctx) {
           zodSchema = objectSchema.passthrough();
         }
       }
-      const hasKeyGuard = schema2.propertyNames !== void 0 && schema2.propertyNames !== true;
-      const minProperties = typeof schema2.minProperties === "number" ? schema2.minProperties : void 0;
-      const maxProperties = typeof schema2.maxProperties === "number" ? schema2.maxProperties : void 0;
+      const hasKeyGuard = schema3.propertyNames !== void 0 && schema3.propertyNames !== true;
+      const minProperties = typeof schema3.minProperties === "number" ? schema3.minProperties : void 0;
+      const maxProperties = typeof schema3.maxProperties === "number" ? schema3.maxProperties : void 0;
       if (hasKeyGuard || minProperties !== void 0 || maxProperties !== void 0) {
         let keySchema;
         if (hasKeyGuard) {
-          const keyJSONSchema = typeof schema2.propertyNames === "object" && schema2.propertyNames.type === void 0 ? { type: "string", ...schema2.propertyNames } : schema2.propertyNames;
+          const keyJSONSchema = typeof schema3.propertyNames === "object" && schema3.propertyNames.type === void 0 ? { type: "string", ...schema3.propertyNames } : schema3.propertyNames;
           keySchema = convertSchema(keyJSONSchema, ctx);
         }
         zodSchema = checkObjectGuards(zodSchema, { keySchema, minProperties, maxProperties });
@@ -48896,53 +48897,53 @@ function convertBaseSchema(schema2, ctx) {
       break;
     }
     case "array": {
-      const prefixItems = schema2.prefixItems;
-      const items = schema2.items;
+      const prefixItems = schema3.prefixItems;
+      const items = schema3.items;
       if (prefixItems && Array.isArray(prefixItems)) {
-        const minItems = typeof schema2.minItems === "number" ? schema2.minItems : 0;
+        const minItems = typeof schema3.minItems === "number" ? schema3.minItems : 0;
         const tupleItems = prefixItems.map((item) => convertSchema(item, ctx));
         const positionalItems = applyMinItems(tupleItems, minItems);
         const rest = !Array.isArray(items) ? getTupleRest(items, ctx) : void 0;
         const tupleSchema = z.tuple(positionalItems);
         zodSchema = rest ? tupleSchema.rest(rest) : tupleSchema;
-        if (typeof schema2.minItems === "number") {
-          zodSchema = zodSchema.check(z.minLength(schema2.minItems));
+        if (typeof schema3.minItems === "number") {
+          zodSchema = zodSchema.check(z.minLength(schema3.minItems));
         }
-        if (typeof schema2.maxItems === "number") {
-          zodSchema = zodSchema.check(z.maxLength(schema2.maxItems));
+        if (typeof schema3.maxItems === "number") {
+          zodSchema = zodSchema.check(z.maxLength(schema3.maxItems));
         }
       } else if (Array.isArray(items)) {
-        const minItems = typeof schema2.minItems === "number" ? schema2.minItems : 0;
+        const minItems = typeof schema3.minItems === "number" ? schema3.minItems : 0;
         const tupleItems = items.map((item) => convertSchema(item, ctx));
         const positionalItems = applyMinItems(tupleItems, minItems);
-        const rest = getTupleRest(schema2.additionalItems, ctx);
+        const rest = getTupleRest(schema3.additionalItems, ctx);
         const tupleSchema = z.tuple(positionalItems);
         zodSchema = rest ? tupleSchema.rest(rest) : tupleSchema;
-        if (typeof schema2.minItems === "number") {
-          zodSchema = zodSchema.check(z.minLength(schema2.minItems));
+        if (typeof schema3.minItems === "number") {
+          zodSchema = zodSchema.check(z.minLength(schema3.minItems));
         }
-        if (typeof schema2.maxItems === "number") {
-          zodSchema = zodSchema.check(z.maxLength(schema2.maxItems));
+        if (typeof schema3.maxItems === "number") {
+          zodSchema = zodSchema.check(z.maxLength(schema3.maxItems));
         }
       } else if (items !== void 0) {
         const element = convertSchema(items, ctx);
         let arraySchema = z.array(element);
-        if (typeof schema2.minItems === "number") {
-          arraySchema = arraySchema.min(schema2.minItems);
+        if (typeof schema3.minItems === "number") {
+          arraySchema = arraySchema.min(schema3.minItems);
         }
-        if (typeof schema2.maxItems === "number") {
-          arraySchema = arraySchema.max(schema2.maxItems);
+        if (typeof schema3.maxItems === "number") {
+          arraySchema = arraySchema.max(schema3.maxItems);
         }
         zodSchema = arraySchema;
       } else {
         zodSchema = z.array(z.any());
       }
-      if (schema2.uniqueItems === true || schema2.contains !== void 0) {
+      if (schema3.uniqueItems === true || schema3.contains !== void 0) {
         zodSchema = checkArrayGuards(zodSchema, {
-          uniqueItems: schema2.uniqueItems === true,
-          containsSchema: schema2.contains !== void 0 ? convertSchema(schema2.contains, ctx) : void 0,
-          minContains: typeof schema2.minContains === "number" ? schema2.minContains : void 0,
-          maxContains: typeof schema2.maxContains === "number" ? schema2.maxContains : void 0
+          uniqueItems: schema3.uniqueItems === true,
+          containsSchema: schema3.contains !== void 0 ? convertSchema(schema3.contains, ctx) : void 0,
+          minContains: typeof schema3.minContains === "number" ? schema3.minContains : void 0,
+          maxContains: typeof schema3.maxContains === "number" ? schema3.maxContains : void 0
         });
       }
       break;
@@ -48952,94 +48953,94 @@ function convertBaseSchema(schema2, ctx) {
   }
   return zodSchema;
 }
-function convertSchema(schema2, ctx) {
-  if (typeof schema2 === "boolean") {
-    return schema2 ? z.any() : z.never();
+function convertSchema(schema3, ctx) {
+  if (typeof schema3 === "boolean") {
+    return schema3 ? z.any() : z.never();
   }
-  let baseSchema = convertBaseSchema(schema2, ctx);
-  const hasExplicitType = schema2.type || schema2.enum !== void 0 || schema2.const !== void 0;
-  if (schema2.anyOf && Array.isArray(schema2.anyOf)) {
-    const options = schema2.anyOf.map((s2) => convertSchema(s2, ctx));
+  let baseSchema = convertBaseSchema(schema3, ctx);
+  const hasExplicitType = schema3.type || schema3.enum !== void 0 || schema3.const !== void 0;
+  if (schema3.anyOf && Array.isArray(schema3.anyOf)) {
+    const options = schema3.anyOf.map((s2) => convertSchema(s2, ctx));
     const anyOfUnion = z.union(options);
     baseSchema = hasExplicitType ? z.intersection(baseSchema, anyOfUnion) : anyOfUnion;
   }
-  if (schema2.oneOf && Array.isArray(schema2.oneOf)) {
-    const options = schema2.oneOf.map((s2) => convertSchema(s2, ctx));
+  if (schema3.oneOf && Array.isArray(schema3.oneOf)) {
+    const options = schema3.oneOf.map((s2) => convertSchema(s2, ctx));
     const oneOfUnion = z.xor(options);
     baseSchema = hasExplicitType ? z.intersection(baseSchema, oneOfUnion) : oneOfUnion;
   }
-  if (schema2.allOf && Array.isArray(schema2.allOf)) {
-    if (schema2.allOf.length === 0) {
+  if (schema3.allOf && Array.isArray(schema3.allOf)) {
+    if (schema3.allOf.length === 0) {
       baseSchema = hasExplicitType ? baseSchema : z.any();
     } else {
-      let result = hasExplicitType ? baseSchema : convertSchema(schema2.allOf[0], ctx);
+      let result = hasExplicitType ? baseSchema : convertSchema(schema3.allOf[0], ctx);
       const startIdx = hasExplicitType ? 0 : 1;
-      for (let i = startIdx; i < schema2.allOf.length; i++) {
-        result = z.intersection(result, convertSchema(schema2.allOf[i], ctx));
+      for (let i = startIdx; i < schema3.allOf.length; i++) {
+        result = z.intersection(result, convertSchema(schema3.allOf[i], ctx));
       }
       baseSchema = result;
     }
   }
-  if (schema2.nullable === true && ctx.version === "openapi-3.0") {
+  if (schema3.nullable === true && ctx.version === "openapi-3.0") {
     baseSchema = z.nullable(baseSchema);
   }
-  if (schema2.readOnly === true) {
+  if (schema3.readOnly === true) {
     baseSchema = z.readonly(baseSchema);
   }
-  if (schema2.default !== void 0) {
-    baseSchema = baseSchema.default(schema2.default);
+  if (schema3.default !== void 0) {
+    baseSchema = baseSchema.default(schema3.default);
   }
   const extraMeta = {};
   const coreMetadataKeys = ["$id", "id", "$comment", "$anchor", "$vocabulary", "$dynamicRef", "$dynamicAnchor"];
   for (const key of coreMetadataKeys) {
-    if (key in schema2) {
-      extraMeta[key] = schema2[key];
+    if (key in schema3) {
+      extraMeta[key] = schema3[key];
     }
   }
   const contentMetadataKeys = ["contentEncoding", "contentMediaType", "contentSchema"];
   for (const key of contentMetadataKeys) {
-    if (key in schema2) {
-      extraMeta[key] = schema2[key];
+    if (key in schema3) {
+      extraMeta[key] = schema3[key];
     }
   }
-  if (schema2.type === "object" && schema2.$ref === void 0) {
-    if (schema2.propertyNames !== void 0 && !containsRef(schema2.propertyNames)) {
-      extraMeta.propertyNames = schema2.propertyNames;
+  if (schema3.type === "object" && schema3.$ref === void 0) {
+    if (schema3.propertyNames !== void 0 && !containsRef(schema3.propertyNames)) {
+      extraMeta.propertyNames = schema3.propertyNames;
     }
     for (const key of ["minProperties", "maxProperties"]) {
-      if (schema2[key] !== void 0)
-        extraMeta[key] = schema2[key];
+      if (schema3[key] !== void 0)
+        extraMeta[key] = schema3[key];
     }
   }
-  if (schema2.type === "array" && schema2.$ref === void 0) {
-    if (schema2.contains !== void 0 && !containsRef(schema2.contains)) {
-      extraMeta.contains = schema2.contains;
+  if (schema3.type === "array" && schema3.$ref === void 0) {
+    if (schema3.contains !== void 0 && !containsRef(schema3.contains)) {
+      extraMeta.contains = schema3.contains;
     }
     for (const key of ["uniqueItems", "minContains", "maxContains"]) {
-      if (schema2[key] !== void 0)
-        extraMeta[key] = schema2[key];
+      if (schema3[key] !== void 0)
+        extraMeta[key] = schema3[key];
     }
   }
-  for (const key of Object.keys(schema2)) {
+  for (const key of Object.keys(schema3)) {
     if (!RECOGNIZED_KEYS.has(key)) {
-      assignProp(extraMeta, key, schema2[key]);
+      assignProp(extraMeta, key, schema3[key]);
     }
   }
   if (Object.keys(extraMeta).length > 0) {
     ctx.registry.add(baseSchema, extraMeta);
   }
-  if (schema2.description) {
-    baseSchema = baseSchema.describe(schema2.description);
+  if (schema3.description) {
+    baseSchema = baseSchema.describe(schema3.description);
   }
   return baseSchema;
 }
-function fromJSONSchema(schema2, params) {
-  if (typeof schema2 === "boolean") {
-    return schema2 ? z.any() : z.never();
+function fromJSONSchema(schema3, params) {
+  if (typeof schema3 === "boolean") {
+    return schema3 ? z.any() : z.never();
   }
   let normalized;
   try {
-    normalized = JSON.parse(JSON.stringify(schema2));
+    normalized = JSON.parse(JSON.stringify(schema3));
   } catch {
     throw new Error("fromJSONSchema input is not valid JSON (possibly cyclic); use $defs/$ref for recursive schemas");
   }
@@ -49058,7 +49059,7 @@ function fromJSONSchema(schema2, params) {
 
 // ../node_modules/zod/v4/core/visit.js
 var RESOLVING = /* @__PURE__ */ Symbol("z.visit/resolving");
-function visit(schema2, fnOrHandlers) {
+function visit(schema3, fnOrHandlers) {
   const fn = typeof fnOrHandlers === "function" ? fnOrHandlers : (node2, rewritten) => {
     const h = fnOrHandlers[node2._zod.def.type];
     return h ? h(node2, rewritten) : node2;
@@ -49208,12 +49209,12 @@ function visit(schema2, fnOrHandlers) {
       }
     }
   }
-  return run3(schema2);
+  return run3(schema3);
 }
 
 // ../node_modules/zod/v4/classic/deep-partial.js
-function deepPartial(schema2) {
-  return visit(schema2, {
+function deepPartial(schema3) {
+  return visit(schema3, {
     object: (s2) => s2.partial(),
     // Every partialed option now admits `undefined`, which the constructor rejects as a duplicate.
     union: (s2) => {
@@ -49236,8 +49237,8 @@ function outSide(def) {
 function inSide(def) {
   return def.in._zod.traits.has("$ZodTransform") ? outSide(def) : def.in;
 }
-function input(schema2) {
-  return visit(schema2, {
+function input(schema3) {
+  return visit(schema3, {
     pipe: (s2) => inSide(s2._zod.def),
     // A default value belongs to the output side, so a rewritten inner type leaves it stranded. `.default()` widens the declared input type with `undefined`, and `optional` is what carries that across.
     default: (s2, rewritten) => rewritten ? optional(s2._zod.def.innerType) : s2,
@@ -49245,8 +49246,8 @@ function input(schema2) {
     catch: (s2, rewritten) => rewritten ? s2._zod.def.innerType : s2
   });
 }
-function output(schema2) {
-  return visit(schema2, {
+function output(schema3) {
+  return visit(schema3, {
     pipe: (s2) => outSide(s2._zod.def),
     // A prefault value is fed through the schema, which makes it input-side, so a rewritten inner type leaves it stranded.
     prefault: (s2, rewritten) => rewritten ? s2._zod.def.innerType : s2
@@ -50477,9 +50478,40 @@ var studiaDispositivo = {
   }
 };
 
+// src/claude/tools/notify.ts
+function slug(s2) {
+  return s2.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+var schema2 = external_exports.object({});
+var elencaNotifiche = {
+  name: "elenca_notifiche",
+  description: "Dispositivi e servizi a cui un'automazione pu\xF2 mandare una notifica: app di Home Assistant su telefoni e tablet, entit\xE0 di notifica (notify.send_message), altri servizi notify (es. Alexa) e la notifica nell'interfaccia di Home Assistant. Usalo per chiedere all'utente dove inviare una notifica prima di proporre la bozza.",
+  schema: schema2,
+  label: () => "Cerco dove inviare le notifiche",
+  async run(_input, ctx) {
+    const [services, idx] = await Promise.all([ctx.ha.services(), loadIndex(ctx)]);
+    const notify = [...services.get("notify") ?? []].sort();
+    const appNames = /* @__PURE__ */ new Map();
+    for (const d of idx.reg.devices) {
+      const domains = d.config_entries.map((e) => idx.reg.configEntryDomain[e]);
+      if (domains.includes("mobile_app")) appNames.set(`mobile_app_${slug(deviceName(d))}`, deviceName(d));
+    }
+    const apps = notify.filter((s2) => s2.startsWith("mobile_app_")).map((s2) => ({ azione: `notify.${s2}`, ...appNames.has(s2) ? { dispositivo: appNames.get(s2) } : {}, tipo: "app Home Assistant (telefono o tablet)" }));
+    const others = notify.filter((s2) => !s2.startsWith("mobile_app_") && !["notify", "send_message", "persistent_notification"].includes(s2)).map((s2) => ({ azione: `notify.${s2}`, tipo: s2.startsWith("alexa_media") ? "Alexa (annuncio o notifica)" : "servizio di notifica" }));
+    const entities = [...idx.states.keys()].filter((id) => domainOf(id) === "notify" && !idx.entries.get(id)?.disabled_by).sort().map((id) => ({ entity_id: id, nome: idx.name(id), uso: "action: notify.send_message con target entity_id (campi message e title)" }));
+    return {
+      telefoni_e_tablet: apps,
+      entita_di_notifica: entities,
+      altri_servizi: others,
+      ...services.get("persistent_notification")?.has("create") ? { interfaccia_home_assistant: { azione: "persistent_notification.create", tipo: "notifica nella campanella dell'interfaccia di Home Assistant" } } : {},
+      nota: "Chiedi all'utente quale usare (anche pi\xF9 di uno), senza scegliere tu. notify.notify \xE8 un servizio generico che invia al predefinito: non usarlo."
+    };
+  }
+};
+
 // src/claude/tools/registry.ts
-var TOOLSET_VERSION = 3;
-var SUPPORTED_TOOLSETS = /* @__PURE__ */ new Set([1, 2, 3]);
+var TOOLSET_VERSION = 4;
+var SUPPORTED_TOOLSETS = /* @__PURE__ */ new Set([1, 2, 3, 4]);
 var READ_TOOLS = [
   cercaEntita,
   dettagliEntita,
@@ -50487,12 +50519,13 @@ var READ_TOOLS = [
   elencaAutomazioni,
   leggiAutomazione,
   catalogoTrigger,
-  infoDispositivo
+  infoDispositivo,
+  elencaNotifiche
 ];
 var CHAT_TOOLS = [...READ_TOOLS, proponiAutomazione, leggiSchedaDispositivo, studiaDispositivo];
 var byName = new Map(CHAT_TOOLS.map((t) => [t.name, t]));
-function jsonSchema(schema2) {
-  const js = external_exports.toJSONSchema(schema2, { io: "input" });
+function jsonSchema(schema3) {
+  const js = external_exports.toJSONSchema(schema3, { io: "input" });
   delete js.$schema;
   return js;
 }
@@ -51260,6 +51293,7 @@ function checkAutomation(config2, ctx, opts = {}) {
       continue;
     }
     services.add(action);
+    if (action === "notify.notify") warnings.push(`${path4}: notify.notify invia al servizio di notifica predefinito: meglio indicare il dispositivo (es. notify.mobile_app_\u2026).`);
     if (CRITICAL_DOMAINS.has(domain2)) critical.push({ ref: action, reason: "comanda serrature, allarmi, sirene o valvole" });
     else if (CRITICAL_SERVICES.has(action)) critical.push({ ref: action, reason: "servizio generico che pu\xF2 comandare qualunque dispositivo" });
   }
@@ -51302,9 +51336,9 @@ function orderedForDisplay(config2) {
   return out;
 }
 function slugCandidates(alias) {
-  const slug = (s2) => s2.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "automation";
+  const slug2 = (s2) => s2.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "automation";
   const out = /* @__PURE__ */ new Set();
-  for (const base of [slug(alias.replace(/['’`"]/g, "")), slug(alias)]) {
+  for (const base of [slug2(alias.replace(/['’`"]/g, "")), slug2(alias)]) {
     out.add(`automation.${base}`);
     for (let n = 2; n <= 4; n++) out.add(`automation.${base}_${n}`);
   }
@@ -53563,6 +53597,7 @@ function suggestSystem(s2) {
 - I numeri dei dossier sono gi\xE0 calcolati e corretti: non ricalcolarli e non inventarne altri. Cita quelli che giustificano la proposta.
 - Proponi solo se l'automazione farebbe al posto dell'utente qualcosa che oggi fa a mano, con poche probabilit\xE0 di scattare a sproposito. Scarta (esito "scarta", motivo nella spiegazione) se il comportamento sembra una coincidenza, se un'automazione correlata lo copre gi\xE0, se agire in automatico sarebbe fastidioso o rischioso.
 - Usa SOLO gli entity_id presenti nel dossier del candidato, pi\xF9 sun.sun e zone.home (il cui stato \xE8 il numero di persone in casa). Non inventarne altri.
+- Notifiche: non sai su quale dispositivo l'utente le vuole. Se la proposta deve avvisare qualcuno usa \`persistent_notification.create\` (notifica nell'interfaccia di Home Assistant), mai \`notify.*\`, e scrivi nei rischi che per riceverla sul telefono il dispositivo si sceglie con \xABDiscuti in chat\xBB.
 - Un'automazione per candidato, completa e autonoma. Se l'ovvio complemento (es. spegnere dopo aver acceso) non ha numeri nel dossier, citalo nella spiegazione invece di aggiungerlo.
 
 # Per tipo di candidato
@@ -55407,7 +55442,7 @@ function verifySystem(s2) {
 
 # Correzioni
 - Scrivi \`yaml_corretto\` SOLO se "modificabile" \xE8 true e c'\xE8 qualcosa che vale la pena correggere; altrimenti stringa vuota. Per le automazioni non modificabili spiega in \`spiegazione_correzione\` cosa cambiare.
-- \`yaml_corretto\` \xE8 l'automazione COMPLETA (alias, description, triggers, conditions, actions, mode): conserva alias, scopo e tutto ci\xF2 che funziona; cambia il minimo indispensabile.
+- \`yaml_corretto\` \xE8 l'automazione COMPLETA (alias, description, triggers, conditions, actions, mode): conserva alias, scopo e tutto ci\xF2 che funziona, compresi i destinatari delle notifiche; cambia il minimo indispensabile.
 - Usa solo entity_id presenti nel dossier (in "entita", nella configurazione o nelle correzioni proposte dai controlli), pi\xF9 sun.sun e zone.home. Non inventarne altri: se l'entit\xE0 giusta non \xE8 nota, lascia vuoto e spiega.
 - \`spiegazione_correzione\`: cosa cambia la correzione, in 1\u20133 frasi (vuota se non c'\xE8 correzione).
 
@@ -56335,17 +56370,17 @@ var KbStore = class {
   get(key) {
     return this.cards.get(key);
   }
-  bySlug(slug) {
-    return [...this.cards.values()].find((c) => cardSlug(c.key) === slug);
+  bySlug(slug2) {
+    return [...this.cards.values()].find((c) => cardSlug(c.key) === slug2);
   }
   list() {
     return [...this.cards.values()].sort((a, b) => a.manufacturer.localeCompare(b.manufacturer) || a.model.localeCompare(b.model));
   }
   async save(card) {
-    const slug = cardSlug(card.key);
-    if (!SLUG_RE.test(slug)) throw new Error("chiave della scheda non valida");
+    const slug2 = cardSlug(card.key);
+    if (!SLUG_RE.test(slug2)) throw new Error("chiave della scheda non valida");
     this.cards.set(card.key, card);
-    await writeJsonAtomic(join12(this.dir, `${slug}.json`), card);
+    await writeJsonAtomic(join12(this.dir, `${slug2}.json`), card);
   }
   async remove(key) {
     if (!this.cards.delete(key)) return false;
@@ -56762,11 +56797,11 @@ var DevicesService = class {
       estimateMs: Math.round(this.estimateMs())
     };
   }
-  card(slug) {
-    return this.deps.kb.bySlug(slug);
+  card(slug2) {
+    return this.deps.kb.bySlug(slug2);
   }
-  async approve(slug, by) {
-    const c = this.deps.kb.bySlug(slug);
+  async approve(slug2, by) {
+    const c = this.deps.kb.bySlug(slug2);
     if (!c) throw new DevicesError(404, "scheda_inesistente", "Scheda non trovata");
     const next = { ...c, status: "approvata", approved: { at: this.now().toISOString(), by } };
     await this.deps.kb.save(next);
@@ -56775,8 +56810,8 @@ var DevicesService = class {
   /** Approva in un colpo le bozze indicate; ritorna quante. */
   async approveAll(slugs, by) {
     let n = 0;
-    for (const slug of new Set(slugs)) {
-      const c = this.deps.kb.bySlug(slug);
+    for (const slug2 of new Set(slugs)) {
+      const c = this.deps.kb.bySlug(slug2);
       if (!c || c.status !== "bozza" || this.active?.info.key === c.key) continue;
       await this.deps.kb.save({ ...c, status: "approvata", approved: { at: this.now().toISOString(), by } });
       n += 1;
@@ -56790,9 +56825,9 @@ var DevicesService = class {
    * "Idee di automazioni": apre una chat già avviata in cui Claude, dalla scheda e dai
    * dispositivi della casa di quel modello, propone automazioni e prepara la bozza scelta.
    */
-  async ideas(slug, by) {
+  async ideas(slug2, by) {
     if (!this.chat) throw new DevicesError(503, "chat_non_disponibile", "Chat non disponibile");
-    const card = this.deps.kb.bySlug(slug);
+    const card = this.deps.kb.bySlug(slug2);
     if (!card) throw new DevicesError(404, "scheda_inesistente", "Scheda non trovata");
     const entry = (await this.catalog()).find((e) => e.key === card.key);
     if (!entry) throw new DevicesError(404, "modello_inesistente", "Questo modello non \xE8 pi\xF9 tra i dispositivi della casa");
@@ -56813,8 +56848,8 @@ var DevicesService = class {
     await this.chat.send(conversationId, lines.join("\n"));
     return { conversationId };
   }
-  async remove(slug) {
-    const c = this.deps.kb.bySlug(slug);
+  async remove(slug2) {
+    const c = this.deps.kb.bySlug(slug2);
     if (!c) throw new DevicesError(404, "scheda_inesistente", "Scheda non trovata");
     if (this.active?.info.key === c.key) throw new DevicesError(409, "studio_in_corso", "Lo studio di questo modello \xE8 in corso.");
     await this.deps.kb.remove(c.key);
@@ -56935,10 +56970,10 @@ var DevicesService = class {
       return [];
     }
   }
-  async record(slug, u) {
+  async record(slug2, u) {
     await this.deps.usage.record({
       kind: "devices",
-      conversationId: slug,
+      conversationId: slug2,
       model: u.model,
       input: u.input,
       output: u.output,
@@ -57060,7 +57095,7 @@ async function guard4(res, fn) {
 }
 function devicesRoutes(deps) {
   const { service, usage, options } = deps;
-  const slug = (params) => {
+  const slug2 = (params) => {
     const s2 = params.slug ?? "";
     if (!SLUG_RE.test(s2)) throw new HttpError(400, "id_non_valido");
     return s2;
@@ -57086,7 +57121,7 @@ function devicesRoutes(deps) {
       path: "/api/devices/cards/:slug",
       auth: true,
       handler: ({ res, params }) => {
-        const card = service.card(slug(params));
+        const card = service.card(slug2(params));
         if (!card) return sendJson(res, 404, { error: "scheda_inesistente", message: "Scheda non trovata" });
         sendJson(res, 200, { card });
       }
@@ -57126,7 +57161,7 @@ function devicesRoutes(deps) {
       method: "POST",
       path: "/api/devices/cards/:slug/approve",
       auth: true,
-      handler: ({ res, params, user }) => guard4(res, async () => sendJson(res, 200, { card: await service.approve(slug(params), who4(user)) }))
+      handler: ({ res, params, user }) => guard4(res, async () => sendJson(res, 200, { card: await service.approve(slug2(params), who4(user)) }))
     },
     {
       method: "POST",
@@ -57145,7 +57180,7 @@ function devicesRoutes(deps) {
       auth: true,
       handler: ({ res, params, user }) => guard4(res, async () => {
         try {
-          sendJson(res, 201, await service.ideas(slug(params), who4(user)));
+          sendJson(res, 201, await service.ideas(slug2(params), who4(user)));
         } catch (err) {
           const e = err;
           if (!(err instanceof HttpError) && !(err instanceof DevicesError) && typeof e.status === "number" && typeof e.code === "string") sendJson(res, e.status, { error: e.code, message: String(e.message) });
@@ -57158,7 +57193,7 @@ function devicesRoutes(deps) {
       path: "/api/devices/cards/:slug",
       auth: true,
       handler: ({ res, params }) => guard4(res, async () => {
-        await service.remove(slug(params));
+        await service.remove(slug2(params));
         sendJson(res, 200, { removed: true });
       })
     }

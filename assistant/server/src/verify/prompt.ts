@@ -12,7 +12,7 @@ import { RULES, type AutomationReport, type Finding } from './types.ts'
 // la configurazione, i problemi già trovati dalle regole (numeri calcolati in locale), l'esito
 // delle ultime esecuzioni e lo stato delle entità usate. Niente storici grezzi.
 
-export const VERIFY_PROMPT_VERSION = 1
+export const VERIFY_PROMPT_VERSION = 2
 const MAX_ENTITIES = 25
 
 export interface VerifyPromptInput {
@@ -37,7 +37,7 @@ export function verifySystem(s: VerifyPromptInput): BetaTextBlockParam[] {
 
 # Correzioni
 - Scrivi \`yaml_corretto\` SOLO se "modificabile" è true e c'è qualcosa che vale la pena correggere; altrimenti stringa vuota. Per le automazioni non modificabili spiega in \`spiegazione_correzione\` cosa cambiare.
-- \`yaml_corretto\` è l'automazione COMPLETA (alias, description, triggers, conditions, actions, mode): conserva alias, scopo e tutto ciò che funziona; cambia il minimo indispensabile.
+- \`yaml_corretto\` è l'automazione COMPLETA (alias, description, triggers, conditions, actions, mode): conserva alias, scopo e tutto ciò che funziona, compresi i destinatari delle notifiche; cambia il minimo indispensabile.
 - Usa solo entity_id presenti nel dossier (in "entita", nella configurazione o nelle correzioni proposte dai controlli), più sun.sun e zone.home. Non inventarne altri: se l'entità giusta non è nota, lascia vuoto e spiega.
 - \`spiegazione_correzione\`: cosa cambia la correzione, in 1–3 frasi (vuota se non c'è correzione).
 

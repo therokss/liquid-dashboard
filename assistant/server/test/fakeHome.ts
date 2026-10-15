@@ -130,7 +130,8 @@ const TRIGGER_CATALOG: Json = {
 export const SERVICES: Record<string, string[]> = {
   light: ['turn_on', 'turn_off', 'toggle'],
   switch: ['turn_on', 'turn_off'],
-  notify: ['mobile_app', 'notify'],
+  notify: ['mobile_app', 'mobile_app_telefono_di_demo', 'mobile_app_tablet_vecchio', 'alexa_media_eco_cucina', 'notify', 'send_message', 'persistent_notification'],
+  persistent_notification: ['create', 'dismiss'],
   automation: ['turn_on', 'turn_off', 'trigger', 'reload'],
   input_boolean: ['turn_on', 'turn_off'],
   shell_command: ['riavvia'],

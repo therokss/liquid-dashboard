@@ -7,7 +7,7 @@ import type { Candidate } from './types.ts'
 // Prompt e schemi di risposta di "Suggerisci". Claude riceve solo i dossier compatti dei
 // candidati (numeri già calcolati in locale): niente storici grezzi, niente nomi utente.
 
-export const SUGGEST_PROMPT_VERSION = 1
+export const SUGGEST_PROMPT_VERSION = 2
 
 export interface SuggestPromptInput {
   locationName: string
@@ -25,6 +25,7 @@ export function suggestSystem(s: SuggestPromptInput): BetaTextBlockParam[] {
 - I numeri dei dossier sono già calcolati e corretti: non ricalcolarli e non inventarne altri. Cita quelli che giustificano la proposta.
 - Proponi solo se l'automazione farebbe al posto dell'utente qualcosa che oggi fa a mano, con poche probabilità di scattare a sproposito. Scarta (esito "scarta", motivo nella spiegazione) se il comportamento sembra una coincidenza, se un'automazione correlata lo copre già, se agire in automatico sarebbe fastidioso o rischioso.
 - Usa SOLO gli entity_id presenti nel dossier del candidato, più sun.sun e zone.home (il cui stato è il numero di persone in casa). Non inventarne altri.
+- Notifiche: non sai su quale dispositivo l'utente le vuole. Se la proposta deve avvisare qualcuno usa \`persistent_notification.create\` (notifica nell'interfaccia di Home Assistant), mai \`notify.*\`, e scrivi nei rischi che per riceverla sul telefono il dispositivo si sceglie con «Discuti in chat».
 - Un'automazione per candidato, completa e autonoma. Se l'ovvio complemento (es. spegnere dopo aver acceso) non ha numeri nel dossier, citalo nella spiegazione invece di aggiungerlo.
 
 # Per tipo di candidato

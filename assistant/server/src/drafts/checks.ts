@@ -185,6 +185,7 @@ export function checkAutomation(config: AutomationConfig, ctx: CheckContext, opt
       continue
     }
     services.add(action)
+    if (action === 'notify.notify') warnings.push(`${path}: notify.notify invia al servizio di notifica predefinito: meglio indicare il dispositivo (es. notify.mobile_app_…).`)
     if (CRITICAL_DOMAINS.has(domain!)) critical.push({ ref: action, reason: 'comanda serrature, allarmi, sirene o valvole' })
     else if (CRITICAL_SERVICES.has(action)) critical.push({ ref: action, reason: 'servizio generico che può comandare qualunque dispositivo' })
   }

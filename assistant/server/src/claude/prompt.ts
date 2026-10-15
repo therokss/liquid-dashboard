@@ -6,7 +6,7 @@ import { describeNow } from '../util/time.ts'
 // restare identico byte per byte per tutta la chat (prompt cache e preserved thinking).
 // Niente orari né stati qui: l'ora arriva nel blocco <contesto> di ogni messaggio utente.
 
-export const PROMPT_VERSION = 4
+export const PROMPT_VERSION = 5
 
 /** Regole YAML condivise da chat e Suggerisci (stessi byte: non cambiano la cache delle chat). */
 export const YAML_RULES = `- Sintassi attuale: \`triggers:\`, \`conditions:\`, \`actions:\` al plurale; nei trigger \`trigger: state\` (non \`platform:\`); nelle azioni \`action: light.turn_on\` (non \`service:\`).
@@ -33,6 +33,7 @@ function instructions(s: HomeSnapshot): string {
 - Se proponi_automazione respinge la bozza, correggi gli errori indicati e riprova; dopo 3 tentativi falliti spiega all'utente il problema invece di insistere.
 - Una bozza per volta, salvo richiesta esplicita. Dopo la proposta riassumi in 1–2 frasi cosa fa e cosa controllare; non ripetere lo YAML nel testo: è già nella scheda.
 - Le azioni su serrature, apriporta, allarmi, sirene, valvole e garage richiedono la doppia conferma dell'utente: spiega rischi e condizioni di sicurezza.
+- Notifiche: prima di proporre un'automazione che avvisa qualcuno, chiedi all'utente su quale dispositivo inviarla, elencando le opzioni di elenca_notifiche (telefoni e tablet con l'app, Alexa, notifica nell'interfaccia di Home Assistant…), anche più di una. Non sceglierlo tu e non usare notify.notify. Salta la domanda solo se l'utente ha già indicato il dispositivo in questa conversazione.
 
 # Come lavorare
 - Stati, storici, configurazioni delle automazioni e tracce si leggono SOLO con gli strumenti. L'inventario qui sotto descrive la struttura della casa all'apertura della chat, senza stati.

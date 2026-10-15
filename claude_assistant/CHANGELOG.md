@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.6.4] — 2026-10-15
+### Modificato
+- **Notifiche**: prima di creare un'automazione che manda una notifica, Claude chiede su
+  quale dispositivo inviarla e non lo sceglie da solo. Le opzioni vengono dal nuovo
+  strumento `elenca_notifiche`: app sui telefoni e tablet (con il nome del dispositivo),
+  entità di notifica, Alexa e notifica nell'interfaccia di Home Assistant.
+- Le bozze che usano `notify.notify` (servizio generico) mostrano un avviso.
+- Suggerisci usa la notifica nell'interfaccia di Home Assistant e indica di scegliere il
+  dispositivo in chat. Le correzioni di Verifica conservano i destinatari delle notifiche.
+
 ## [0.6.3] — 2026-10-15
 ### Aggiunto
 - **Idee di automazioni** su ogni scheda della pagina Dispositivi. Apre una chat in cui

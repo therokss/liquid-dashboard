@@ -103,6 +103,11 @@ test('controlli: entità e servizi inesistenti, servizi vietati, template', () =
   assert.match(checkAutomation(tpl, ctxFrom()).errors.join(), /template/)
   const missing = { ...base, actions: [{ action: 'light.esplodi' }] }
   assert.match(checkAutomation(missing, ctxFrom()).errors.join(), /non esiste in questa installazione/)
+  // notify.notify è valido ma generico: avviso, non errore.
+  const generic = checkAutomation({ ...base, actions: [{ action: 'notify.notify', data: { message: 'ciao' } }] }, ctxFrom())
+  assert.deepEqual(generic.errors, [])
+  assert.match(generic.warnings.join(), /notify\.notify invia al servizio di notifica predefinito/)
+  assert.deepEqual(checkAutomation({ ...base, actions: [{ action: 'notify.mobile_app_telefono_di_demo', data: { message: 'ciao' } }] }, ctxFrom()).warnings, [])
 
   const withTemplate = { ...base, conditions: [{ condition: 'template', value_template: "{{ states('sensor.media_temperatura') | float > 20 and is_state('sensor.sparito', 'on') }}" }] }
   const r = checkAutomation(withTemplate, ctxFrom())

@@ -67,6 +67,13 @@ ammessi (comandi di shell, script Python, chiamate REST, riavvio di Home Assista
 del recorder, aggiornamenti). Le automazioni definite in YAML/packages o create da una
 blueprint non si modificano da qui: Claude ti propone lo YAML da copiare.
 
+**Notifiche**: se un'automazione deve avvisarti, Claude ti chiede prima su quale dispositivo
+inviarla (l'app Home Assistant su un telefono o tablet, Alexa, la notifica nell'interfaccia
+di Home Assistant…), anche più di uno, e non sceglie da solo. Per mostrarti le opzioni vede
+i nomi dei servizi di notifica (per esempio `notify.mobile_app_…`), non i dati dei telefoni.
+Le proposte di *Suggerisci* usano la notifica nell'interfaccia di Home Assistant: per
+riceverla sul telefono scegli il dispositivo con **Discuti in chat**.
+
 Per fare prove senza toccare dispositivi veri c'è l'interruttore **Test Claude**
 (`input_boolean.test_claude`), creato dall'add-on al primo avvio della 0.3.1: ad esempio
 "crea un'automazione che quando accendo Test Claude mi manda una notifica persistente". Se

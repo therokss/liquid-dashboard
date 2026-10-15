@@ -4,7 +4,9 @@ import { executeTool, toolDefinitions, toolLabel, CHAT_TOOLS } from '../src/clau
 import { summarizeSeries, toSamples } from '../src/claude/tools/history.ts'
 import { DEFAULT_CONSENTS, type Consents } from '../src/inventory/privacy.ts'
 import type { ToolContext } from '../src/claude/tools/common.ts'
-import { fakeHA } from './fakeHome.ts'
+import { fakeHA, fakeRegistries } from './fakeHome.ts'
+import { buildSystemPrompt } from '../src/claude/prompt.ts'
+import { buildHomeSnapshot, resetSnapshotCache } from '../src/inventory/snapshot.ts'
 
 const NOW = new Date('2026-10-14T10:00:00Z')
 
@@ -155,4 +157,27 @@ test('info_dispositivo: niente seriali o MAC, documentazione e trigger', async (
 test('etichette dei tool per i chip', () => {
   assert.equal(toolLabel('cerca_entita', { testo: 'luce', area: 'cucina' }), 'Cerco "luce" in cucina')
   assert.equal(toolLabel('sconosciuto', {}), 'sconosciuto')
+})
+
+test('elenca_notifiche: telefoni col nome del dispositivo, Alexa, interfaccia di HA; mai notify.notify', async () => {
+  const reg = fakeRegistries()
+  reg.devices = reg.devices.map((d) => (d.id === 'dev_telefono' ? { ...d, config_entries: ['ce_app'] } : d))
+  reg.configEntryDomain = { ...reg.configEntryDomain, ce_app: 'mobile_app' }
+  const r = await run('elenca_notifiche', {}, ctx(DEFAULT_CONSENTS, fakeHA({ registries: reg })))
+  assert.deepEqual(r.json.telefoni_e_tablet, [
+    { azione: 'notify.mobile_app_tablet_vecchio', tipo: 'app Home Assistant (telefono o tablet)' },
+    { azione: 'notify.mobile_app_telefono_di_demo', dispositivo: 'Telefono di Demo', tipo: 'app Home Assistant (telefono o tablet)' },
+  ])
+  assert.deepEqual(r.json.altri_servizi, [
+    { azione: 'notify.alexa_media_eco_cucina', tipo: 'Alexa (annuncio o notifica)' },
+    { azione: 'notify.mobile_app', tipo: 'servizio di notifica' },
+  ])
+  assert.equal(r.json.interfaccia_home_assistant.azione, 'persistent_notification.create')
+  assert.ok(!JSON.stringify(r.json.telefoni_e_tablet.concat(r.json.altri_servizi)).includes('"notify.notify"'))
+  assert.match(r.json.nota, /Chiedi all'utente/)
+
+  // La regola nel prompt della chat: chiedere il dispositivo prima della bozza.
+  resetSnapshotCache()
+  const prompt = buildSystemPrompt(await buildHomeSnapshot(fakeHA(), DEFAULT_CONSENTS))[0]!.text
+  assert.match(prompt, /Notifiche: prima di proporre un'automazione che avvisa qualcuno, chiedi all'utente su quale dispositivo/)
 })
