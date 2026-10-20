@@ -22,6 +22,8 @@ import { buildDossier, REPAIR_SCHEMA, Repairs, repairUserMessage, REVIEW_SCHEMA,
 import { numberFindings, runStaticRules } from './rules.ts'
 import type { ReviewResult, VerifyRun, VerifyStats, VerifyStore } from './store.ts'
 import { RULES, type RuleId, type Severity } from './types.ts'
+import { FeatureMemory } from '../claude/models.ts'
+import { budgetBlockedMessage, usageRecord } from '../claude/usage.ts'
 
 // "Verifica" in due tempi, come Suggerisci:
 // 1. controllo rapido gratuito: regole deterministiche su configurazioni, stati, statistiche,
@@ -62,7 +64,7 @@ export const MAX_DAYS = 14
 
 export class VerifyService {
   private readonly controllers = new Map<string, AbortController>()
-  private readonly features = { fallbacks: true }
+  private readonly features = new FeatureMemory()
   private saving: Promise<void> = Promise.resolve()
   private readonly now: () => Date
   private locationName = 'Casa'
@@ -240,7 +242,7 @@ export class VerifyService {
     return run.reports.filter((r) => hot.has(r.entityId)).map((r) => r.entityId).slice(0, MAX_SELECTION)
   }
 
-  private request(dossiers: string[], days: number): StructuredRequest {
+  private request(dossiers: string[], days: number, cacheSystem = false): StructuredRequest {
     return {
       model: this.deps.options.analysisModel,
       effort: this.deps.options.verifyEffort,
@@ -248,6 +250,9 @@ export class VerifyService {
       user: verifyUserMessage(dossiers, { now: describeNow(this.now(), this.timeZone), days }),
       schema: REVIEW_SCHEMA as unknown as Record<string, unknown>,
       maxTokens: MAX_TOKENS,
+      // Con più lotti, uno dopo l'altro con lo stesso prompt di sistema, dal secondo si legge dalla
+      // cache. La correzione ha un altro schema di output, quindi non la riusa.
+      cacheSystem,
     }
   }
 
@@ -312,7 +317,7 @@ export class VerifyService {
     if (!todo.length) throw new VerifyError(400, 'niente_da_analizzare', 'Scegli almeno un’automazione da analizzare.')
     if (todo.length > MAX_SELECTION) throw new VerifyError(400, 'troppe_automazioni', `Al massimo ${MAX_SELECTION} automazioni per analisi.`)
     const budget = this.deps.usage.status(this.deps.options)
-    if (budget.level === 'bloccato') throw new VerifyError(429, 'budget_superato', `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): l'add-on non chiama Claude fino al mese prossimo.`)
+    if (budget.level === 'bloccato') throw new VerifyError(429, 'budget_superato', budgetBlockedMessage(budget))
     run.status = 'analisi'
     run.selection = todo
     delete run.error
@@ -325,18 +330,18 @@ export class VerifyService {
     return run
   }
 
-  private async record(run: VerifyRun, u: UsageTotals): Promise<void> {
-    await this.deps.usage.record({ kind: 'verify', conversationId: run.id, model: u.model, input: u.input, output: u.output, cacheRead: u.cacheRead, cacheWrite: u.cacheWrite, costUsd: u.costUsd, ...(u.fallback ? { fallback: true } : {}) })
+  private async record(run: VerifyRun, u: UsageTotals, step: string, effort: string): Promise<void> {
+    await this.deps.usage.record(usageRecord('verify', run.id, u, { step, effort }))
     const prev = run.usage ?? { model: u.model, costUsd: 0, input: 0, output: 0, fallback: false }
     run.usage = { model: u.model, costUsd: prev.costUsd + u.costUsd, input: prev.input + u.input, output: prev.output + u.output, fallback: prev.fallback || u.fallback }
   }
 
-  private async structured(run: VerifyRun, req: StructuredRequest, signal: AbortSignal, onText?: (chars: number) => void) {
-    const res = await requestStructured(this.deps.stream!, req, this.features, signal, onText).catch(async (err) => {
-      if (err instanceof StructuredError && err.usage) await this.record(run, err.usage)
+  private async structured(run: VerifyRun, req: StructuredRequest, step: string, signal: AbortSignal, onText?: (chars: number) => void) {
+    const res = await requestStructured(this.deps.stream!, req, this.features.for(req.model), signal, onText).catch(async (err) => {
+      if (err instanceof StructuredError && err.usage) await this.record(run, err.usage, step, req.effort)
       throw err
     })
-    await this.record(run, res.usage)
+    await this.record(run, res.usage, step, req.effort)
     return res
   }
 
@@ -355,10 +360,10 @@ export class VerifyService {
       for (const [b, batch] of batches.entries()) {
         if (signal.aborted) throw new StructuredError('annullata', 'Analisi annullata')
         const budget = this.deps.usage.status(this.deps.options)
-        if (budget.level === 'bloccato') throw new VerifyError(429, 'budget_superato', `Budget mensile raggiunto dopo ${done} automazioni: analisi fermata.`)
+        if (budget.level === 'bloccato') throw new VerifyError(429, 'budget_superato', `Budget raggiunto dopo ${done} automazioni: analisi fermata.`)
         const phase = batches.length > 1 ? `Claude sta analizzando (lotto ${b + 1} di ${batches.length})` : 'Claude sta analizzando le automazioni'
         await this.progress(run, phase, done, todo.length)
-        const res = await this.structured(run, this.request(batch.map((a) => run.dossiers[a]!), run.days), signal)
+        const res = await this.structured(run, this.request(batch.map((a) => run.dossiers[a]!), run.days, batches.length > 1), 'analisi', signal)
         const parsed = Reviews.safeParse(res.value)
         if (!parsed.success) throw new StructuredError('json_non_valido', 'La risposta del modello non rispetta lo schema.')
         const wanted = new Set(batch)
@@ -391,7 +396,7 @@ export class VerifyService {
         await this.progress(run, 'Correzione delle proposte non valide', 0, failed.length)
         try {
           const base = this.request([], run.days)
-          const fix = await this.structured(run, { ...base, effort: 'medium', user: repairUserMessage(failed), schema: REPAIR_SCHEMA as unknown as Record<string, unknown>, maxTokens: REPAIR_MAX_TOKENS }, signal)
+          const fix = await this.structured(run, { ...base, effort: 'medium', user: repairUserMessage(failed), schema: REPAIR_SCHEMA as unknown as Record<string, unknown>, maxTokens: REPAIR_MAX_TOKENS }, 'correzione', signal)
           const parsed = Repairs.safeParse(fix.value)
           const fixed = new Map((parsed.success ? parsed.data.correzioni : []).map((c) => [c.automazione, c.yaml.trim()]))
           for (const it of failed) {

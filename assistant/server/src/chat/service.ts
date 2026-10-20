@@ -12,6 +12,8 @@ import type { UsageLedger } from '../claude/usage.ts'
 import type { SettingsStore } from '../store/settings.ts'
 import type { Options } from '../options.ts'
 import { log } from '../log.ts'
+import { supportsServerFallback } from '../claude/models.ts'
+import { budgetBlockedMessage, budgetRaiseHint, usageRecord } from '../claude/usage.ts'
 
 // Un turno di chat è un job lato server: prosegue anche se il browser si disconnette, e chi
 // si ricollega (stessa pagina, reload, altro dispositivo) rivede gli eventi da dove era rimasto.
@@ -115,7 +117,7 @@ export class ChatService {
     if (this.isRunning(conversationId)) throw new ChatError(409, 'turno_in_corso', 'Attendi la fine della risposta in corso')
     const budget = this.deps.usage.status(this.deps.options)
     if (budget.level === 'bloccato') {
-      throw new ChatError(429, 'budget_superato', `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): l'add-on non chiama Claude fino al mese prossimo. Puoi alzare la soglia nelle opzioni.`)
+      throw new ChatError(429, 'budget_superato', `${budgetBlockedMessage(budget)} ${budgetRaiseHint(budget)}`)
     }
     const conv = await this.deps.store.get(conversationId)
     if (!conv) throw new ChatError(404, 'conversazione_inesistente', 'Conversazione non trovata')
@@ -160,7 +162,7 @@ export class ChatService {
     this.jobs.set(conversationId, job)
     this.publish(job, 'start', { turnId: job.turnId })
     if (budget.level === 'avviso') {
-      this.publish(job, 'warning', { message: `Spesa del mese: $${budget.spentUsd.toFixed(2)}, oltre la soglia di avviso ($${budget.warnUsd}).` })
+      this.publish(job, 'warning', { message: `Spesa del periodo: $${budget.spentUsd.toFixed(2)}, oltre la soglia di avviso ($${budget.warnUsd}).` })
     }
     void this.execute(job, conv)
     return { turnId: job.turnId }
@@ -171,7 +173,7 @@ export class ChatService {
     const ha = this.requireHA()
     const toolCtx: ToolContext = { ha, consents: () => this.deps.settings.consents(), now: this.now, drafts: this.deps.drafts, devices: this.deps.devices }
     let features = this.features.get(header.model)
-    if (!features) this.features.set(header.model, (features = { fallbacks: true, blockBinding: true }))
+    if (!features) this.features.set(header.model, (features = { fallbacks: supportsServerFallback(header.model), blockBinding: true }))
     try {
       const result = await runTurn(
         { model: header.model, effort: header.effort, system: header.system, tools: header.tools },
@@ -183,21 +185,10 @@ export class ChatService {
           executeTool: (name, input, toolUseId) => executeTool(name, input, { ...toolCtx, call: { conversationId: job.conversationId, toolUseId } }),
           beforeRequest: () => {
             if (this.deps.usage.status(this.deps.options).level === 'bloccato') {
-              throw new ChatError(429, 'budget_superato', 'Budget mensile raggiunto durante la risposta: interrotta.')
+              throw new ChatError(429, 'budget_superato', 'Budget raggiunto durante la risposta: interrotta.')
             }
           },
-          onUsage: (u) =>
-            this.deps.usage.record({
-              kind: 'chat',
-              conversationId: job.conversationId,
-              model: u.model,
-              input: u.input,
-              output: u.output,
-              cacheRead: u.cacheRead,
-              cacheWrite: u.cacheWrite,
-              costUsd: u.costUsd,
-              ...(u.fallback ? { fallback: true } : {}),
-            }),
+          onUsage: (u) => this.deps.usage.record(usageRecord('chat', job.conversationId, u, { step: 'turno', effort: header.effort })),
           emit: (e) => this.publishTurnEvent(job, e),
         },
         job.controller.signal,

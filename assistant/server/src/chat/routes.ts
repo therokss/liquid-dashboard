@@ -163,6 +163,7 @@ export function chatRoutes(deps: ChatRouteDeps): Route[] {
           consentsChangedAt: s.consentsChangedAt ?? null,
           models: { chat: options.chatModel, chatEffort: options.chatEffort, analysis: options.analysisModel },
           budget: usage.status(options),
+          usageBreakdown: usage.breakdown(options.billingDay),
         })
       },
     },

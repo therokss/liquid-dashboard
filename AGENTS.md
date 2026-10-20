@@ -90,6 +90,19 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
 
   Test con `test/fakeDevices.ts`, che verifica anche che nelle richieste non ci siano nomi
   della casa.
+- Costi (`server/src/claude/`):
+  - `pricing.ts` ha i prezzi per prefisso del modello; Haiku 5.5 ha due fasce decise per
+    richiesta (input + letture e scritture di cache oltre 100.000 token);
+  - `models.ts` (`FeatureMemory`) tiene le funzioni opzionali per modello: Haiku parte senza
+    `fallbacks` e un 400 spegne la funzione solo per quel modello;
+  - ogni richiesta va nel registro con `usageRecord(kind, id, usage, { step, effort })`;
+  - `claude_plan` e `billing_day`: il periodo di spesa va dal giorno di rinnovo, l'ultimo del
+    mese se è più corto (`periodKey` e `nextPeriodStart` in `util/time.ts`). Con Max o Team
+    ogni soglia lasciata al valore predefinito diventa automatica, una per una
+    (`budgetThresholds`). Il registro calcola il periodo di ogni voce una volta sola: non
+    rifare la conversione delle date in `status()`, che gira prima di ogni richiesta.
+  - L'add-on usa solo la chiave API, mai token OAuth dell'abbonamento: lo vietano i termini
+    d'uso.
 - Manutenzione (`server/src/maintenance/`), senza Claude:
   - `collect.ts` legge registri, stati, `config_entries/get` e `config_entries/flow/progress`.
     Solo per i dispositivi che adesso non rispondono legge anche lo storico (30 giorni) e,

@@ -15,7 +15,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react'
-import { api, ApiCallError, type ConversationDetail, type ConversationSummary, type DraftPublic, type Session, type ViewItem, type ViewPart } from '../api'
+import { api, ApiCallError, budgetResetLabel, type ConversationDetail, type ConversationSummary, type DraftPublic, type Session, type ViewItem, type ViewPart } from '../api'
 import { GlassCard } from '../components/Glass'
 import { DraftCard } from '../components/DraftCard'
 import { t } from '../i18n/it'
@@ -382,7 +382,7 @@ export function ChatPage({ session }: { session: Session }) {
           <p className={`as-note ${budget.level === 'bloccato' ? 'error' : 'warning'} as-chat-banner`}>
             <AlertTriangle size={14} />
             {budget.level === 'bloccato'
-              ? `${t('budgetBlocked')} (${usd(budget.spentUsd)} / $${budget.blockUsd})`
+              ? `${t('budgetBlocked')} ${budgetResetLabel(budget)} (${usd(budget.spentUsd)} / $${budget.blockUsd})`
               : `${t('budgetWarn')}: ${usd(budget.spentUsd)} (soglia $${budget.warnUsd})`}
           </p>
         )}

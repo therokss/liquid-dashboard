@@ -1,6 +1,6 @@
 name: "Assistente Claude"
 description: "Chatta con Claude, crea e verifica le automazioni di Home Assistant"
-version: "0.7.0"
+version: "0.7.1"
 slug: "claude_assistant"
 url: "https://github.com/therokss/liquid-dashboard"
 init: false
@@ -24,6 +24,9 @@ options:
   devices_effort: "medium"
   monthly_budget_warn_usd: 25
   monthly_budget_block_usd: 50
+  claude_plan: "api"
+  team_credits_usd: 0
+  billing_day: 1
 schema:
   anthropic_api_key: password
   chat_model: str
@@ -34,6 +37,9 @@ schema:
   devices_effort: list(low|medium|high|xhigh|max)?
   monthly_budget_warn_usd: float(0,)
   monthly_budget_block_usd: float(0,)
+  claude_plan: list(api|pro|max_5x|max_20x|team)?
+  team_credits_usd: float(0,500)?
+  billing_day: int(1,31)?
 arch:
   - aarch64
   - amd64

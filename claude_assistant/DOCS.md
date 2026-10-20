@@ -19,10 +19,10 @@ Un assistente per Home Assistant basato su Claude (Anthropic) che:
 ## Cosa serve
 
 - Home Assistant OS o Supervised, versione **2026.7** o successiva.
-- Una **chiave API Anthropic**. Si crea su [console.anthropic.com](https://console.anthropic.com)
-  → *API Keys*. È un account a consumo, separato dall'abbonamento Claude Pro/Max (che non
-  include l'accesso alle API). Consigliato: una chiave dedicata e un **limite di spesa
-  mensile** impostato nella Console.
+- Una **chiave API Anthropic**. Si crea nella Console, su
+  [platform.claude.com](https://platform.claude.com) → *API Keys*. Consigliato: una chiave
+  dedicata e un **limite di spesa mensile** impostato nella Console. Con Max o Team la spesa
+  può essere coperta dai crediti inclusi nel piano (vedi «Piano Claude» più sotto).
 
 ## Configurazione
 
@@ -33,7 +33,40 @@ Un assistente per Home Assistant basato su Claude (Anthropic) che:
 | `analysis_model` | Modello di Suggerisci, Verifica e studio dei dispositivi. Predefinito `claude-opus-5-5`. |
 | `suggest_effort` / `verify_effort` | Livello di ragionamento delle due analisi (`high` e `medium`). |
 | `devices_effort` | Livello di ragionamento dello studio dei dispositivi sul web (`medium`). |
-| `monthly_budget_warn_usd` / `monthly_budget_block_usd` | Spesa mensile stimata oltre la quale l'add-on avvisa e poi smette di chiamare Claude. |
+| `monthly_budget_warn_usd` / `monthly_budget_block_usd` | Spesa stimata del periodo oltre la quale l'add-on avvisa e poi smette di chiamare Claude. Predefinite 25 $ e 50 $. |
+| `claude_plan` | Il tuo piano: `api` (solo Console a consumo, predefinito), `pro`, `max_5x`, `max_20x`, `team`. |
+| `team_credits_usd` | Solo per `team`: i crediti API del mese del tuo Team (massimo 500). |
+| `billing_day` | Giorno da cui riparte il conteggio della spesa (1–31). Con Max o Team mettilo uguale al giorno di rinnovo del piano; con 29, 30 o 31, nei mesi più corti vale l'ultimo giorno. |
+
+### Piano Claude
+
+L'add-on usa sempre e solo la chiave API: non accede mai al tuo account claude.ai né
+all'abbonamento, come richiedono i termini d'uso di Anthropic. Il piano serve a calcolare
+crediti e soglie.
+
+- **Max e Team** includono ogni mese dei **crediti API**: 100 $ con Max 5x, 200 $ con Max 20x,
+  20 $ o 100 $ per posto con Team (al massimo 500 $). Per usarli:
+  1. da browser apri claude.ai → *Impostazioni* → *Fatturazione* → *Crediti API* →
+     **Collega organizzazione** e scegli l'organizzazione della Console (una sola);
+  2. crea lì la chiave API e incollala in `anthropic_api_key`;
+  3. imposta `claude_plan` e `billing_day` (con Team anche `team_credits_usd`).
+
+  I crediti si consumano per primi e non passano al mese successivo. Quando finiscono, le
+  richieste si fermano, salvo crediti acquistati o ricarica automatica.
+
+  Con Max o Team le soglie lasciate ai valori predefiniti diventano automatiche: il blocco
+  (50) scatta quando i crediti finiscono, l'avviso (25) all'80% del blocco (o dei crediti, se
+  il blocco è 0). Le due soglie si decidono una per una. Per esempio, con Max 5x e il blocco a
+  60 l'avviso scatta a 48 $; con l'avviso a 0 (spento) il blocco resta a 100 $. Per usare
+  proprio 25 o 50, scrivi 25.01 o 50.01. Quando il budget è raggiunto, l'add-on dice il giorno
+  in cui torna a chiamare Claude.
+- **Pro** non include crediti API: serve una chiave della Console a consumo, come con `api`.
+- Il limite di spesa della Console si azzera all'inizio del mese di calendario, non al
+  rinnovo del piano.
+
+Per conversare con la casa usando l'abbonamento, cioè dall'app Claude e non da questo
+add-on, Home Assistant ha l'integrazione ufficiale **Model Context Protocol Server**. È
+separata dall'add-on e richiede che Home Assistant sia raggiungibile da Internet.
 
 ## Chat
 
@@ -204,8 +237,8 @@ inventati.
 **Studia tutti** mette in coda i modelli senza scheda tra quelli mostrati: con la ricerca e
 i filtri scegli quali, per esempio escludendo bridge e gruppi di altoparlanti. Prima di
 partire chiede conferma, mostrando il numero di modelli, il costo e la durata stimati e la
-spesa del mese. Gli studi vanno uno alla volta, anche se chiudi la pagina. La coda si ferma
-con **Ferma tutto**, quando la spesa del mese raggiunge la soglia di blocco o dopo due
+spesa del periodo. Gli studi vanno uno alla volta, anche se chiudi la pagina. La coda si ferma
+con **Ferma tutto**, quando la spesa del periodo raggiunge la soglia di blocco o dopo due
 studi di fila non riusciti. Mentre la coda è in corso, la chat non può avviare altri studi.
 
 Una scheda nuova è una **bozza**. Leggila e premi **Approva** se ti sembra corretta; puoi
@@ -279,7 +312,8 @@ versione.
 - **Persone e strumenti**: quali utenti di Home Assistant sono persone e quali strumenti,
   per Suggerisci.
 - **Cosa vede Claude**: l'inventario esatto che apre ogni nuova chat.
-- **Modelli** e **spesa del mese** rispetto alle soglie di budget.
+- **Modelli** e **spesa del periodo** rispetto alle soglie, con il piano, i crediti inclusi e
+  la ripartizione per funzione e modello (richieste, costo, quota letta dalla cache).
 
 ## Diagnostica
 

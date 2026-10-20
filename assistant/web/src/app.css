@@ -949,3 +949,13 @@ body {
 .as-mnt-history li > span { flex: 1 1 240px; min-width: 0; }
 .as-mnt-history li.undone { opacity: 0.6; }
 .as-mnt-history .as-link { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+
+/* Impostazioni → spesa per funzione e modello */
+.as-usage-title { margin-top: var(--space-md); font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.as-usage { list-style: none; display: flex; flex-direction: column; margin-top: 6px; }
+.as-usage li { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--space-sm); padding: 8px 0; border-top: 1px solid var(--glass-border-dim); }
+.as-usage li:first-child { border-top: none; }
+.as-usage-name { font-size: 14px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.as-usage-model { margin-left: 6px; font-size: 12px; font-weight: 400; color: var(--text-tertiary); }
+.as-usage-cost { font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
+.as-usage-meta { grid-column: 1 / -1; font-size: 12px; color: var(--text-secondary); }

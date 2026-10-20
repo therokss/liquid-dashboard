@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ExternalLink, Eye, Loader2, ShieldAlert, Stethoscope } from 'lucide-react'
-import { api, type ConsentKey, type Consents, type HAUser, type HistoryEntry, type InventoryStats, type SettingsData } from '../api'
+import { api, type Budget, type ConsentKey, type Consents, type HAUser, type HistoryEntry, type InventoryStats, type SettingsData, type UsageSlice } from '../api'
 import { automationEditorPath, navigateHomeAssistant } from '../lib/navigate'
 import { Button, Section } from '../components/Glass'
 import { t, type TextKey } from '../i18n/it'
@@ -24,6 +24,50 @@ const CONSENT_TEXT: Record<ConsentKey, { title: string; text: string; warning: s
 }
 
 const usd = (n: number) => `$${n.toFixed(2)}`
+
+const KIND_TEXT: Record<UsageSlice['kind'], TextKey> = { chat: 'tabChat', suggest: 'tabSuggest', verify: 'tabVerify', devices: 'setUsageDevices' }
+
+/** "2026-10" → "ottobre 2026", oppure il ciclo di fatturazione "dal 15/10/2026". */
+function periodLabel(b: Budget): string {
+  const [y, m, d] = b.startsOn.split('-')
+  if (b.startDay > 1) return `${t('setPeriodFrom')} ${d}/${m}/${y}`
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })
+}
+
+/** Soglia 0 = spenta. */
+const threshold = (n: number, at: TextKey, off: TextKey) => (n > 0 ? `${t(at)} ${usd(n)}` : t(off))
+
+function planLine(b: Budget): string {
+  const plan = t(`setPlan_${b.plan}` as TextKey)
+  if (b.plan === 'api' || b.plan === 'pro') return `${plan}. ${t(b.plan === 'pro' ? 'setPlanProNote' : 'setPlanApiNote')}`
+  if (b.creditUsd <= 0) return `${plan}. ${t('setPlanTeamMissing')}`
+  const over = b.spentUsd > b.creditUsd ? ` ${t('setPlanOver')}` : ''
+  const auto = b.warnFromCredits && b.blockFromCredits ? 'setPlanFromCredits' : b.blockFromCredits ? 'setPlanBlockFromCredits' : b.warnFromCredits ? (b.blockUsd > 0 ? 'setPlanWarnAuto' : 'setPlanWarnAutoNoBlock') : 'setPlanOwnThresholds'
+  return `${plan}: ${t('setPlanCredits')} ${usd(b.creditUsd)} ${t('setPlanPerCycle')}. ${t(auto)}${over}`
+}
+
+function UsageBreakdown({ slices }: { slices: UsageSlice[] }) {
+  if (!slices.length) return <p className="as-probe-summary">{t('setUsageEmpty')}</p>
+  return (
+    <ul className="as-usage">
+      {slices.map((s) => {
+        const prompt = s.input + s.cacheRead + s.cacheWrite
+        return (
+          <li key={`${s.kind}|${s.model}`}>
+            <span className="as-usage-name">
+              {t(KIND_TEXT[s.kind])} <span className="as-usage-model">{s.model.replace(/^claude-/, '')}</span>
+            </span>
+            <span className="as-usage-cost">{usd(s.costUsd)}</span>
+            <span className="as-usage-meta">
+              {s.requests} {s.requests === 1 ? t('setUsageRequest1') : t('setUsageRequests')}
+              {prompt > 0 && ` · ${t('setUsageCache')} ${Math.round((s.cacheRead / prompt) * 100)}%`}
+            </span>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
 
 function Switch({ checked, onChange, disabled, label }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean; label: string }) {
   return (
@@ -248,15 +292,18 @@ export function SettingsPage({ onOpenDiagnostics }: { onOpenDiagnostics: () => v
         </dl>
       </Section>
 
-      <Section title={t('setBudget')} intro={t('setBudgetIntro')}>
+      <Section title={t(b.startDay > 1 ? 'setBudgetCycle' : 'setBudget')} intro={t('setBudgetIntro')}>
         <div className="as-budget">
           <div className="as-budget-bar">
             <span className={b.level} style={{ width: `${pct}%` }} />
           </div>
           <p className="text-body">
-            {b.month}: <strong>{usd(b.spentUsd)}</strong> · avviso a ${b.warnUsd} · blocco a ${b.blockUsd}
+            {periodLabel(b)}: <strong>{usd(b.spentUsd)}</strong> · {threshold(b.warnUsd, 'setWarnAt', 'setWarnOff')} · {threshold(b.blockUsd, 'setBlockAt', 'setBlockOff')}
           </p>
+          <p className="as-probe-summary">{planLine(b)}</p>
         </div>
+        <h3 className="as-usage-title">{t('setUsageTitle')}</h3>
+        <UsageBreakdown slices={data.usageBreakdown} />
       </Section>
 
       <Section

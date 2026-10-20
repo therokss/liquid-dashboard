@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, CheckCheck, CheckCircle2, ChevronDown, ExternalLink, Globe, Layers, Lightbulb, Loader2, Search, Square, Trash2, AlertTriangle, ShieldCheck, Wrench } from 'lucide-react'
-import { api, type ActiveStudy, type CatalogIntegration, type DeviceCard, type DeviceModel, type DevicesOverview, type StudyBatch } from '../api'
+import { api, budgetResetLabel, type ActiveStudy, type CatalogIntegration, type DeviceCard, type DeviceModel, type DevicesOverview, type StudyBatch } from '../api'
 import { Button, GlassCard, Section } from '../components/Glass'
 import { t, type TextKey } from '../i18n/it'
 import { MaintenanceView } from './MaintenancePage'
@@ -459,7 +459,7 @@ function ModelsView({ onOpenChat }: { onOpenChat: (conversationId: string) => vo
           <ShieldCheck size={14} /> {t('devPrivacy')}
         </p>
         {overview && !overview.configured && <p className="as-note warning">{t('devNoKey')}</p>}
-        {overview?.budget.level === 'bloccato' && <p className="as-note error">{t('devBudget')}</p>}
+        {overview?.budget.level === 'bloccato' && <p className="as-note error">{t('devBudget')} {budgetResetLabel(overview.budget)}.</p>}
         {error && <p className="as-error">{error}</p>}
         {overview && (overview.active || overview.batch?.running) && (
           <StudyProgress active={overview.active} batch={overview.batch} onStop={() => void api.stopStudy().then(refresh, () => undefined)} />

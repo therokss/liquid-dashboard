@@ -1,7 +1,7 @@
 configuration:
   anthropic_api_key:
     name: Anthropic API key
-    description: Key created at console.anthropic.com (pay-as-you-go API account, not the Claude subscription). It never leaves the add-on.
+    description: Key created in the Anthropic Console (platform.claude.com). With Max or Team, create it in the organization linked to the plan's API credits. It never leaves the add-on.
   chat_model:
     name: Chat model
     description: Claude model used in the chat (default claude-sonnet-5-5).
@@ -22,7 +22,16 @@ configuration:
     description: Effort of the sub-agent that searches the web for information about a device model.
   monthly_budget_warn_usd:
     name: Monthly budget, warning threshold (USD)
-    description: Above this estimated monthly spend the add-on shows a warning.
+    description: Above this estimated spend for the period the add-on shows a warning. With Max or Team, the default value (25) means automatic, at 80% of the hard limit (or of the credits, if the hard limit is 0).
   monthly_budget_block_usd:
     name: Monthly budget, hard limit (USD)
-    description: Above this estimated monthly spend the add-on stops calling Claude until next month.
+    description: Above this estimated spend the add-on stops calling Claude until the next month (or billing cycle). With Max or Team, the default value (50) means automatic, when the plan's credits run out.
+  claude_plan:
+    name: How you pay for Claude
+    description: "api = pay-as-you-go key; max_5x / max_20x / team = the key of the Console organization linked to the plan's monthly API credits ($100, $200, Team up to $500), used as budget thresholds when you keep the default ones; pro = pay-as-you-go key (Pro has no API credits)."
+  team_credits_usd:
+    name: Team monthly credits (USD)
+    description: Team plan only, $20 per Standard seat and $100 per Premium seat, up to $500.
+  billing_day:
+    name: Plan renewal day
+    description: Day of the month your plan renews and credits arrive (1-31; with 29-31, shorter months use their last day). Spending is counted from that day; 1 means calendar month.

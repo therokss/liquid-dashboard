@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import Anthropic from '@anthropic-ai/sdk'
 import type { BetaMessageParam } from '@anthropic-ai/sdk/resources/beta/messages/messages'
 import { buildRequest, INTERRUPTED_TOOL, prepareMessages, REFUSAL_TEXT, runTurn, type Frozen, type TurnDeps, type TurnEvent } from '../src/claude/loop.ts'
-import { costUsd, messageCost } from '../src/claude/pricing.ts'
+import { costUsd, messageCost, priceOf } from '../src/claude/pricing.ts'
 import { fakeStream, msg, text, thinking, toolUse, type Step } from './fakeClaude.ts'
 
 const frozen: Frozen = {
@@ -161,7 +161,7 @@ test('budget: il controllo prima di ogni richiesta può fermare il turno', async
 })
 
 test('costi: cache per TTL e tentativi di fallback', () => {
-  // Sonnet 5.5: $2 input, $10 output, $0,20 lettura cache; scrittura 1 h = 2× input
+  // Sonnet 5.5: $2 input, $10 output, $0,10 lettura cache (0,05×); scrittura 1 h = 2× input
   const c = costUsd('claude-sonnet-5-5', {
     input_tokens: 1_000_000,
     output_tokens: 100_000,
@@ -169,19 +169,33 @@ test('costi: cache per TTL e tentativi di fallback', () => {
     cache_creation_input_tokens: 1_000_000,
     cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 1_000_000 },
   })
-  assert.equal(Math.round(c * 100) / 100, 2 + 1 + 0.2 + 4)
+  assert.equal(Math.round(c * 100) / 100, 2 + 1 + 0.1 + 4)
   const m = messageCost({
-    model: 'claude-sonnet-5',
+    model: 'claude-sonnet-5-5',
     usage: {
       input_tokens: 10,
       output_tokens: 0,
       iterations: [
-        { type: 'message', model: 'claude-sonnet-5-5', input_tokens: 1_000_000, output_tokens: 0 },
-        { type: 'fallback_message', model: 'claude-sonnet-5', input_tokens: 1_000_000, output_tokens: 0 },
+        { type: 'message', model: 'claude-opus-5-5', input_tokens: 1_000_000, output_tokens: 0 },
+        { type: 'fallback_message', model: 'claude-sonnet-5-5', input_tokens: 1_000_000, output_tokens: 0 },
       ],
     },
   })
   assert.equal(m.fallback, true)
-  assert.equal(Math.round(m.costUsd * 100) / 100, 2 + 3)
+  // Ogni tentativo col prezzo del suo modello: non 2 + 2 (tutto Sonnet) né 4 + 4 (tutto Opus).
+  assert.equal(Math.round(m.costUsd * 100) / 100, 4 + 2)
   assert.equal(m.input, 2_000_000)
+
+  // Haiku 5.5: oltre 100.000 token di prompt (cache compresa) tutta la richiesta passa alla fascia alta.
+  const short = costUsd('claude-haiku-5-5', { input_tokens: 10_000, output_tokens: 1_000_000, cache_read_input_tokens: 90_000 })
+  const r4 = (n: number) => Math.round(n * 10_000) / 10_000
+  assert.equal(r4(short), r4(0.001 + 0.5 + 0.0009))
+  const long = costUsd('claude-haiku-5-5', { input_tokens: 10_000, output_tokens: 1_000_000, cache_read_input_tokens: 90_001 })
+  assert.equal(r4(long), r4(0.005 + 2.5 + (90_001 / 1e6) * 0.05))
+  assert.equal(priceOf('claude-haiku-5-5').price.input, 0.1)
+
+  // Le scritture da 1 h restano distinguibili nel registro.
+  const w = messageCost({ model: 'claude-opus-5-5', usage: { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 500, cache_creation: { ephemeral_5m_input_tokens: 200, ephemeral_1h_input_tokens: 300 } } })
+  assert.equal(w.cacheWrite, 500)
+  assert.equal(w.cacheWrite1h, 300)
 })

@@ -16,10 +16,15 @@ export interface Session {
     devicesEffort: string
     monthlyBudgetWarnUsd: number
     monthlyBudgetBlockUsd: number
+    plan: Plan
+    teamCreditsUsd: number
+    billingDay: number
     anthropicConfigured: boolean
   }
   budget: Budget | null
 }
+
+export type Plan = 'api' | 'pro' | 'max_5x' | 'max_20x' | 'team'
 
 export interface Budget {
   month: string
@@ -27,6 +32,33 @@ export interface Budget {
   warnUsd: number
   blockUsd: number
   level: 'ok' | 'avviso' | 'bloccato'
+  plan: Plan
+  creditUsd: number
+  /** soglie automatiche dai crediti del piano */
+  warnFromCredits: boolean
+  blockFromCredits: boolean
+  startDay: number
+  /** inizio del periodo in corso ("2026-09-30") */
+  startsOn: string
+  /** inizio del periodo successivo ("2026-11-15") */
+  resetsOn: string
+}
+
+/** Data in cui un blocco del budget si toglie da solo: "15/11/2026". */
+export function budgetResetLabel(b: Budget): string {
+  const [y, m, d] = b.resetsOn.split('-')
+  return `${d}/${m}/${y}`
+}
+
+export interface UsageSlice {
+  kind: 'chat' | 'suggest' | 'verify' | 'devices'
+  model: string
+  requests: number
+  costUsd: number
+  input: number
+  output: number
+  cacheRead: number
+  cacheWrite: number
 }
 
 export interface ConversationSummary {
@@ -108,6 +140,7 @@ export interface SettingsData {
   consentsChangedAt: string | null
   models: { chat: string; chatEffort: string; analysis: string }
   budget: Budget
+  usageBreakdown: UsageSlice[]
 }
 
 export interface Evidence {

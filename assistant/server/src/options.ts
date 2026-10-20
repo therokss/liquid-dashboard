@@ -6,6 +6,10 @@ import { addSecret } from './log.ts'
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const
 export type Effort = (typeof EFFORTS)[number]
 
+/** Come si paga Claude: API a consumo o crediti API mensili inclusi nei piani Max e Team. */
+export const PLANS = ['api', 'pro', 'max_5x', 'max_20x', 'team'] as const
+export type Plan = (typeof PLANS)[number]
+
 export interface Options {
   anthropicApiKey: string
   chatModel: string
@@ -16,6 +20,11 @@ export interface Options {
   devicesEffort: Effort
   monthlyBudgetWarnUsd: number
   monthlyBudgetBlockUsd: number
+  plan: Plan
+  /** Team: credito mensile condiviso (20 $ per posto Standard, 100 $ per Premium, massimo 500 $) */
+  teamCreditsUsd: number
+  /** giorno del mese in cui si rinnova il piano (e arrivano i crediti); 1 = mese di calendario, 29–31 = ultimo giorno nei mesi più corti */
+  billingDay: number
 }
 
 export const DEFAULT_OPTIONS: Options = {
@@ -28,6 +37,9 @@ export const DEFAULT_OPTIONS: Options = {
   devicesEffort: 'medium',
   monthlyBudgetWarnUsd: 25,
   monthlyBudgetBlockUsd: 50,
+  plan: 'api',
+  teamCreditsUsd: 0,
+  billingDay: 1,
 }
 
 function str(v: unknown, fallback: string): string {
@@ -55,6 +67,9 @@ export function parseOptions(raw: Record<string, unknown>): Options {
     devicesEffort: effort(raw.devices_effort, d.devicesEffort),
     monthlyBudgetWarnUsd: num(raw.monthly_budget_warn_usd, d.monthlyBudgetWarnUsd),
     monthlyBudgetBlockUsd: num(raw.monthly_budget_block_usd, d.monthlyBudgetBlockUsd),
+    plan: (PLANS as readonly string[]).includes(raw.claude_plan as string) ? (raw.claude_plan as Plan) : d.plan,
+    teamCreditsUsd: Math.min(500, num(raw.team_credits_usd, d.teamCreditsUsd)),
+    billingDay: Math.min(31, Math.max(1, Math.round(num(raw.billing_day, d.billingDay)) || 1)),
   }
 }
 

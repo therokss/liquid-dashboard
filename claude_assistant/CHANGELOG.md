@@ -3,6 +3,34 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.7.1] — 2026-10-20
+### Aggiunto
+- Opzione **`claude_plan`**: il piano con cui paghi Claude (`api`, `pro`, `max_5x`, `max_20x`,
+  `team`). Con Max e Team l'add-on conosce i **crediti API mensili** inclusi nel piano (100 $,
+  200 $ o il credito del Team in `team_credits_usd`). Se le soglie di budget sono quelle
+  predefinite, avvisa all'80% dei crediti e si ferma quando sono finiti. La DOCS spiega come
+  collegare i crediti alla chiave e perché l'add-on non usa mai l'accesso all'abbonamento.
+  Le due soglie si decidono una per una: cambiarne una non riporta l'altra ai valori delle
+  opzioni.
+- Opzione **`billing_day`** (1–31): la spesa si conta dal giorno di rinnovo del piano invece
+  che dal 1° del mese. Con 29, 30 o 31, nei mesi più corti vale l'ultimo giorno. Quando il
+  budget è raggiunto, i messaggi dicono il giorno in cui si sblocca.
+- Impostazioni: la spesa del periodo è divisa **per funzione e modello**, con numero di
+  richieste, costo e quota letta dalla cache.
+- Il registro dei consumi annota anche il passo (generazione, correzione, analisi, turno,
+  studio) e il livello di ragionamento di ogni richiesta.
+### Corretto
+- **Prezzi**: la spesa mostrata era più alta del reale in due casi:
+  - la lettura dalla cache di Sonnet 5.5 costa 0,10 $ per milione di token, non 0,20 $;
+  - Sonnet 5 costa 2 $ / 10 $ per milione di token in ingresso e in uscita (0,20 $ la lettura
+    dalla cache), non 3 $ / 15 $.
+
+  Haiku 5.5 ha i prezzi delle sue due fasce (fino a 100.000 token di prompt e oltre).
+- Con **Haiku 5.5** come modello, le richieste non chiedono più il fallback lato server, che
+  Haiku non ha. Le funzioni rifiutate da un modello restano spente solo per quel modello.
+- **Verifica**: con più lotti, l'analisi approfondita rilegge dalla cache il prompt di sistema
+  comune invece di pagarlo intero ogni volta.
+
 ## [0.7.0] — 2026-10-15
 ### Aggiunto
 - **Manutenzione** nella pagina Dispositivi (seconda scheda, accanto a "Modelli e schede").

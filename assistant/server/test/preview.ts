@@ -7,9 +7,9 @@ import { chatRoutes } from '../src/chat/routes.ts'
 import { ChatService } from '../src/chat/service.ts'
 import { ConversationStore } from '../src/chat/store.ts'
 import { SettingsStore } from '../src/store/settings.ts'
-import { UsageLedger } from '../src/claude/usage.ts'
+import { UsageLedger, usageRecord } from '../src/claude/usage.ts'
 import { HARest } from '../src/ha/rest.ts'
-import { DEFAULT_OPTIONS } from '../src/options.ts'
+import { parseOptions } from '../src/options.ts'
 import type { StreamFn } from '../src/claude/loop.ts'
 import { DraftStore } from '../src/drafts/store.ts'
 import { DraftService } from '../src/drafts/service.ts'
@@ -255,12 +255,23 @@ const preview: StreamFn = async (params, signal, h) => {
 }
 
 const dir = await mkdtemp(join(tmpdir(), 'assistente-preview-'))
-const options = { ...DEFAULT_OPTIONS, anthropicApiKey: 'sk-ant-anteprima' }
+// PREVIEW_PLAN=max_5x (o team, pro…) mostra le Impostazioni con i crediti del piano.
+const options = parseOptions({ anthropic_api_key: 'sk-ant-anteprima', claude_plan: process.env.PREVIEW_PLAN, billing_day: Number(process.env.PREVIEW_BILLING_DAY ?? 1) })
 const store = new ConversationStore(dir)
 await store.load()
 const settings = new SettingsStore(dir)
 await settings.load()
 const usage = new UsageLedger(dir, () => 'Europe/Rome')
+await usage.load()
+// Qualche consumo sintetico per la ripartizione nelle Impostazioni.
+for (const [kind, model, n, costUsd, cacheRead] of [
+  ['chat', 'claude-sonnet-5-5', 14, 0.031, 21_000],
+  ['suggest', 'claude-opus-5-5', 1, 0.62, 0],
+  ['verify', 'claude-opus-5-5', 3, 0.41, 1_000],
+  ['devices', 'claude-opus-5-5', 2, 0.24, 0],
+] as const) {
+  for (let i = 0; i < n; i++) await usage.record(usageRecord(kind, `anteprima-${kind}`, { model, input: 2_000, output: 900, cacheRead, cacheWrite: 0, costUsd, fallback: false }))
+}
 // Casa sintetica della Verifica (contiene anche quella di base): un caso noto per automazione.
 const { ha, writer } = verifyHome()
 const draftStore = new DraftStore(dir)

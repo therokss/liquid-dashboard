@@ -1,7 +1,7 @@
 configuration:
   anthropic_api_key:
     name: Chiave API Anthropic
-    description: Chiave creata su console.anthropic.com (account API a consumo, non l'abbonamento Claude). Resta solo nell'add-on.
+    description: Chiave creata nella Console Anthropic (platform.claude.com). Con Max o Team creala nell'organizzazione collegata ai crediti API del piano. Resta solo nell'add-on.
   chat_model:
     name: Modello per la chat
     description: Modello Claude usato nella chat (predefinito claude-sonnet-5-5).
@@ -22,7 +22,16 @@ configuration:
     description: Effort del sotto-agente che cerca sul web le informazioni su un modello di dispositivo.
   monthly_budget_warn_usd:
     name: Budget mensile, soglia di avviso (USD)
-    description: Oltre questa spesa mensile stimata l'add-on mostra un avviso.
+    description: Oltre questa spesa stimata del periodo l'add-on mostra un avviso. Con Max o Team, il valore predefinito (25) vuol dire automatico, all'80% del blocco (o dei crediti, se il blocco è 0).
   monthly_budget_block_usd:
     name: Budget mensile, soglia di blocco (USD)
-    description: Oltre questa spesa mensile stimata l'add-on smette di chiamare Claude fino al mese successivo.
+    description: Oltre questa spesa stimata l'add-on smette di chiamare Claude fino al mese (o ciclo di fatturazione) successivo. Con Max o Team, il valore predefinito (50) vuol dire automatico, quando finiscono i crediti del piano.
+  claude_plan:
+    name: Come paghi Claude
+    description: "api = chiave a consumo; max_5x / max_20x / team = la chiave della Console collegata ai crediti API mensili del piano (100 $, 200 $, Team fino a 500 $), che diventano le soglie del budget se lasci quelle predefinite; pro = chiave a consumo (Pro non include crediti API)."
+  team_credits_usd:
+    name: Crediti mensili del Team (USD)
+    description: Solo con il piano Team, 20 $ per posto Standard e 100 $ per Premium, massimo 500 $.
+  billing_day:
+    name: Giorno di rinnovo del piano
+    description: Giorno del mese in cui si rinnova il piano e arrivano i crediti (1-31; con 29-31 nei mesi più corti vale l'ultimo giorno). La spesa si conta da quel giorno; con 1 vale il mese di calendario.

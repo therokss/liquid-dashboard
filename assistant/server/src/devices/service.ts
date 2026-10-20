@@ -11,6 +11,8 @@ import { log } from '../log.ts'
 import { buildCatalog, catalogDomains, loadManifests, manufacturerKey, modelKey, modelLabel, normalizeText, type CatalogEntry, type Manifest } from './catalog.ts'
 import { cardIndex, cardSlug, cardSummary, type Card, type CardSummary, type KbStore } from './kb.ts'
 import { runStudy, studySubject, StudyError, type StudyProgress } from './study.ts'
+import { FeatureMemory } from '../claude/models.ts'
+import { budgetBlockedMessage, usageRecord } from '../claude/usage.ts'
 
 // Pagina Dispositivi e strumenti della chat: catalogo dei modelli presenti in casa, schede KB
 // e studio sul web di un modello alla volta (in memoria: un riavvio interrompe lo studio).
@@ -84,7 +86,7 @@ export class DevicesService implements DeviceKnowledge {
   private batch: StudyBatch | null = null
   /** Collegata dopo la creazione: la chat a sua volta usa questo servizio per i tool. */
   private chat: ChatStarter | null = null
-  private readonly features = { fallbacks: true }
+  private readonly features = new FeatureMemory()
   private readonly now: () => Date
 
   constructor(private readonly deps: DevicesServiceDeps) {
@@ -246,7 +248,7 @@ export class DevicesService implements DeviceKnowledge {
     if (this.active) throw new DevicesError(409, 'studio_in_corso', `È già in corso lo studio di ${modelLabel(this.active.info.manufacturer, this.active.info.model)}: attendi che finisca.`)
     const budget = this.deps.usage.status(this.deps.options)
     if (budget.level === 'bloccato') {
-      throw new DevicesError(429, 'budget_superato', `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): lo studio non parte.`)
+      throw new DevicesError(429, 'budget_superato', budgetBlockedMessage(budget))
     }
     const known = new Set((await this.catalog()).map((e) => e.key))
     const pending = [...new Set(keys)].filter((k) => known.has(k) && !this.deps.kb.get(k)).slice(0, MAX_BATCH)
@@ -262,7 +264,7 @@ export class DevicesService implements DeviceKnowledge {
     let inARow = 0
     while (batch.running && batch.pending.length) {
       if (this.deps.usage.status(this.deps.options).level === 'bloccato') {
-        batch.stopped = 'Budget mensile raggiunto.'
+        batch.stopped = 'Budget raggiunto.'
         break
       }
       const key = batch.pending[0]!
@@ -306,7 +308,7 @@ export class DevicesService implements DeviceKnowledge {
     }
     const budget = this.deps.usage.status(this.deps.options)
     if (budget.level === 'bloccato') {
-      throw new DevicesError(429, 'budget_superato', `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): lo studio non parte.`)
+      throw new DevicesError(429, 'budget_superato', budgetBlockedMessage(budget))
     }
     const entry = (await this.catalog()).find((e) => e.key === key)
     if (!entry) throw new DevicesError(404, 'modello_inesistente', 'Modello non trovato tra i dispositivi della casa')
@@ -348,18 +350,7 @@ export class DevicesService implements DeviceKnowledge {
   }
 
   private async record(slug: string, u: UsageTotals): Promise<void> {
-    await this.deps.usage.record({
-      kind: 'devices',
-      conversationId: slug,
-      model: u.model,
-      input: u.input,
-      output: u.output,
-      cacheRead: u.cacheRead,
-      cacheWrite: u.cacheWrite,
-      costUsd: u.costUsd,
-      ...(u.fallback ? { fallback: true } : {}),
-      ...(u.searches ? { searches: u.searches } : {}),
-    })
+    await this.deps.usage.record(usageRecord('devices', slug, u, { step: 'studio', effort: this.deps.options.devicesEffort }))
   }
 
   private async execute(info: ActiveStudy, entry: CatalogEntry, ha: HAReader, signal: AbortSignal): Promise<Card> {
@@ -374,7 +365,7 @@ export class DevicesService implements DeviceKnowledge {
         {
           stream: this.deps.stream!,
           signal,
-          features: this.features,
+          features: this.features.for(options.analysisModel),
           onProgress: (p) => (info.progress = p),
           onUsage: async (u) => {
             info.costUsd += u.costUsd

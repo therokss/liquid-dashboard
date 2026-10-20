@@ -15,6 +15,8 @@ import { mine } from './miner.ts'
 import { PROPOSALS_SCHEMA, Proposals, repairUserMessage, REPAIR_SCHEMA, Repairs, suggestSystem, suggestUserMessage, type RepairItem } from './prompt.ts'
 import type { CandidateResult, SuggestRun, SuggestStore } from './store.ts'
 import type { Activity, Candidate } from './types.ts'
+import { FeatureMemory } from '../claude/models.ts'
+import { budgetBlockedMessage, usageRecord } from '../claude/usage.ts'
 
 // "Suggerisci" in due tempi, entrambi job lato server seguiti dall'interfaccia:
 // 1. raccolta + analisi locale (gratis): candidati con i numeri e la stima del costo;
@@ -58,7 +60,7 @@ export const MAX_DAYS = 30
 
 export class SuggestService {
   private readonly controllers = new Map<string, AbortController>()
-  private readonly features = { fallbacks: true }
+  private readonly features = new FeatureMemory()
   /** Salvataggi in fila: un progresso lento non deve sovrascrivere lo stato finale. */
   private saving: Promise<void> = Promise.resolve()
   private readonly now: () => Date
@@ -248,7 +250,7 @@ export class SuggestService {
     if (todo.length === 0) throw new SuggestError(400, 'niente_da_proporre', 'Nessun candidato da proporre.')
     const budget = this.deps.usage.status(this.deps.options)
     if (budget.level === 'bloccato') {
-      throw new SuggestError(429, 'budget_superato', `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): l'add-on non chiama Claude fino al mese prossimo.`)
+      throw new SuggestError(429, 'budget_superato', budgetBlockedMessage(budget))
     }
     run.status = 'generazione'
     delete run.error
@@ -260,8 +262,8 @@ export class SuggestService {
     return run
   }
 
-  private async record(run: SuggestRun, u: UsageTotals): Promise<void> {
-    await this.deps.usage.record({ kind: 'suggest', conversationId: run.id, model: u.model, input: u.input, output: u.output, cacheRead: u.cacheRead, cacheWrite: u.cacheWrite, costUsd: u.costUsd, ...(u.fallback ? { fallback: true } : {}) })
+  private async record(run: SuggestRun, u: UsageTotals, step: string, effort: string): Promise<void> {
+    await this.deps.usage.record(usageRecord('suggest', run.id, u, { step, effort }))
     const prev = run.usage ?? { model: u.model, costUsd: 0, input: 0, output: 0, fallback: false }
     run.usage = { model: u.model, costUsd: prev.costUsd + u.costUsd, input: prev.input + u.input, output: prev.output + u.output, fallback: prev.fallback || u.fallback }
   }
@@ -273,15 +275,15 @@ export class SuggestService {
       await this.loadHomeInfo()
       const req = this.request({ ...run, candidates: todo }, { tz: this.timeZone })
       let lastSave = 0
-      const res = await requestStructured(stream, req, this.features, signal, (chars) => {
+      const res = await requestStructured(stream, req, this.features.for(req.model), signal, (chars) => {
         if (Date.now() - lastSave < 1500) return
         lastSave = Date.now()
         void this.progress(run, 'Claude sta scrivendo le proposte', chars, 0)
       }).catch(async (err) => {
-        if (err instanceof StructuredError && err.usage) await this.record(run, err.usage)
+        if (err instanceof StructuredError && err.usage) await this.record(run, err.usage, 'generazione', req.effort)
         throw err
       })
-      await this.record(run, res.usage)
+      await this.record(run, res.usage, 'generazione', req.effort)
       const parsed = Proposals.safeParse(res.value)
       if (!parsed.success) throw new StructuredError('json_non_valido', 'La risposta del modello non rispetta lo schema.')
       const byId = new Map(todo.map((c) => [c.id, c]))
@@ -316,13 +318,13 @@ export class SuggestService {
           const fix = await requestStructured(
             stream,
             { ...req, effort: 'medium', user: repairUserMessage(failed), schema: REPAIR_SCHEMA as unknown as Record<string, unknown>, maxTokens: REPAIR_MAX_TOKENS },
-            this.features,
+            this.features.for(req.model),
             signal,
           ).catch(async (err) => {
-            if (err instanceof StructuredError && err.usage) await this.record(run, err.usage)
+            if (err instanceof StructuredError && err.usage) await this.record(run, err.usage, 'correzione', 'medium')
             throw err
           })
-          await this.record(run, fix.usage)
+          await this.record(run, fix.usage, 'correzione', 'medium')
           const fixes = Repairs.safeParse(fix.value)
           const fixed = new Map((fixes.success ? fixes.data.correzioni : []).map((c) => [c.candidato, c.yaml.trim()]))
           for (const it of failed) {

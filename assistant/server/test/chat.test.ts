@@ -221,3 +221,18 @@ test('chat + bozze: proponi_automazione crea la scheda, l\'evento arriva a Claud
     await rm(t.dir, { recursive: true, force: true })
   }
 })
+
+test('chat su Haiku 5.5: nessun fallback lato server né la sua beta', async () => {
+  const { dir, chat, stream } = await setup([msg([thinking(), text('Ciao!')], 'end_turn')], { chatModel: 'claude-haiku-5-5' })
+  try {
+    const { id } = await chat.create('Admin Demo')
+    await chat.send(id, 'ciao')
+    await collect(chat, id)
+    const req = stream.requests[0]!
+    assert.equal(req.model, 'claude-haiku-5-5')
+    assert.equal(req.fallbacks, undefined)
+    assert.deepEqual(req.betas, ['thinking-binding-controls-2026-08-01'])
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})

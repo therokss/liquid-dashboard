@@ -28895,6 +28895,7 @@ var DATA_DIR = process.env.ASSISTANT_DATA_DIR || "/data";
 
 // src/options.ts
 var EFFORTS = ["low", "medium", "high", "xhigh", "max"];
+var PLANS = ["api", "pro", "max_5x", "max_20x", "team"];
 var DEFAULT_OPTIONS = {
   anthropicApiKey: "",
   chatModel: "claude-sonnet-5-5",
@@ -28904,7 +28905,10 @@ var DEFAULT_OPTIONS = {
   verifyEffort: "medium",
   devicesEffort: "medium",
   monthlyBudgetWarnUsd: 25,
-  monthlyBudgetBlockUsd: 50
+  monthlyBudgetBlockUsd: 50,
+  plan: "api",
+  teamCreditsUsd: 0,
+  billingDay: 1
 };
 function str(v, fallback) {
   return typeof v === "string" && v.trim() ? v.trim() : fallback;
@@ -28926,7 +28930,10 @@ function parseOptions(raw) {
     verifyEffort: effort(raw.verify_effort, d.verifyEffort),
     devicesEffort: effort(raw.devices_effort, d.devicesEffort),
     monthlyBudgetWarnUsd: num(raw.monthly_budget_warn_usd, d.monthlyBudgetWarnUsd),
-    monthlyBudgetBlockUsd: num(raw.monthly_budget_block_usd, d.monthlyBudgetBlockUsd)
+    monthlyBudgetBlockUsd: num(raw.monthly_budget_block_usd, d.monthlyBudgetBlockUsd),
+    plan: PLANS.includes(raw.claude_plan) ? raw.claude_plan : d.plan,
+    teamCreditsUsd: Math.min(500, num(raw.team_credits_usd, d.teamCreditsUsd)),
+    billingDay: Math.min(31, Math.max(1, Math.round(num(raw.billing_day, d.billingDay)) || 1))
   };
 }
 function loadOptions(env = process.env) {
@@ -28947,7 +28954,7 @@ function publicOptions(o) {
 }
 
 // src/version.ts
-var VERSION2 = true ? "0.7.0" : "dev";
+var VERSION2 = true ? "0.7.1" : "dev";
 
 // src/routes.ts
 function buildRoutes(deps) {
@@ -29232,21 +29239,23 @@ init_sdk();
 // src/claude/pricing.ts
 var PRICES = [
   ["claude-opus-5-5", { input: 4, output: 20, cacheRead: 0.2 }],
-  ["claude-sonnet-5-5", { input: 2, output: 10, cacheRead: 0.2 }],
-  ["claude-haiku-5-5", { input: 0.1, output: 0.5, cacheRead: 0.01 }],
+  ["claude-sonnet-5-5", { input: 2, output: 10, cacheRead: 0.1 }],
+  ["claude-haiku-5-5", { input: 0.1, output: 0.5, cacheRead: 0.01, long: { overTokens: 1e5, price: { input: 0.5, output: 2.5, cacheRead: 0.05 } } }],
   ["claude-fable-5-1", { input: 10, output: 50, cacheRead: 0.25 }],
   ["claude-opus-5", { input: 5, output: 25, cacheRead: 0.5 }],
-  ["claude-sonnet-5", { input: 3, output: 15, cacheRead: 0.3 }],
+  ["claude-sonnet-5", { input: 2, output: 10, cacheRead: 0.2 }],
   ["claude-opus-4-8", { input: 5, output: 25, cacheRead: 0.5 }]
 ];
 var FALLBACK_PRICE = { input: 10, output: 50, cacheRead: 1 };
-function priceOf(model) {
+function priceOf(model, promptTokens = 0) {
   const hit = PRICES.find(([prefix]) => model === prefix || model.startsWith(prefix + "-"));
-  return hit ? { price: hit[1], known: true } : { price: FALLBACK_PRICE, known: false };
+  if (!hit) return { price: FALLBACK_PRICE, known: false };
+  const card = hit[1];
+  return { price: card.long && promptTokens > card.long.overTokens ? card.long.price : card, known: true };
 }
 function costUsd(model, u) {
-  const { price } = priceOf(model);
   const created = u.cache_creation_input_tokens ?? 0;
+  const { price } = priceOf(model, u.input_tokens + (u.cache_read_input_tokens ?? 0) + created);
   const write1h = u.cache_creation?.ephemeral_1h_input_tokens ?? 0;
   const write5m = u.cache_creation ? u.cache_creation.ephemeral_5m_input_tokens : created;
   const usd = u.input_tokens * price.input + u.output_tokens * price.output + (u.cache_read_input_tokens ?? 0) * price.cacheRead + write5m * price.input * 1.25 + write1h * price.input * 2;
@@ -29262,6 +29271,8 @@ function messageCost(message2) {
     totals.output += u.output_tokens;
     totals.cacheRead += u.cache_read_input_tokens ?? 0;
     totals.cacheWrite += u.cache_creation_input_tokens ?? 0;
+    const write1h = u.cache_creation?.ephemeral_1h_input_tokens ?? 0;
+    if (write1h) totals.cacheWrite1h = (totals.cacheWrite1h ?? 0) + write1h;
     totals.costUsd += costUsd(model, u);
   }
   const searches = message2.usage.server_tool_use?.web_search_requests ?? 0;
@@ -29523,9 +29534,31 @@ function describeNow(now, tz) {
   const p = localParts(now, tz);
   return `${p.weekday} ${p.day}/${p.month}/${p.year}, ore ${p.hour}:${p.minute} (${tz})`;
 }
-function monthKey(d, tz) {
+function periodKey(d, tz, startDay) {
   const p = localParts(d, tz);
-  return `${p.year}-${p.month}`;
+  let year = Number(p.year);
+  let month = Number(p.month);
+  if (Number(p.day) < cycleDay(year, month, startDay)) [year, month] = addMonth(year, month, -1);
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+function periodStart(d, tz, startDay) {
+  const [year, month] = periodKey(d, tz, startDay).split("-").map(Number);
+  return isoDay(year, month, startDay);
+}
+function nextPeriodStart(d, tz, startDay) {
+  const [y, m] = periodKey(d, tz, startDay).split("-").map(Number);
+  const [year, month] = addMonth(y, m, 1);
+  return isoDay(year, month, startDay);
+}
+function isoDay(year, month, startDay) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(cycleDay(year, month, startDay)).padStart(2, "0")}`;
+}
+function cycleDay(year, month, startDay) {
+  return Math.min(startDay, new Date(Date.UTC(year, month, 0)).getUTCDate());
+}
+function addMonth(year, month, delta) {
+  const m = month + delta;
+  return m === 0 ? [year - 1, 12] : m === 13 ? [year + 1, 1] : [year, m];
 }
 function formatDuration(ms3) {
   const s2 = Math.round(ms3 / 1e3);
@@ -50625,6 +50658,129 @@ async function buildHomeSnapshot(ha, consents) {
   };
 }
 
+// src/claude/models.ts
+function supportsServerFallback(model) {
+  return !model.startsWith("claude-haiku-");
+}
+var FeatureMemory = class {
+  byModel = /* @__PURE__ */ new Map();
+  for(model) {
+    let f = this.byModel.get(model);
+    if (!f) this.byModel.set(model, f = { fallbacks: supportsServerFallback(model) });
+    return f;
+  }
+};
+
+// src/claude/usage.ts
+import { join as join6 } from "node:path";
+function usageRecord(kind, conversationId, u, extra = {}) {
+  return {
+    kind,
+    conversationId,
+    model: u.model,
+    input: u.input,
+    output: u.output,
+    cacheRead: u.cacheRead,
+    cacheWrite: u.cacheWrite,
+    costUsd: u.costUsd,
+    ...u.cacheWrite1h ? { cacheWrite1h: u.cacheWrite1h } : {},
+    ...u.fallback ? { fallback: true } : {},
+    ...u.searches ? { searches: u.searches } : {},
+    ...extra.step ? { step: extra.step } : {},
+    ...extra.effort ? { effort: extra.effort } : {}
+  };
+}
+var PLAN_CREDITS = { api: 0, pro: 0, max_5x: 100, max_20x: 200, team: 0 };
+function planCreditUsd(o) {
+  return o.plan === "team" ? Math.min(500, o.teamCreditsUsd) : PLAN_CREDITS[o.plan];
+}
+function budgetThresholds(o) {
+  const credit = planCreditUsd(o);
+  if (credit <= 0) return { warn: o.monthlyBudgetWarnUsd, block: o.monthlyBudgetBlockUsd, warnFromCredits: false, blockFromCredits: false };
+  const blockFromCredits = o.monthlyBudgetBlockUsd === DEFAULT_OPTIONS.monthlyBudgetBlockUsd;
+  const warnFromCredits = o.monthlyBudgetWarnUsd === DEFAULT_OPTIONS.monthlyBudgetWarnUsd;
+  const block = blockFromCredits ? credit : o.monthlyBudgetBlockUsd;
+  const warn = warnFromCredits ? Math.round((block > 0 ? block : credit) * 80) / 100 : o.monthlyBudgetWarnUsd;
+  return { warn, block, warnFromCredits, blockFromCredits };
+}
+function budgetBlockedMessage(b) {
+  const [y, m, d] = b.resetsOn.split("-");
+  return `Budget raggiunto ($${b.spentUsd.toFixed(2)} su $${b.blockUsd}): l'add-on torna a chiamare Claude il ${d}/${m}/${y}.`;
+}
+function budgetRaiseHint(b) {
+  if (!b.blockFromCredits) return "Puoi alzare la soglia nelle opzioni.";
+  return `La soglia \xE8 automatica, sui crediti del piano: per continuare imposta monthly_budget_block_usd oltre $${b.blockUsd} (servono crediti acquistati o la ricarica automatica).`;
+}
+var UsageLedger = class {
+  constructor(dataDir, tz, now = () => /* @__PURE__ */ new Date()) {
+    this.tz = tz;
+    this.now = now;
+    this.file = join6(dataDir, "usage.jsonl");
+  }
+  tz;
+  now;
+  file;
+  records = [];
+  /** periodo di ogni voce, calcolato una volta sola per fuso e giorno di inizio */
+  keys = { tz: "", startDay: 0, list: [] };
+  async load() {
+    this.records = (await readJsonl(this.file)).filter((r) => typeof r.costUsd === "number" && !Number.isNaN(new Date(r.ts).getTime()));
+    this.keys = { tz: "", startDay: 0, list: [] };
+  }
+  async record(r) {
+    const rec = { ts: this.now().toISOString(), ...r };
+    this.records.push(rec);
+    await appendJsonl(this.file, rec);
+  }
+  /** Voci del periodo in corso (mese di calendario o ciclo di fatturazione). */
+  current(startDay) {
+    const tz = this.tz();
+    if (this.keys.tz !== tz || this.keys.startDay !== startDay) this.keys = { tz, startDay, list: [] };
+    const list = this.keys.list;
+    for (let i = list.length; i < this.records.length; i++) list.push(periodKey(new Date(this.records[i].ts), tz, startDay));
+    const key = periodKey(this.now(), tz, startDay);
+    return this.records.filter((_, i) => list[i] === key);
+  }
+  monthSpent(startDay = 1) {
+    return this.current(startDay).reduce((sum, r) => sum + r.costUsd, 0);
+  }
+  status(options) {
+    const spent = this.monthSpent(options.billingDay);
+    const { warn, block, warnFromCredits, blockFromCredits } = budgetThresholds(options);
+    const level = block > 0 && spent >= block ? "bloccato" : warn > 0 && spent >= warn ? "avviso" : "ok";
+    return {
+      month: periodKey(this.now(), this.tz(), options.billingDay),
+      spentUsd: Math.round(spent * 1e4) / 1e4,
+      warnUsd: warn,
+      blockUsd: block,
+      level,
+      plan: options.plan,
+      creditUsd: planCreditUsd(options),
+      warnFromCredits,
+      blockFromCredits,
+      startDay: options.billingDay,
+      startsOn: periodStart(this.now(), this.tz(), options.billingDay),
+      resetsOn: nextPeriodStart(this.now(), this.tz(), options.billingDay)
+    };
+  }
+  /** Spesa del periodo per funzione e modello, la più cara prima. */
+  breakdown(startDay = 1) {
+    const slices = /* @__PURE__ */ new Map();
+    for (const r of this.current(startDay)) {
+      const key = `${r.kind}|${r.model}`;
+      const s2 = slices.get(key) ?? { kind: r.kind, model: r.model, requests: 0, costUsd: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+      s2.requests += 1;
+      s2.costUsd += r.costUsd;
+      s2.input += r.input;
+      s2.output += r.output;
+      s2.cacheRead += r.cacheRead;
+      s2.cacheWrite += r.cacheWrite;
+      slices.set(key, s2);
+    }
+    return [...slices.values()].map((s2) => ({ ...s2, costUsd: Math.round(s2.costUsd * 1e4) / 1e4 })).sort((a, b) => b.costUsd - a.costUsd);
+  }
+};
+
 // src/chat/service.ts
 var ChatError = class extends Error {
   constructor(status, code, message2) {
@@ -50693,7 +50849,7 @@ var ChatService = class {
     if (this.isRunning(conversationId)) throw new ChatError(409, "turno_in_corso", "Attendi la fine della risposta in corso");
     const budget = this.deps.usage.status(this.deps.options);
     if (budget.level === "bloccato") {
-      throw new ChatError(429, "budget_superato", `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): l'add-on non chiama Claude fino al mese prossimo. Puoi alzare la soglia nelle opzioni.`);
+      throw new ChatError(429, "budget_superato", `${budgetBlockedMessage(budget)} ${budgetRaiseHint(budget)}`);
     }
     const conv = await this.deps.store.get(conversationId);
     if (!conv) throw new ChatError(404, "conversazione_inesistente", "Conversazione non trovata");
@@ -50734,7 +50890,7 @@ var ChatService = class {
     this.jobs.set(conversationId, job);
     this.publish(job, "start", { turnId: job.turnId });
     if (budget.level === "avviso") {
-      this.publish(job, "warning", { message: `Spesa del mese: $${budget.spentUsd.toFixed(2)}, oltre la soglia di avviso ($${budget.warnUsd}).` });
+      this.publish(job, "warning", { message: `Spesa del periodo: $${budget.spentUsd.toFixed(2)}, oltre la soglia di avviso ($${budget.warnUsd}).` });
     }
     void this.execute(job, conv);
     return { turnId: job.turnId };
@@ -50744,7 +50900,7 @@ var ChatService = class {
     const ha = this.requireHA();
     const toolCtx = { ha, consents: () => this.deps.settings.consents(), now: this.now, drafts: this.deps.drafts, devices: this.deps.devices };
     let features = this.features.get(header2.model);
-    if (!features) this.features.set(header2.model, features = { fallbacks: true, blockBinding: true });
+    if (!features) this.features.set(header2.model, features = { fallbacks: supportsServerFallback(header2.model), blockBinding: true });
     try {
       const result = await runTurn(
         { model: header2.model, effort: header2.effort, system: header2.system, tools: header2.tools },
@@ -50756,20 +50912,10 @@ var ChatService = class {
           executeTool: (name, input2, toolUseId) => executeTool(name, input2, { ...toolCtx, call: { conversationId: job.conversationId, toolUseId } }),
           beforeRequest: () => {
             if (this.deps.usage.status(this.deps.options).level === "bloccato") {
-              throw new ChatError(429, "budget_superato", "Budget mensile raggiunto durante la risposta: interrotta.");
+              throw new ChatError(429, "budget_superato", "Budget raggiunto durante la risposta: interrotta.");
             }
           },
-          onUsage: (u) => this.deps.usage.record({
-            kind: "chat",
-            conversationId: job.conversationId,
-            model: u.model,
-            input: u.input,
-            output: u.output,
-            cacheRead: u.cacheRead,
-            cacheWrite: u.cacheWrite,
-            costUsd: u.costUsd,
-            ...u.fallback ? { fallback: true } : {}
-          }),
+          onUsage: (u) => this.deps.usage.record(usageRecord("chat", job.conversationId, u, { step: "turno", effort: header2.effort })),
           emit: (e) => this.publishTurnEvent(job, e)
         },
         job.controller.signal
@@ -51852,7 +51998,8 @@ function chatRoutes(deps) {
           consentsChangedBy: s2.consentsChangedBy ?? null,
           consentsChangedAt: s2.consentsChangedAt ?? null,
           models: { chat: options.chatModel, chatEffort: options.chatEffort, analysis: options.analysisModel },
-          budget: usage.status(options)
+          budget: usage.status(options),
+          usageBreakdown: usage.breakdown(options.billingDay)
         });
       }
     },
@@ -52073,45 +52220,6 @@ var HAData = class {
       this.statesCache = { at: now, value };
     }
     return this.statesCache.value;
-  }
-};
-
-// src/claude/usage.ts
-import { join as join6 } from "node:path";
-var UsageLedger = class {
-  constructor(dataDir, tz, now = () => /* @__PURE__ */ new Date()) {
-    this.tz = tz;
-    this.now = now;
-    this.file = join6(dataDir, "usage.jsonl");
-  }
-  tz;
-  now;
-  file;
-  byMonth = /* @__PURE__ */ new Map();
-  async load() {
-    this.byMonth.clear();
-    for (const r of await readJsonl(this.file)) this.add(r);
-  }
-  add(r) {
-    const d = new Date(r.ts);
-    if (Number.isNaN(d.getTime()) || typeof r.costUsd !== "number") return;
-    const key = monthKey(d, this.tz());
-    this.byMonth.set(key, (this.byMonth.get(key) ?? 0) + r.costUsd);
-  }
-  async record(r) {
-    const rec = { ts: this.now().toISOString(), ...r };
-    this.add(rec);
-    await appendJsonl(this.file, rec);
-  }
-  monthSpent() {
-    return this.byMonth.get(monthKey(this.now(), this.tz())) ?? 0;
-  }
-  status(options) {
-    const spent = this.monthSpent();
-    const block = options.monthlyBudgetBlockUsd;
-    const warn = options.monthlyBudgetWarnUsd;
-    const level = block > 0 && spent >= block ? "bloccato" : warn > 0 && spent >= warn ? "avviso" : "ok";
-    return { month: monthKey(this.now(), this.tz()), spentUsd: Math.round(spent * 1e4) / 1e4, warnUsd: warn, blockUsd: block, level };
   }
 };
 
@@ -52475,12 +52583,15 @@ function buildStructuredParams(req, fallbacks) {
   return {
     model: req.model,
     max_tokens: req.maxTokens,
-    system: req.system,
+    system: req.cacheSystem ? withCachedTail(req.system) : req.system,
     messages: [{ role: "user", content: req.user }],
     thinking: { type: "adaptive" },
     output_config: { effort: req.effort, format: { type: "json_schema", schema: req.schema } },
     ...fallbacks ? { fallbacks: "default", betas: [FALLBACK_BETA] } : {}
   };
+}
+function withCachedTail(system) {
+  return system.map((b, i) => i === system.length - 1 ? { ...b, cache_control: { type: "ephemeral" } } : b);
 }
 function answerText(msg) {
   const blocks2 = msg.content;
@@ -53762,7 +53873,7 @@ var SuggestService = class {
   }
   deps;
   controllers = /* @__PURE__ */ new Map();
-  features = { fallbacks: true };
+  features = new FeatureMemory();
   /** Salvataggi in fila: un progresso lento non deve sovrascrivere lo stato finale. */
   saving = Promise.resolve();
   now;
@@ -53932,7 +54043,7 @@ var SuggestService = class {
     if (todo.length === 0) throw new SuggestError(400, "niente_da_proporre", "Nessun candidato da proporre.");
     const budget = this.deps.usage.status(this.deps.options);
     if (budget.level === "bloccato") {
-      throw new SuggestError(429, "budget_superato", `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): l'add-on non chiama Claude fino al mese prossimo.`);
+      throw new SuggestError(429, "budget_superato", budgetBlockedMessage(budget));
     }
     run3.status = "generazione";
     delete run3.error;
@@ -53943,8 +54054,8 @@ var SuggestService = class {
     void this.runGeneration(run3, todo, controller.signal).finally(() => this.release(run3.id, controller));
     return run3;
   }
-  async record(run3, u) {
-    await this.deps.usage.record({ kind: "suggest", conversationId: run3.id, model: u.model, input: u.input, output: u.output, cacheRead: u.cacheRead, cacheWrite: u.cacheWrite, costUsd: u.costUsd, ...u.fallback ? { fallback: true } : {} });
+  async record(run3, u, step, effort2) {
+    await this.deps.usage.record(usageRecord("suggest", run3.id, u, { step, effort: effort2 }));
     const prev = run3.usage ?? { model: u.model, costUsd: 0, input: 0, output: 0, fallback: false };
     run3.usage = { model: u.model, costUsd: prev.costUsd + u.costUsd, input: prev.input + u.input, output: prev.output + u.output, fallback: prev.fallback || u.fallback };
   }
@@ -53955,15 +54066,15 @@ var SuggestService = class {
       await this.loadHomeInfo();
       const req = this.request({ ...run3, candidates: todo }, { tz: this.timeZone });
       let lastSave = 0;
-      const res = await requestStructured(stream2, req, this.features, signal, (chars) => {
+      const res = await requestStructured(stream2, req, this.features.for(req.model), signal, (chars) => {
         if (Date.now() - lastSave < 1500) return;
         lastSave = Date.now();
         void this.progress(run3, "Claude sta scrivendo le proposte", chars, 0);
       }).catch(async (err) => {
-        if (err instanceof StructuredError && err.usage) await this.record(run3, err.usage);
+        if (err instanceof StructuredError && err.usage) await this.record(run3, err.usage, "generazione", req.effort);
         throw err;
       });
-      await this.record(run3, res.usage);
+      await this.record(run3, res.usage, "generazione", req.effort);
       const parsed = Proposals.safeParse(res.value);
       if (!parsed.success) throw new StructuredError("json_non_valido", "La risposta del modello non rispetta lo schema.");
       const byId = new Map(todo.map((c) => [c.id, c]));
@@ -53995,13 +54106,13 @@ var SuggestService = class {
           const fix = await requestStructured(
             stream2,
             { ...req, effort: "medium", user: repairUserMessage(failed), schema: REPAIR_SCHEMA, maxTokens: REPAIR_MAX_TOKENS },
-            this.features,
+            this.features.for(req.model),
             signal
           ).catch(async (err) => {
-            if (err instanceof StructuredError && err.usage) await this.record(run3, err.usage);
+            if (err instanceof StructuredError && err.usage) await this.record(run3, err.usage, "correzione", "medium");
             throw err;
           });
-          await this.record(run3, fix.usage);
+          await this.record(run3, fix.usage, "correzione", "medium");
           const fixes = Repairs.safeParse(fix.value);
           const fixed = new Map((fixes.success ? fixes.data.correzioni : []).map((c) => [c.candidato, c.yaml.trim()]));
           for (const it of failed) {
@@ -55656,7 +55767,7 @@ var VerifyService = class {
   }
   deps;
   controllers = /* @__PURE__ */ new Map();
-  features = { fallbacks: true };
+  features = new FeatureMemory();
   saving = Promise.resolve();
   now;
   locationName = "Casa";
@@ -55814,14 +55925,17 @@ var VerifyService = class {
     const hot = new Set(run3.findings.filter((f) => f.severity !== "info" && !ignored.has(f.signature)).map((f) => f.automation));
     return run3.reports.filter((r) => hot.has(r.entityId)).map((r) => r.entityId).slice(0, MAX_SELECTION);
   }
-  request(dossiers, days) {
+  request(dossiers, days, cacheSystem = false) {
     return {
       model: this.deps.options.analysisModel,
       effort: this.deps.options.verifyEffort,
       system: verifySystem({ locationName: this.locationName, haVersion: this.haVersion, timeZone: this.timeZone }),
       user: verifyUserMessage(dossiers, { now: describeNow(this.now(), this.timeZone), days }),
       schema: REVIEW_SCHEMA,
-      maxTokens: MAX_TOKENS3
+      maxTokens: MAX_TOKENS3,
+      // Con più lotti, uno dopo l'altro con lo stesso prompt di sistema, dal secondo si legge dalla
+      // cache. La correzione ha un altro schema di output, quindi non la riusa.
+      cacheSystem
     };
   }
   /** Preventivo: token del sistema e di ogni dossier (contati con countTokens su un campione). */
@@ -55883,7 +55997,7 @@ var VerifyService = class {
     if (!todo.length) throw new VerifyError(400, "niente_da_analizzare", "Scegli almeno un\u2019automazione da analizzare.");
     if (todo.length > MAX_SELECTION) throw new VerifyError(400, "troppe_automazioni", `Al massimo ${MAX_SELECTION} automazioni per analisi.`);
     const budget = this.deps.usage.status(this.deps.options);
-    if (budget.level === "bloccato") throw new VerifyError(429, "budget_superato", `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): l'add-on non chiama Claude fino al mese prossimo.`);
+    if (budget.level === "bloccato") throw new VerifyError(429, "budget_superato", budgetBlockedMessage(budget));
     run3.status = "analisi";
     run3.selection = todo;
     delete run3.error;
@@ -55895,17 +56009,17 @@ var VerifyService = class {
     void this.runAnalysis(run3, todo, controller.signal).finally(() => this.release(run3.id, controller));
     return run3;
   }
-  async record(run3, u) {
-    await this.deps.usage.record({ kind: "verify", conversationId: run3.id, model: u.model, input: u.input, output: u.output, cacheRead: u.cacheRead, cacheWrite: u.cacheWrite, costUsd: u.costUsd, ...u.fallback ? { fallback: true } : {} });
+  async record(run3, u, step, effort2) {
+    await this.deps.usage.record(usageRecord("verify", run3.id, u, { step, effort: effort2 }));
     const prev = run3.usage ?? { model: u.model, costUsd: 0, input: 0, output: 0, fallback: false };
     run3.usage = { model: u.model, costUsd: prev.costUsd + u.costUsd, input: prev.input + u.input, output: prev.output + u.output, fallback: prev.fallback || u.fallback };
   }
-  async structured(run3, req, signal, onText) {
-    const res = await requestStructured(this.deps.stream, req, this.features, signal, onText).catch(async (err) => {
-      if (err instanceof StructuredError && err.usage) await this.record(run3, err.usage);
+  async structured(run3, req, step, signal, onText) {
+    const res = await requestStructured(this.deps.stream, req, this.features.for(req.model), signal, onText).catch(async (err) => {
+      if (err instanceof StructuredError && err.usage) await this.record(run3, err.usage, step, req.effort);
       throw err;
     });
-    await this.record(run3, res.usage);
+    await this.record(run3, res.usage, step, req.effort);
     return res;
   }
   async propose(run3, automation, yaml, spiegazione) {
@@ -55922,10 +56036,10 @@ var VerifyService = class {
       for (const [b, batch] of batches.entries()) {
         if (signal.aborted) throw new StructuredError("annullata", "Analisi annullata");
         const budget = this.deps.usage.status(this.deps.options);
-        if (budget.level === "bloccato") throw new VerifyError(429, "budget_superato", `Budget mensile raggiunto dopo ${done} automazioni: analisi fermata.`);
+        if (budget.level === "bloccato") throw new VerifyError(429, "budget_superato", `Budget raggiunto dopo ${done} automazioni: analisi fermata.`);
         const phase = batches.length > 1 ? `Claude sta analizzando (lotto ${b + 1} di ${batches.length})` : "Claude sta analizzando le automazioni";
         await this.progress(run3, phase, done, todo.length);
-        const res = await this.structured(run3, this.request(batch.map((a) => run3.dossiers[a]), run3.days), signal);
+        const res = await this.structured(run3, this.request(batch.map((a) => run3.dossiers[a]), run3.days, batches.length > 1), "analisi", signal);
         const parsed = Reviews.safeParse(res.value);
         if (!parsed.success) throw new StructuredError("json_non_valido", "La risposta del modello non rispetta lo schema.");
         const wanted = new Set(batch);
@@ -55956,7 +56070,7 @@ var VerifyService = class {
         await this.progress(run3, "Correzione delle proposte non valide", 0, failed.length);
         try {
           const base = this.request([], run3.days);
-          const fix = await this.structured(run3, { ...base, effort: "medium", user: repairUserMessage2(failed), schema: REPAIR_SCHEMA2, maxTokens: REPAIR_MAX_TOKENS2 }, signal);
+          const fix = await this.structured(run3, { ...base, effort: "medium", user: repairUserMessage2(failed), schema: REPAIR_SCHEMA2, maxTokens: REPAIR_MAX_TOKENS2 }, "correzione", signal);
           const parsed = Repairs2.safeParse(fix.value);
           const fixed = new Map((parsed.success ? parsed.data.correzioni : []).map((c) => [c.automazione, c.yaml.trim()]));
           for (const it of failed) {
@@ -56792,7 +56906,7 @@ var DevicesService = class {
   batch = null;
   /** Collegata dopo la creazione: la chat a sua volta usa questo servizio per i tool. */
   chat = null;
-  features = { fallbacks: true };
+  features = new FeatureMemory();
   now;
   requireHA() {
     if (!this.deps.ha) throw new DevicesError(503, "ha_non_configurato", "Home Assistant non \xE8 raggiungibile da questo processo");
@@ -56924,7 +57038,7 @@ var DevicesService = class {
     if (this.active) throw new DevicesError(409, "studio_in_corso", `\xC8 gi\xE0 in corso lo studio di ${modelLabel(this.active.info.manufacturer, this.active.info.model)}: attendi che finisca.`);
     const budget = this.deps.usage.status(this.deps.options);
     if (budget.level === "bloccato") {
-      throw new DevicesError(429, "budget_superato", `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): lo studio non parte.`);
+      throw new DevicesError(429, "budget_superato", budgetBlockedMessage(budget));
     }
     const known = new Set((await this.catalog()).map((e) => e.key));
     const pending = [...new Set(keys)].filter((k) => known.has(k) && !this.deps.kb.get(k)).slice(0, MAX_BATCH);
@@ -56939,7 +57053,7 @@ var DevicesService = class {
     let inARow = 0;
     while (batch.running && batch.pending.length) {
       if (this.deps.usage.status(this.deps.options).level === "bloccato") {
-        batch.stopped = "Budget mensile raggiunto.";
+        batch.stopped = "Budget raggiunto.";
         break;
       }
       const key = batch.pending[0];
@@ -56981,7 +57095,7 @@ var DevicesService = class {
     }
     const budget = this.deps.usage.status(this.deps.options);
     if (budget.level === "bloccato") {
-      throw new DevicesError(429, "budget_superato", `Budget mensile raggiunto ($${budget.spentUsd.toFixed(2)} su $${budget.blockUsd}): lo studio non parte.`);
+      throw new DevicesError(429, "budget_superato", budgetBlockedMessage(budget));
     }
     const entry = (await this.catalog()).find((e) => e.key === key);
     if (!entry) throw new DevicesError(404, "modello_inesistente", "Modello non trovato tra i dispositivi della casa");
@@ -57019,18 +57133,7 @@ var DevicesService = class {
     }
   }
   async record(slug2, u) {
-    await this.deps.usage.record({
-      kind: "devices",
-      conversationId: slug2,
-      model: u.model,
-      input: u.input,
-      output: u.output,
-      cacheRead: u.cacheRead,
-      cacheWrite: u.cacheWrite,
-      costUsd: u.costUsd,
-      ...u.fallback ? { fallback: true } : {},
-      ...u.searches ? { searches: u.searches } : {}
-    });
+    await this.deps.usage.record(usageRecord("devices", slug2, u, { step: "studio", effort: this.deps.options.devicesEffort }));
   }
   async execute(info, entry, ha, signal) {
     const started = Date.now();
@@ -57043,7 +57146,7 @@ var DevicesService = class {
         {
           stream: this.deps.stream,
           signal,
-          features: this.features,
+          features: this.features.for(options.analysisModel),
           onProgress: (p) => info.progress = p,
           onUsage: async (u) => {
             info.costUsd += u.costUsd;

@@ -71,8 +71,46 @@ export function describeNow(now: Date, tz: string): string {
 
 /** Chiave del mese "2026-10" nel fuso indicato (per il budget). */
 export function monthKey(d: Date, tz: string): string {
+  return periodKey(d, tz, 1)
+}
+
+/**
+ * Periodo di spesa: il mese di calendario (startDay 1) o il ciclo di fatturazione che parte il
+ * giorno `startDay` (crediti dei piani Max e Team). Nei mesi più corti un ciclo dal 29, 30 o 31
+ * parte l'ultimo giorno del mese. La chiave è il mese in cui il periodo inizia.
+ */
+export function periodKey(d: Date, tz: string, startDay: number): string {
   const p = localParts(d, tz)
-  return `${p.year}-${p.month}`
+  let year = Number(p.year)
+  let month = Number(p.month)
+  if (Number(p.day) < cycleDay(year, month, startDay)) [year, month] = addMonth(year, month, -1)
+  return `${year}-${String(month).padStart(2, '0')}`
+}
+
+/** Giorno in cui è partito il periodo in corso, "2026-09-30" (data locale). */
+export function periodStart(d: Date, tz: string, startDay: number): string {
+  const [year, month] = periodKey(d, tz, startDay).split('-').map(Number)
+  return isoDay(year!, month!, startDay)
+}
+
+/** Giorno in cui parte il periodo successivo, "2026-11-15" (data locale). */
+export function nextPeriodStart(d: Date, tz: string, startDay: number): string {
+  const [y, m] = periodKey(d, tz, startDay).split('-').map(Number)
+  const [year, month] = addMonth(y!, m!, 1)
+  return isoDay(year, month, startDay)
+}
+
+function isoDay(year: number, month: number, startDay: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(cycleDay(year, month, startDay)).padStart(2, '0')}`
+}
+
+function cycleDay(year: number, month: number, startDay: number): number {
+  return Math.min(startDay, new Date(Date.UTC(year, month, 0)).getUTCDate())
+}
+
+function addMonth(year: number, month: number, delta: 1 | -1): [number, number] {
+  const m = month + delta
+  return m === 0 ? [year - 1, 12] : m === 13 ? [year + 1, 1] : [year, m]
 }
 
 /** Durata leggibile: "2 h 15 min", "45 s". */

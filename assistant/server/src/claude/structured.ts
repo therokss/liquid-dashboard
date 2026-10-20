@@ -21,6 +21,11 @@ export interface StructuredRequest {
   user: string
   schema: Record<string, unknown>
   maxTokens: number
+  /**
+   * Cache (5 min) sul prompt di sistema: conviene solo quando più richieste vicine lo
+   * ripetono identico (i lotti di Verifica); per una richiesta isolata la scrittura costa e basta.
+   */
+  cacheSystem?: boolean
 }
 
 export interface StructuredResult {
@@ -33,12 +38,16 @@ export function buildStructuredParams(req: StructuredRequest, fallbacks: boolean
   return {
     model: req.model,
     max_tokens: req.maxTokens,
-    system: req.system,
+    system: req.cacheSystem ? withCachedTail(req.system) : req.system,
     messages: [{ role: 'user', content: req.user }],
     thinking: { type: 'adaptive' },
     output_config: { effort: req.effort, format: { type: 'json_schema', schema: req.schema } },
     ...(fallbacks ? { fallbacks: 'default' as const, betas: [FALLBACK_BETA] } : {}),
   }
+}
+
+function withCachedTail(system: BetaTextBlockParam[]): BetaTextBlockParam[] {
+  return system.map((b, i) => (i === system.length - 1 ? { ...b, cache_control: { type: 'ephemeral' } } : b))
 }
 
 /** Testo della risposta: con un fallback lato server vale solo quello dopo l'ultimo blocco "fallback". */

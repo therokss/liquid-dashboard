@@ -280,6 +280,9 @@ test('Verifica: analisi approfondita a lotti, bozze di correzione con una ripara
     assert.match(req.messages[0].content, /problemi_rilevati/)
     assert.equal(stream.requests[3]!.output_config.effort, 'medium')
     assert.match(stream.requests[3]!.messages[0].content, /switch\.inventata non esiste/)
+    // Più lotti: il prompt di sistema comune si legge dalla cache; la correzione (altro schema) no.
+    assert.deepEqual(req.system.at(-1).cache_control, { type: 'ephemeral' })
+    assert.equal(stream.requests[3]!.system.at(-1).cache_control, undefined)
 
     const a = done.reviews['automation.assenza_soggiorno']!
     assert.equal(a.giudizio, 'problemi')

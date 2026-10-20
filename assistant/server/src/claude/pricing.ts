@@ -1,5 +1,5 @@
-// Prezzi in USD per milione di token (listino Anthropic, ottobre 2026). Servono solo per la
-// stima dei costi mostrata nell'add-on: il consuntivo ufficiale resta quello della Console.
+// Prezzi in USD per milione di token (listino Anthropic verificato il 19/10/2026). Servono solo
+// per la stima dei costi mostrata nell'add-on: il consuntivo ufficiale resta quello della Console.
 // Scrittura in cache: ×1,25 (TTL 5 min) o ×2 (TTL 1 h) del prezzo di input.
 
 interface Price {
@@ -8,22 +8,31 @@ interface Price {
   cacheRead: number
 }
 
-const PRICES: Array<[prefix: string, price: Price]> = [
+interface PriceCard extends Price {
+  /** Haiku 5.5: oltre questa lunghezza del prompt (input + cache) tutta la richiesta costa di più. */
+  long?: { overTokens: number; price: Price }
+}
+
+// L'ordine conta: si cerca per prefisso, quindi "claude-sonnet-5-5" prima di "claude-sonnet-5".
+const PRICES: Array<[prefix: string, price: PriceCard]> = [
   ['claude-opus-5-5', { input: 4, output: 20, cacheRead: 0.2 }],
-  ['claude-sonnet-5-5', { input: 2, output: 10, cacheRead: 0.2 }],
-  ['claude-haiku-5-5', { input: 0.1, output: 0.5, cacheRead: 0.01 }],
+  ['claude-sonnet-5-5', { input: 2, output: 10, cacheRead: 0.1 }],
+  ['claude-haiku-5-5', { input: 0.1, output: 0.5, cacheRead: 0.01, long: { overTokens: 100_000, price: { input: 0.5, output: 2.5, cacheRead: 0.05 } } }],
   ['claude-fable-5-1', { input: 10, output: 50, cacheRead: 0.25 }],
   ['claude-opus-5', { input: 5, output: 25, cacheRead: 0.5 }],
-  ['claude-sonnet-5', { input: 3, output: 15, cacheRead: 0.3 }],
+  ['claude-sonnet-5', { input: 2, output: 10, cacheRead: 0.2 }],
   ['claude-opus-4-8', { input: 5, output: 25, cacheRead: 0.5 }],
 ]
 
 /** Modello sconosciuto: si stima per eccesso (prezzo del livello più caro). */
 const FALLBACK_PRICE: Price = { input: 10, output: 50, cacheRead: 1 }
 
-export function priceOf(model: string): { price: Price; known: boolean } {
+/** Prezzo base del modello (per i preventivi); `promptTokens` sceglie la fascia dei prompt lunghi. */
+export function priceOf(model: string, promptTokens = 0): { price: Price; known: boolean } {
   const hit = PRICES.find(([prefix]) => model === prefix || model.startsWith(prefix + '-'))
-  return hit ? { price: hit[1], known: true } : { price: FALLBACK_PRICE, known: false }
+  if (!hit) return { price: FALLBACK_PRICE, known: false }
+  const card = hit[1]
+  return { price: card.long && promptTokens > card.long.overTokens ? card.long.price : card, known: true }
 }
 
 export interface TokenUsage {
@@ -35,8 +44,8 @@ export interface TokenUsage {
 }
 
 export function costUsd(model: string, u: TokenUsage): number {
-  const { price } = priceOf(model)
   const created = u.cache_creation_input_tokens ?? 0
+  const { price } = priceOf(model, u.input_tokens + (u.cache_read_input_tokens ?? 0) + created)
   const write1h = u.cache_creation?.ephemeral_1h_input_tokens ?? 0
   const write5m = u.cache_creation ? u.cache_creation.ephemeral_5m_input_tokens : created
   const usd =
@@ -57,6 +66,8 @@ export interface UsageTotals {
   output: number
   cacheRead: number
   cacheWrite: number
+  /** di cui scritture in cache con durata 1 h (prezzo ×2) */
+  cacheWrite1h?: number
   costUsd: number
   /** Almeno una parte servita da un modello di riserva (fallback dopo un rifiuto). */
   fallback: boolean
@@ -87,6 +98,8 @@ export function messageCost(message: {
     totals.output += u.output_tokens
     totals.cacheRead += u.cache_read_input_tokens ?? 0
     totals.cacheWrite += u.cache_creation_input_tokens ?? 0
+    const write1h = u.cache_creation?.ephemeral_1h_input_tokens ?? 0
+    if (write1h) totals.cacheWrite1h = (totals.cacheWrite1h ?? 0) + write1h
     totals.costUsd += costUsd(model, u)
   }
   const searches = message.usage.server_tool_use?.web_search_requests ?? 0
