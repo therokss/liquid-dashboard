@@ -3,6 +3,20 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.48.1] — 2026-10-26
+### Corretto
+- **Consumo istantaneo: in elenco solo le prese.** Nella scheda Energia la lista dei consumi
+  in tempo reale prendeva tutti i sensori di potenza della casa, escludendo a mano quelli che
+  sembravano infrastruttura. Così finivano in elenco — e nel conteggio — anche i sensori di
+  integrazioni come **EcoFlow**, che ne espone molti (ingresso CA, uscita CA, batteria), come
+  se fossero consumi di casa. Ora il criterio è rovesciato: entrano **solo le prese**, cioè i
+  dispositivi che Home Assistant marca come tali (interruttore con device_class `outlet`) o
+  che si chiamano come tali. Stazioni di energia, inverter e UPS restano fuori anche quando
+  espongono una presa in uscita.
+- **Prese Shelly senza nome**: le voci con il nome grezzo del dispositivo (`shellyplug-s-a1b2c3`)
+  dovevano già essere nascoste, ma il filtro non riconosceva proprio la forma di nome più
+  comune. Ora spariscono davvero.
+
 ## [1.48.0] — 2026-09-28
 ### Aggiunto
 - **Visibilità dispositivi, filtro per tipo**: sotto la scelta della stanza ci sono i filtri

@@ -286,12 +286,22 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
   const entityAreas = useStore((s) => s.entityAreas)
   const areasList = useStore((s) => s.areas)
   const liveEntities = useStore((s) => s.entities)
+  const entityDevices = useStore((s) => s.entityDevices)
+  const deviceInfo = useStore((s) => s.deviceInfo)
   const powerSel = useStore((s) => s.energyPowerEntity)
 
-  // Consumo istantaneo (W) per dispositivo: sensori device_class 'power' in tempo reale.
-  // Esclude il sensore "casa" configurato e l'infrastruttura (UPS, contatore, UDR/PoE,
-  // fasi, batterie) e i sensori senza nome leggibile (shelly grezzi). Nome ripulito da
-  // "Power/Potenza".
+  // Consumo istantaneo (W) per dispositivo: SOLO le prese, in tempo reale.
+  //
+  // Prima entravano tutti i sensori device_class 'power' e si escludeva a mano
+  // l'infrastruttura (UPS, contatore, PoE, fasi…). Una lista nera però non tiene:
+  // integrazioni come EcoFlow espongono decine di sensori di potenza (ingressi,
+  // uscite, batteria) che finivano in elenco e venivano contati come consumi della
+  // casa. Ora il criterio è rovesciato: un sensore entra solo se sta su una PRESA,
+  // cioè su un dispositivo che espone un interruttore con device_class 'outlet' (lo
+  // standard di HA per le prese smart) o che si chiama come tale. Restano fuori il
+  // sensore "casa" configurato, le stazioni di energia (EcoFlow, inverter, UPS: hanno
+  // prese in uscita ma non sono prese) e i sensori senza nome leggibile (shelly
+  // grezzi). Nome ripulito da "Power/Potenza".
   const livePower = useMemo(() => {
     const toW = (e: HassEntity) => {
       const v = parseFloat(e.state)
@@ -299,11 +309,24 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
       const u = ((e.attributes as Record<string, unknown>).unit_of_measurement as string) || 'W'
       return u === 'kW' ? v * 1000 : v
     }
-    const skip = (name: string, id: string) => {
-      if (/myups|\bups\b|contator|\bmeter\b|\budr\d*\b|\bpoe\b|phase|\bfase\b|nominale|batter/i.test(`${name} ${id}`)) return true
-      if (/shelly[a-z0-9]*-[0-9a-f]{6,}/i.test(name)) return true // nome grezzo senza friendly_name
-      return false
+    // Dispositivi con un interruttore 'outlet': sono prese anche se il sensore di
+    // potenza si chiama in tutt'altro modo.
+    const plugDevices = new Set<string>()
+    for (const e of Object.values(liveEntities)) {
+      if (!e.entity_id.startsWith('switch.')) continue
+      if ((e.attributes as Record<string, unknown>).device_class !== 'outlet') continue
+      const dev = entityDevices[e.entity_id]
+      if (dev) plugDevices.add(dev)
     }
+    const isPlug = (id: string, name: string) => {
+      const dev = entityDevices[id]
+      const info = dev ? deviceInfo[dev] : undefined
+      const hw = `${info?.manufacturer ?? ''} ${info?.model ?? ''}`
+      if (/ecoflow|inverter|power\s?station|\bups\b/i.test(hw)) return false
+      if (dev && plugDevices.has(dev)) return true
+      return /\b(presa|prese|plug|socket|outlet|spina|enchufe)\b/i.test(`${name} ${hw}`)
+    }
+    const unreadable = (name: string) => /shelly[a-z0-9-]*-[0-9a-f]{6,}/i.test(name) // nome grezzo senza friendly_name (shellyplug-s-a1b2c3)
     const clean = (name: string) => name.replace(/\s+(potenza|power)(\s+reale)?(\s+nominale)?$/i, '').trim() || name
     return Object.values(liveEntities)
       .filter((e) => e.entity_id.startsWith('sensor.') && (e.attributes as Record<string, unknown>).device_class === 'power' && e.entity_id !== powerSel && !isNaN(toW(e)))
@@ -313,9 +336,9 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
         const raw = ((e.attributes as Record<string, unknown>).friendly_name as string) || e.entity_id
         return { id: e.entity_id, name: clean(raw), raw, room, w: toW(e) }
       })
-      .filter((d) => !skip(d.raw, d.id))
+      .filter((d) => isPlug(d.id, d.raw) && !unreadable(d.raw))
       .sort((a, b) => b.w - a.w)
-  }, [liveEntities, entityAreas, areasList, powerSel])
+  }, [liveEntities, entityDevices, deviceInfo, entityAreas, areasList, powerSel])
 
   useEffect(() => {
     let cancelled = false
