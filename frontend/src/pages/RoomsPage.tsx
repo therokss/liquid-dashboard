@@ -17,6 +17,9 @@ import { sameProps } from '../lib/sameProps'
 import { PendingSelect } from '../components/PendingSelect'
 import { useNav, openArea, closeChild, useScrollMemory } from '../lib/navState'
 import { getDomain } from '../types/ha'
+import { consumerPowerFilter, energyLoads, extractStatIds, fetchEnergyPrefs, hasEnergyConfig } from '../lib/energy'
+import type { EnergyPrefs } from '../lib/energy'
+import { cachedFetch, peekCache } from '../lib/fetchCache'
 import type { HassArea, HassEntity } from '../types/ha'
 
 const AREA_ICONS: Record<string, React.ReactNode> = {
@@ -62,7 +65,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   const t = useT()
   const entityDevices = useStore((s) => s.entityDevices)
   const powerSel = useStore((s) => s.energyPowerEntity)
-  const { callService } = useHA()
+  const { callService, sendMessage } = useHA()
   const [openBadge, setOpenBadge] = useState<string | null>(null)
   const [detailEntity, setDetailEntity] = useState<string | null>(null)
   const scrollRef = useScrollMemory('room')
@@ -77,6 +80,18 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
         !s.userHiddenEntities[e.entity_id]
     )
   ))
+  // Singoli dispositivi della dashboard Energia o, senza, prese e relè (badge "Corrente
+  // area"): il risultato cambia solo con il registro o la configurazione Energia, non a ogni evento.
+  const [energyPrefs, setEnergyPrefs] = useState<EnergyPrefs | null>(() => peekCache<EnergyPrefs>('energy:prefs') ?? null)
+  useEffect(() => {
+    let cancelled = false
+    cachedFetch('energy:prefs', () => fetchEnergyPrefs(sendMessage), { shouldCache: (v) => !!v && hasEnergyConfig(v) })
+      .then((p) => { if (!cancelled && p) setEnergyPrefs(p) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [sendMessage])
+  const loads = useMemo(() => energyLoads(energyPrefs ? extractStatIds(energyPrefs) : null), [energyPrefs])
+  const consumers = useStore((s) => consumerPowerFilter(s.entities, s.entityDevices, s.systemEntities, s.deviceInfo, loads))
   // Sensore potenza della casa (badge "Corrente casa"): quello scelto o il primo trovato
   const houseEnt = useStore((s) => (powerSel && s.entities[powerSel])
     ? s.entities[powerSel]
@@ -196,8 +211,13 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
   const doors = areaEntities.filter((e) => getDomain(e.entity_id) === 'binary_sensor' && (dc(e) === 'door' || dc(e) === 'opening'))
   const windows = areaEntities.filter((e) => getDomain(e.entity_id) === 'binary_sensor' && dc(e) === 'window')
   const garages = areaEntities.filter((e) => getDomain(e.entity_id) === 'binary_sensor' && dc(e) === 'garage_door')
-  const areaPowerSensors = areaEntities.filter((e) => getDomain(e.entity_id) === 'sensor' && dc(e) === 'power')
-  const areaW = areaPowerSensors.reduce((s, e) => s + toW(e), 0)
+  const areaPowerSensors = areaEntities.filter((e) => consumers.inRoom(e) && num(e.state) !== null)
+  // Un dispositivo misurato anche da quello "a monte" nella stessa stanza non si somma due volte.
+  const areaPowerIds = new Set(areaPowerSensors.map((e) => e.entity_id))
+  const areaW = areaPowerSensors.reduce((s, e) => {
+    const up = consumers.parent(e.entity_id)
+    return up && areaPowerIds.has(up) ? s : s + toW(e)
+  }, 0)
   const houseW = houseEnt ? toW(houseEnt) : null
 
   type BadgeItem = { name: string; value: string }
@@ -236,7 +256,7 @@ function AreaDetail({ area, onBack, gradientColors }: AreaDetailProps) {
 
   if (areaPowerSensors.length) badges.push({
     key: 'areaP', icon: <Zap size={16} />, label: t('Corrente area'), value: fmtW(areaW),
-    list: areaPowerSensors.map((e) => ({ name: nameOf(e), value: fmtW(toW(e)) })),
+    list: areaPowerSensors.map((e) => ({ name: consumers.name(e.entity_id) || nameOf(e), value: fmtW(toW(e)) })),
   })
   if (houseW !== null) badges.push({ key: 'houseP', icon: <Zap size={16} />, label: t('Corrente casa'), value: fmtW(houseW) })
 

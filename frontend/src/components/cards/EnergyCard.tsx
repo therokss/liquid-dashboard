@@ -12,6 +12,7 @@ import { useHA } from '../../hooks/useHA'
 import { useT } from '../../i18n'
 import {
   fetchEnergyPrefs, extractStatIds, hasEnergyConfig, fetchStatsSum, sumOf, kwhFactor,
+  consumerPowerFilter, energyLoads, isInfraPower,
 } from '../../lib/energy'
 import type { EnergyPrefs, EnergyStatIds } from '../../lib/energy'
 import type { HassEntity } from '../../types/ha'
@@ -287,21 +288,14 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
   const areasList = useStore((s) => s.areas)
   const liveEntities = useStore((s) => s.entities)
   const entityDevices = useStore((s) => s.entityDevices)
+  const systemEntities = useStore((s) => s.systemEntities)
   const deviceInfo = useStore((s) => s.deviceInfo)
   const powerSel = useStore((s) => s.energyPowerEntity)
 
-  // Consumo istantaneo (W) per dispositivo: SOLO le prese, in tempo reale.
-  //
-  // Prima entravano tutti i sensori device_class 'power' e si escludeva a mano
-  // l'infrastruttura (UPS, contatore, PoE, fasi…). Una lista nera però non tiene:
-  // integrazioni come EcoFlow espongono decine di sensori di potenza (ingressi,
-  // uscite, batteria) che finivano in elenco e venivano contati come consumi della
-  // casa. Ora il criterio è rovesciato: un sensore entra solo se sta su una PRESA,
-  // cioè su un dispositivo che espone un interruttore con device_class 'outlet' (lo
-  // standard di HA per le prese smart) o che si chiama come tale. Restano fuori il
-  // sensore "casa" configurato, le stazioni di energia (EcoFlow, inverter, UPS: hanno
-  // prese in uscita ma non sono prese) e i sensori senza nome leggibile (shelly
-  // grezzi). Nome ripulito da "Power/Potenza".
+  // Consumo istantaneo (W) per dispositivo, in tempo reale: i singoli dispositivi della
+  // dashboard Energia o, senza, prese e relè (consumerPowerFilter). Senza il sensore "casa"
+  // configurato, i sensori non disponibili e l'infrastruttura (contatori e fasi). Nome dalla
+  // dashboard Energia o ripulito da "Power/Potenza".
   const livePower = useMemo(() => {
     const toW = (e: HassEntity) => {
       const v = parseFloat(e.state)
@@ -309,36 +303,18 @@ function EnergyDetail({ ids, sendMessage, livePowerW, onBack }: { ids: EnergySta
       const u = ((e.attributes as Record<string, unknown>).unit_of_measurement as string) || 'W'
       return u === 'kW' ? v * 1000 : v
     }
-    // Dispositivi con un interruttore 'outlet': sono prese anche se il sensore di
-    // potenza si chiama in tutt'altro modo.
-    const plugDevices = new Set<string>()
-    for (const e of Object.values(liveEntities)) {
-      if (!e.entity_id.startsWith('switch.')) continue
-      if ((e.attributes as Record<string, unknown>).device_class !== 'outlet') continue
-      const dev = entityDevices[e.entity_id]
-      if (dev) plugDevices.add(dev)
-    }
-    const isPlug = (id: string, name: string) => {
-      const dev = entityDevices[id]
-      const info = dev ? deviceInfo[dev] : undefined
-      const hw = `${info?.manufacturer ?? ''} ${info?.model ?? ''}`
-      if (/ecoflow|inverter|power\s?station|\bups\b/i.test(hw)) return false
-      if (dev && plugDevices.has(dev)) return true
-      return /\b(presa|prese|plug|socket|outlet|spina|enchufe)\b/i.test(`${name} ${hw}`)
-    }
-    const unreadable = (name: string) => /shelly[a-z0-9-]*-[0-9a-f]{6,}/i.test(name) // nome grezzo senza friendly_name (shellyplug-s-a1b2c3)
+    const consumers = consumerPowerFilter(liveEntities, entityDevices, systemEntities, deviceInfo, energyLoads(ids))
     const clean = (name: string) => name.replace(/\s+(potenza|power)(\s+reale)?(\s+nominale)?$/i, '').trim() || name
     return Object.values(liveEntities)
-      .filter((e) => e.entity_id.startsWith('sensor.') && (e.attributes as Record<string, unknown>).device_class === 'power' && e.entity_id !== powerSel && !isNaN(toW(e)))
+      .filter((e) => consumers.test(e) && e.entity_id !== powerSel && !isNaN(toW(e)) && !isInfraPower(e, consumers))
       .map((e) => {
         const areaId = entityAreas[e.entity_id]
         const room = (areaId && areasList.find((a) => a.area_id === areaId)?.name) || ''
         const raw = ((e.attributes as Record<string, unknown>).friendly_name as string) || e.entity_id
-        return { id: e.entity_id, name: clean(raw), raw, room, w: toW(e) }
+        return { id: e.entity_id, name: consumers.name(e.entity_id) || clean(raw), room, w: toW(e) }
       })
-      .filter((d) => isPlug(d.id, d.raw) && !unreadable(d.raw))
       .sort((a, b) => b.w - a.w)
-  }, [liveEntities, entityDevices, deviceInfo, entityAreas, areasList, powerSel])
+  }, [liveEntities, entityDevices, systemEntities, deviceInfo, ids, entityAreas, areasList, powerSel])
 
   useEffect(() => {
     let cancelled = false

@@ -3,6 +3,26 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.48.2] — 2026-10-26
+### Modificato
+- **Energia, consumo istantaneo per dispositivo**: se nella dashboard Energia di Home
+  Assistant hai scelto i "singoli dispositivi", la lista mostra esattamente quelli, ognuno con
+  il suo sensore di potenza e il suo nome. Compaiono così anche i dispositivi che non sono
+  prese, come una pinza su una linea, e un elettrodomestico misurato anche da una presa
+  compare una volta sola. Contatori e loro fasi restano fuori, come prima. Per vedere un
+  dispositivo in lista, aggiungilo tra i singoli dispositivi della dashboard Energia di HA.
+- Senza singoli dispositivi configurati in HA restano le prese della 1.48.1, riconosciute
+  anche da un interruttore o una luce veri (non di configurazione) sullo stesso dispositivo.
+  Restano fuori stazioni di energia, inverter, UPS e telefoni (anche quando hanno un
+  interruttore) e le sorgenti di energia (rete, solare, batteria).
+### Corretto
+- **Stanze, badge "Corrente area"**: sommava tutti i sensori di potenza della stanza. Ora con
+  i singoli dispositivi della dashboard Energia somma quelli della stanza, e un dispositivo
+  misurato anche da quello "a monte" non si conta due volte. Senza, somma tutti i sensori di
+  potenza tranne batterie, stazioni di energia e sorgenti. In entrambi i casi senza i sensori
+  non disponibili. Prima, nella stanza di una power station si sommavano solare, batteria,
+  casa e rete, contando più volte la stessa energia.
+
 ## [1.48.1] — 2026-10-26
 ### Corretto
 - **Consumo istantaneo: in elenco solo le prese.** Nella scheda Energia la lista dei consumi
