@@ -28954,7 +28954,7 @@ function publicOptions(o) {
 }
 
 // src/version.ts
-var VERSION2 = true ? "0.7.2" : "dev";
+var VERSION2 = true ? "0.7.3" : "dev";
 
 // src/routes.ts
 function buildRoutes(deps) {

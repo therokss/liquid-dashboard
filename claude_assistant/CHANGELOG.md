@@ -3,6 +3,13 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.7.3] — 2026-11-01
+### Corretto
+- **"Apri nell'editor HA" con l'Assistente aperto da Liquid Dashboard** (pulsante con le
+  scintille, dalla 1.48.3): non apriva l'editor e cambiava l'indirizzo della dashboard. Ora
+  apre l'editor di Home Assistant anche da lì. Dal pannello nella barra laterale non cambia
+  nulla.
+
 ## [0.7.2] — 2026-11-01
 ### Modificato
 - **Torna dov'eri**: quando esci dal pannello e ci rientri, l'Assistente riapre la stessa
