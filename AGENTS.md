@@ -41,6 +41,10 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
 - **Anteprima senza HA né chiave API**: `npm run preview` in `assistant/` (case sintetiche di
   `test/fakeHome.ts`, `test/fakeVerify.ts`, `test/fakeDevices.ts` e `test/fakeMaintenance.ts` e un Claude simulato) dopo `npx vite build` in `web/`, oppure con
   `npm run dev:web` per l'hot reload.
+- Interfaccia: Home Assistant ricarica il pannello senza hash a ogni rientro. Sezione,
+  scorrimento, conversazione, analisi scelte, filtri e righe aperte si salvano con
+  `web/src/lib/remember.ts` (`useRemembered`, `useScrollMemory`; chiavi `assistente.*` in
+  localStorage). Il nuovo stato di navigazione va salvato lì, non in un altro storage.
 - Chat: prompt di sistema e tool sono congelati nell'intestazione di ogni conversazione
   (`/data/conversations/<id>.jsonl`, solo in aggiunta). Se cambi nomi o parametri dei tool
   incrementa `TOOLSET_VERSION` (`server/src/claude/tools/registry.ts`); se cambi il testo

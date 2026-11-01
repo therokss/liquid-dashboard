@@ -5,6 +5,7 @@ import { Button, GlassCard, Section } from '../components/Glass'
 import { DraftCard } from '../components/DraftCard'
 import { automationEditorPath, navigateHomeAssistant } from '../lib/navigate'
 import { t, type TextKey } from '../i18n/it'
+import { recall, remember, useRemembered } from '../lib/remember'
 
 // Verifica: controllo rapido gratuito (regole deterministiche) → problemi per automazione con
 // correzioni meccaniche applicabili come bozze → su richiesta, analisi approfondita di Claude.
@@ -15,22 +16,6 @@ const SEVERITY_ORDER: Record<Severity, number> = { errore: 0, avviso: 1, info: 2
 const SEVERITY_ICON: Record<Severity, typeof Info> = { errore: XCircle, avviso: AlertTriangle, info: Info }
 const usd = (n: number) => `$${n < 0.1 ? n.toFixed(3) : n.toFixed(2)}`
 const dateTimeIt = (s: string) => new Date(s).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-
-function storageGet(key: string): string | null {
-  try {
-    return sessionStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-
-function storageSet(key: string, value: string): void {
-  try {
-    sessionStorage.setItem(key, value)
-  } catch {
-    /* navigazione privata: si riparte dall'ultima verifica */
-  }
-}
 
 /** Stima in dollari dell'analisi approfondita per le automazioni scelte. */
 export function estimateCost(e: VerifyEstimate, selection: string[]): number {
@@ -344,8 +329,8 @@ export function VerifyPage({ onOpenChat }: { onOpenChat: (conversationId: string
   const [days, setDays] = useState(7)
   const [busy, setBusy] = useState<null | 'start' | 'analyze'>(null)
   const [error, setError] = useState<string | null>(null)
-  const [showInfo, setShowInfo] = useState(false)
-  const [showIgnored, setShowIgnored] = useState(false)
+  const [showInfo, setShowInfo] = useRemembered<boolean>('verifica.info', false)
+  const [showIgnored, setShowIgnored] = useRemembered<boolean>('verifica.ignorati', false)
   const [selection, setSelection] = useState<Set<string>>(new Set())
   const selectionFor = useRef<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -354,7 +339,7 @@ export function VerifyPage({ onOpenChat }: { onOpenChat: (conversationId: string
     try {
       const { run: r } = await api.verifyRun(id)
       setRun(r)
-      storageSet('as-verify', r.id)
+      remember('verifica.analisi', r.id)
       return r
     } catch (e) {
       if (e instanceof ApiCallError && e.status === 404) return null
@@ -366,7 +351,7 @@ export function VerifyPage({ onOpenChat }: { onOpenChat: (conversationId: string
     try {
       const o = await api.verify()
       setOverview(o)
-      const wanted = o.active ?? storageGet('as-verify') ?? o.runs[0]?.id ?? null
+      const wanted = o.active ?? recall('verifica.analisi') ?? o.runs[0]?.id ?? null
       const r = wanted ? await loadRun(wanted) : null
       if (!r && o.runs[0] && o.runs[0].id !== wanted) await loadRun(o.runs[0].id)
     } catch (e) {
@@ -405,7 +390,7 @@ export function VerifyPage({ onOpenChat }: { onOpenChat: (conversationId: string
     try {
       const { run: r } = await api.startVerify(days)
       setRun(r)
-      storageSet('as-verify', r.id)
+      remember('verifica.analisi', r.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {

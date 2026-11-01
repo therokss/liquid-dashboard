@@ -4,6 +4,7 @@ import { api, type MaintenanceAction, type MaintenanceIssue, type MaintenanceKin
 import { Button, GlassCard, Section } from '../components/Glass'
 import { navigateHomeAssistant } from '../lib/navigate'
 import { t, type TextKey } from '../i18n/it'
+import { useRemembered } from '../lib/remember'
 
 // Manutenzione: segnalazioni calcolate dall'add-on (senza Claude) e modifiche ai registri di HA
 // con un tocco. "Sposta" e "Disattiva" si annullano; le eliminazioni chiedono conferma.
@@ -142,7 +143,7 @@ export function MaintenanceView() {
   const [overview, setOverview] = useState<MaintenanceOverview | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [kind, setKind] = useState<MaintenanceKind | null>(null)
+  const [kind, setKind] = useRemembered<MaintenanceKind | null>('manutenzione.tipo', null, [null, ...KINDS])
   const autoChecked = useRef(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 

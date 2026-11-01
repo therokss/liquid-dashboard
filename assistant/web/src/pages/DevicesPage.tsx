@@ -3,6 +3,7 @@ import { BookOpen, CheckCheck, CheckCircle2, ChevronDown, ExternalLink, Globe, L
 import { api, budgetResetLabel, type ActiveStudy, type CatalogIntegration, type DeviceCard, type DeviceModel, type DevicesOverview, type StudyBatch } from '../api'
 import { Button, GlassCard, Section } from '../components/Glass'
 import { t, type TextKey } from '../i18n/it'
+import { useRemembered } from '../lib/remember'
 import { MaintenanceView } from './MaintenancePage'
 
 // Dispositivi: catalogo dei modelli presenti in casa (uno per modello, anche se arriva da più
@@ -363,9 +364,9 @@ function ModelRow({
 function ModelsView({ onOpenChat }: { onOpenChat: (conversationId: string) => void }) {
   const [overview, setOverview] = useState<DevicesOverview | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<Filter>('tutti')
-  const [open, setOpen] = useState<string | null>(null)
+  const [query, setQuery] = useRemembered<string>('dispositivi.cerca', '')
+  const [filter, setFilter] = useRemembered<Filter>('dispositivi.filtro', 'tutti', FILTERS)
+  const [open, setOpen] = useRemembered<string | null>('dispositivi.aperto', null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const refresh = useCallback(async () => {
@@ -532,26 +533,9 @@ function ModelsView({ onOpenChat }: { onOpenChat: (conversationId: string) => vo
 }
 
 type Tab = 'modelli' | 'manutenzione'
-const TAB_KEY = 'assistente.dispositivi.scheda'
-
-function savedTab(): Tab {
-  try {
-    return localStorage.getItem(TAB_KEY) === 'manutenzione' ? 'manutenzione' : 'modelli'
-  } catch {
-    return 'modelli'
-  }
-}
 
 export function DevicesPage({ onOpenChat }: { onOpenChat: (conversationId: string) => void }) {
-  const [tab, setTab] = useState<Tab>(savedTab)
-  const choose = (next: Tab) => {
-    setTab(next)
-    try {
-      localStorage.setItem(TAB_KEY, next)
-    } catch {
-      // archiviazione non disponibile: la scelta vale solo per questa visita
-    }
-  }
+  const [tab, choose] = useRemembered<Tab>('dispositivi.scheda', 'modelli', ['modelli', 'manutenzione'])
   return (
     <div className="as-page">
       <div className="as-dev-tabs" role="tablist" aria-label={t('tabDevices')}>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { MessageCircle, Sparkles, ShieldCheck, Cpu, Settings, RefreshCw } from 'lucide-react'
 import { api, ApiError, type Session } from './api'
 import { DiagnosticsPage } from './pages/DiagnosticsPage'
@@ -9,6 +9,7 @@ import { VerifyPage } from './pages/VerifyPage'
 import { DevicesPage } from './pages/DevicesPage'
 import { GlassCard } from './components/Glass'
 import { t } from './i18n/it'
+import { recall, remember, useScrollMemory } from './lib/remember'
 
 type Tab = 'chat' | 'suggest' | 'verify' | 'devices' | 'settings' | 'diagnostics'
 
@@ -22,13 +23,23 @@ const TABS: Array<{ id: Tab; label: string; icon: typeof MessageCircle }> = [
 ]
 
 // Navigazione con l'hash (#diagnostica): con base './' i percorsi annidati romperebbero gli asset.
+// Home Assistant ricarica il pannello senza hash quando ci rientri: senza hash si torna alla
+// sezione dove eri (lib/remember).
 const HASH: Record<Tab, string> = { chat: 'chat', suggest: 'suggerisci', verify: 'verifica', devices: 'dispositivi', settings: 'impostazioni', diagnostics: 'diagnostica' }
-const fromHash = (): Tab => (Object.entries(HASH).find(([, h]) => `#${h}` === location.hash)?.[0] as Tab | undefined) ?? 'chat'
+const tabOf = (h: string | null): Tab | undefined => Object.entries(HASH).find(([, v]) => v === h)?.[0] as Tab | undefined
+const fromHash = (): Tab => tabOf(location.hash.slice(1)) ?? tabOf(recall('sezione')) ?? 'chat'
 
 export function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [error, setError] = useState<{ status: number; message: string } | null>(null)
   const [tab, setTab] = useState<Tab>(fromHash)
+  const mainRef = useRef<HTMLElement>(null)
+  // La chat scorre da sola (in fondo, sull'ultima risposta); le altre sezioni tornano dov'eri.
+  useScrollMemory(mainRef, session && tab !== 'chat' ? tab : null)
+
+  useEffect(() => {
+    remember('sezione', HASH[tab])
+  }, [tab])
 
   const load = useCallback(async () => {
     setError(null)
@@ -53,11 +64,7 @@ export function App() {
 
   // "Discuti in chat" da Suggerisci e Verifica: la chat apre la conversazione appena creata.
   const openChat = (conversationId: string) => {
-    try {
-      sessionStorage.setItem('as-chat', conversationId)
-    } catch {
-      /* senza sessionStorage la chat apre l'ultima conversazione */
-    }
+    remember('chat', conversationId)
     go('chat')
   }
 
@@ -72,7 +79,7 @@ export function App() {
           {session && <span className="as-version">v{session.version}</span>}
         </header>
 
-        <main className={`as-main ${tab === 'chat' && session ? 'as-main-chat' : 'glass-scroll'}`}>
+        <main ref={mainRef} className={`as-main ${tab === 'chat' && session ? 'as-main-chat' : 'glass-scroll'}`}>
           {!session && !error && <p className="text-body as-center">{t('loading')}</p>}
           {error && (
             <GlassCard className="as-center-card">

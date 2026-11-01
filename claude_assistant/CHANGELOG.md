@@ -3,6 +3,19 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.7.2] — 2026-11-01
+### Modificato
+- **Torna dov'eri**: quando esci dal pannello e ci rientri, l'Assistente riapre la stessa
+  sezione, alla stessa posizione di scorrimento. Ritrovi anche:
+  - la conversazione aperta;
+  - l'analisi scelta in Suggerisci e in Verifica, con le opzioni "mostra informazioni" e
+    "mostra ignorati";
+  - in Dispositivi la scheda, la ricerca, il filtro e il modello aperto;
+  - in Manutenzione il tipo di problema scelto.
+
+  Prima Home Assistant ricaricava il pannello sempre dalla Chat. I dati restano solo su questo
+  dispositivo, anche dopo la chiusura dell'app.
+
 ## [0.7.1] — 2026-10-20
 ### Aggiunto
 - Opzione **`claude_plan`**: il piano con cui paghi Claude (`api`, `pro`, `max_5x`, `max_20x`,

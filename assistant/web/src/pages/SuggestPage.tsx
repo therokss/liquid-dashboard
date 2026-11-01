@@ -4,6 +4,7 @@ import { api, ApiCallError, type CandidateKind, type CandidateView, type Cause, 
 import { Button, GlassCard, Section } from '../components/Glass'
 import { DraftCard } from '../components/DraftCard'
 import { t, type TextKey } from '../i18n/it'
+import { recall, remember } from '../lib/remember'
 
 // Suggerisci: analisi locale dello storico (gratis) → candidati con i numeri → su richiesta
 // Claude scrive le automazioni, che diventano bozze applicabili come in chat.
@@ -22,22 +23,6 @@ const RUNNING = new Set(['raccolta', 'generazione'])
 const usd = (n: number) => `$${n < 0.1 ? n.toFixed(3) : n.toFixed(2)}`
 const dateIt = (s: string) => new Date(s).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
 const dateTimeIt = (s: string) => new Date(s).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-
-function storageGet(key: string): string | null {
-  try {
-    return sessionStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-
-function storageSet(key: string, value: string): void {
-  try {
-    sessionStorage.setItem(key, value)
-  } catch {
-    /* navigazione privata: si ricomincia dall'ultima analisi */
-  }
-}
 
 function Progress({ run, onStop }: { run: SuggestRunView; onStop: () => void }) {
   const p = run.progress
@@ -254,7 +239,7 @@ export function SuggestPage({ onOpenChat }: { onOpenChat: (conversationId: strin
     try {
       const { run: r } = await api.suggestRun(id)
       setRun(r)
-      storageSet('as-suggest', r.id)
+      remember('suggerisci.analisi', r.id)
       return r
     } catch (e) {
       if (e instanceof ApiCallError && e.status === 404) return null
@@ -266,7 +251,7 @@ export function SuggestPage({ onOpenChat }: { onOpenChat: (conversationId: strin
     try {
       const o = await api.suggest()
       setOverview(o)
-      const wanted = o.active ?? storageGet('as-suggest') ?? o.runs[0]?.id ?? null
+      const wanted = o.active ?? recall('suggerisci.analisi') ?? o.runs[0]?.id ?? null
       const r = wanted ? await loadRun(wanted) : null
       if (!r && o.runs[0] && o.runs[0].id !== wanted) await loadRun(o.runs[0].id)
     } catch (e) {
@@ -298,7 +283,7 @@ export function SuggestPage({ onOpenChat }: { onOpenChat: (conversationId: strin
     try {
       const { run: r } = await api.startSuggest(days)
       setRun(r)
-      storageSet('as-suggest', r.id)
+      remember('suggerisci.analisi', r.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {

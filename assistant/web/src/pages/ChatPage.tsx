@@ -19,6 +19,7 @@ import { api, ApiCallError, budgetResetLabel, type ConversationDetail, type Conv
 import { GlassCard } from '../components/Glass'
 import { DraftCard } from '../components/DraftCard'
 import { t } from '../i18n/it'
+import { recall, remember } from '../lib/remember'
 
 // Chat con Claude: elenco delle conversazioni, risposte in streaming via SSE (il turno gira
 // sul server: se la pagina si ricarica, si riaggancia), chip degli strumenti, Stop.
@@ -146,7 +147,7 @@ function Message({ item, drafts, onDraft }: { item: ViewItem } & DraftProps) {
 
 export function ChatPage({ session }: { session: Session }) {
   const [list, setList] = useState<ConversationSummary[]>([])
-  const [currentId, setCurrentId] = useState<string | null>(() => sessionStorageGet('as-chat'))
+  const [currentId, setCurrentId] = useState<string | null>(() => recall('chat'))
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
   const [pendingUser, setPendingUser] = useState<string | null>(null)
   const [live, setLive] = useState<LiveState | null>(null)
@@ -235,7 +236,7 @@ export function ChatPage({ session }: { session: Session }) {
   }, [refreshList])
 
   useEffect(() => {
-    sessionStorageSet('as-chat', currentId)
+    remember('chat', currentId)
     setDetail(null)
     setLive(null)
     setPendingUser(null)
@@ -460,22 +461,4 @@ export function ChatPage({ session }: { session: Session }) {
       </section>
     </div>
   )
-}
-
-// sessionStorage può essere bloccato nell'iframe (es. Safari con cookie di terze parti off).
-function sessionStorageGet(key: string): string | null {
-  try {
-    return sessionStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-
-function sessionStorageSet(key: string, value: string | null): void {
-  try {
-    if (value) sessionStorage.setItem(key, value)
-    else sessionStorage.removeItem(key)
-  } catch {
-    // ignorato
-  }
 }
