@@ -49,7 +49,7 @@ export const AssistantButton = memo(function AssistantButton() {
     }
     const s = useStore.getState()
     const base = (s.activeHassUrl || (localStorage.getItem('ha-ll-use-proxy') === '1' ? `${location.protocol}//${location.hostname}:8123` : s.hassUrl)).replace(/\/$/, '')
-    window.open(`${base}/hassio/ingress/${addon.slug}`, '_blank', 'noopener')
+    window.open(base + addon.path, '_blank', 'noopener')
   }
 
   return (

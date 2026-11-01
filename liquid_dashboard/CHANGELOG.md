@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.48.4] — 2026-11-01
+### Corretto
+- **Pulsante Assistente Claude fuori da Home Assistant** (porta diretta, browser): apriva
+  l'indirizzo degli add-on usato fino a HA 2026.1, che sulle versioni successive non porta
+  all'Assistente. Ora apre la pagina giusta per la versione di HA installata.
+
 ## [1.48.3] — 2026-11-01
 ### Aggiunto
 - **Assistente Claude dentro la dashboard.** Se hai installato e avviato l'add-on Assistente
