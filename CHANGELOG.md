@@ -3,6 +3,16 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.48.3] — 2026-11-01
+### Aggiunto
+- **Assistente Claude dentro la dashboard.** Se hai installato e avviato l'add-on Assistente
+  Claude, in basso a destra di ogni pagina compare un pulsante con le scintille, visibile
+  solo agli amministratori. Aperta da Home Assistant, la dashboard mostra l'Assistente a tutto
+  schermo sopra la pagina: si chiude con la X in alto a destra o con Esc. Chiudendo e
+  riaprendo, una risposta in corso non si interrompe. Dall'app e dalla porta diretta il
+  pulsante apre l'Assistente in Home Assistant. Senza l'add-on, o se è spento, il pulsante
+  non compare.
+
 ## [1.48.2] — 2026-10-26
 ### Modificato
 - **Energia, consumo istantaneo per dispositivo**: se nella dashboard Energia di Home

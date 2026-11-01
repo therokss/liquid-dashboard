@@ -61,6 +61,7 @@ const it: Record<string, string> = {
   "Casa": "Casa",
   "Cerca (es. unifi, temperatura, disco)…": "Cerca (es. unifi, temperatura, disco)…",
   "Ch": "Ch",
+  "Assistente Claude": "Assistente Claude",
   "Chiudi": "Chiudi",
   "Chiuso": "Chiuso",
   "Clima": "Clima",

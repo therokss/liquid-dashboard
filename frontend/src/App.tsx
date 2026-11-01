@@ -19,6 +19,7 @@ import { HomePage } from './pages/HomePage'
 import { RoomsPage } from './pages/RoomsPage'
 import { SecurityPage } from './pages/SecurityPage'
 import { MediaPage } from './pages/MediaPage'
+import { AssistantButton } from './components/AssistantButton'
 import { useNav, openTab, startNavHistory } from './lib/navState'
 
 // Caricate a richiesta: Impostazioni (con le sue sottopagine) e la dashboard
@@ -205,6 +206,7 @@ function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
         </AnimatePresence>
       </div>
       <TabBar active={activeTab} onChange={openTab} />
+      <AssistantButton />
     </div>
   )
 }
