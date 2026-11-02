@@ -12,8 +12,9 @@ import { findAssistant, servedByIngress, type AssistantAddon } from '../lib/assi
 // l'add-on è installato e avviato. Dentro Home Assistant l'Assistente si apre qui, in un
 // iframe sulla stessa origine; altrove (app, porta diretta) si apre in Home Assistant.
 // Una volta aperto l'iframe resta montato finché la dashboard è aperta, così chiudendo e
-// riaprendo una risposta in corso non si interrompe.
-export const AssistantButton = memo(function AssistantButton() {
+// riaprendo una risposta in corso non si interrompe. Senza barra delle schede (dashboard
+// personalizzata a schermo pieno) il pulsante scende al bordo inferiore.
+export const AssistantButton = memo(function AssistantButton({ withTabBar = true }: { withTabBar?: boolean }) {
   const t = useT()
   const { sendMessage } = useHA()
   const isAdmin = useStore((s) => s.isAdmin)
@@ -65,7 +66,7 @@ export const AssistantButton = memo(function AssistantButton() {
           style={{
             position: 'fixed',
             right: 16,
-            bottom: 'calc(var(--tabbar-height) + var(--safe-bottom) + 12px)',
+            bottom: withTabBar ? 'calc(var(--tabbar-height) + var(--safe-bottom) + 12px)' : 'calc(var(--safe-bottom) + 16px)',
             zIndex: 101,
             width: 52,
             height: 52,

@@ -3,6 +3,12 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.48.5] — 2026-11-02
+### Corretto
+- **Pulsante Assistente Claude sulle dashboard personalizzate**: sugli schermi a cui hai
+  assegnato una dashboard creata con l'editor, che si apre a tutto schermo, il pulsante non
+  compariva. Ora c'è anche lì, in basso a destra.
+
 ## [1.48.4] — 2026-11-01
 ### Corretto
 - **Pulsante Assistente Claude fuori da Home Assistant** (porta diretta, browser): apriva

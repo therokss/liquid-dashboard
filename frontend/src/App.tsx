@@ -174,9 +174,12 @@ function Dashboard({ onReconfigure }: { onReconfigure: () => void }) {
   // sua dashboard assegnata (è la configurazione voluta per quello schermo).
   if (assignedDash && !showDefault) {
     return (
-      <Suspense fallback={null}>
-        <CustomDashboardView dashboard={assignedDash} onDefault={() => setShowDefault(true)} />
-      </Suspense>
+      <>
+        <Suspense fallback={null}>
+          <CustomDashboardView dashboard={assignedDash} onDefault={() => setShowDefault(true)} />
+        </Suspense>
+        <AssistantButton withTabBar={false} />
+      </>
     )
   }
 
