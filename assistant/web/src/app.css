@@ -765,6 +765,22 @@ body {
 .as-draft-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
 .as-draft-done { flex-wrap: wrap; }
 
+/* Bozze con più elementi (0.8): una sezione per parte, nell'ordine in cui si applicano. */
+.as-draft-parts { display: flex; flex-direction: column; gap: var(--space-sm); }
+.as-draft-part {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border-dim);
+  background: var(--glass-bg);
+}
+.as-draft-part .as-draft-title strong { font-size: 15px; }
+.as-draft-entity { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-secondary); overflow-wrap: anywhere; }
+.as-draft-part-head { display: flex; align-items: flex-start; gap: var(--space-sm); }
+.as-draft-part-done { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 12px; color: var(--text-secondary); }
+
 .as-history { list-style: none; margin-top: var(--space-md); }
 .as-history li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); padding: 10px 0; border-top: 1px solid var(--glass-border-dim); }
 .as-history li:first-child { border-top: none; }

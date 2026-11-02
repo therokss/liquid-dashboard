@@ -3,7 +3,8 @@ import type { BetaTool } from '@anthropic-ai/sdk/resources/beta/messages/message
 import { ToolError, type ToolContext } from './common.ts'
 import { cercaEntita, dettagliEntita, infoDispositivo } from './entities.ts'
 import { catalogoTrigger, elencaAutomazioni, leggiAutomazione, riepilogoStorico } from './automations.ts'
-import { proponiAutomazione } from './drafts.ts'
+import { proponiAutomazione, proponiBozza } from './drafts.ts'
+import { leggiHelper, leggiScript } from './configs.ts'
 import { leggiSchedaDispositivo, studiaDispositivo } from './devices.ts'
 import { elencaNotifiche } from './notify.ts'
 import { log } from '../../log.ts'
@@ -14,14 +15,14 @@ import { log } from '../../log.ts'
  * cambia nomi o significato dei parametri, si incrementa e le chat vecchie restano leggibili
  * ma non proseguibili.
  */
-export const TOOLSET_VERSION = 4
+export const TOOLSET_VERSION = 5
 
 /**
  * Versioni di cui il server sa ancora eseguire tutti i tool: la 1 (0.2.x, sola lettura), la 2
- * (0.3–0.5, + bozze) e la 3 (0.6, + schede) sono sottoinsiemi invariati della 4, quindi le
- * chat vecchie proseguono.
+ * (0.3–0.5, + bozze), la 3 (0.6, + schede) e la 4 (0.7) proseguono. Dalla 5 (0.8)
+ * proponi_bozza sostituisce proponi_automazione, che resta eseguibile per le chat vecchie.
  */
-export const SUPPORTED_TOOLSETS = new Set([1, 2, 3, 4])
+export const SUPPORTED_TOOLSETS = new Set([1, 2, 3, 4, 5])
 
 export interface ToolSpec<S extends z.ZodType> {
   name: string
@@ -46,10 +47,13 @@ export const READ_TOOLS: AnySpec[] = [
   elencaNotifiche,
 ]
 
-/** Tool della chat: lettura + proposta di bozze + schede dei dispositivi (dalla 0.6). */
-export const CHAT_TOOLS: AnySpec[] = [...READ_TOOLS, proponiAutomazione, leggiSchedaDispositivo, studiaDispositivo]
+/** Tool della chat: lettura + script e helper (0.8) + bozze + schede dei dispositivi (0.6). */
+export const CHAT_TOOLS: AnySpec[] = [...READ_TOOLS, leggiScript, leggiHelper, proponiBozza, leggiSchedaDispositivo, studiaDispositivo]
 
-const byName = new Map(CHAT_TOOLS.map((t) => [t.name, t]))
+/** Tool delle chat aperte con versioni precedenti, non più proposti nelle nuove. */
+const LEGACY_TOOLS: AnySpec[] = [proponiAutomazione]
+
+const byName = new Map([...CHAT_TOOLS, ...LEGACY_TOOLS].map((t) => [t.name, t]))
 
 function jsonSchema(schema: z.ZodType): BetaTool.InputSchema {
   const js = z.toJSONSchema(schema, { io: 'input' }) as Record<string, unknown>

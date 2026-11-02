@@ -54,6 +54,22 @@ Secondo add-on dello stesso repository, indipendente da Liquid Dashboard.
   `drafts/service.ts` (route `/api/drafts/:id/apply|undo|discard`) e da
   `maintenance/service.ts` (registri dei dispositivi e delle entità). I tool di Claude ricevono solo
   `HAReader` (sola lettura, elenco chiuso di comandi in `ha/data.ts`).
+- Bozze (`server/src/drafts/`, dalla 0.8):
+  - una bozza ha `parts[]` (helper → script → automazioni), che si scrivono in sequenza;
+    se una fallisce, le precedenti si annullano in ordine inverso, e "Annulla" fa lo stesso;
+  - `automation.ts` normalizza le automazioni, `objects.ts` script e helper (domini ammessi
+    in `HELPER_DOMAINS`, valori predefiniti come quelli di HA);
+  - il writer scrive automazioni e script con la stessa API REST dell'editor
+    (`/api/config/{automation,script}/config/<id>`) e gli helper con i comandi WS
+    `<dominio>/create|update|delete`. Si modificano solo gli helper presenti in
+    `<dominio>/list` (creati dall'interfaccia), mai quelli in YAML;
+  - le bozze salvate prima della 0.8 si convertono in `migrateDraft` (`store.ts`);
+    `publicDraft` espone ancora i campi della singola automazione per le interfacce vecchie;
+  - le chat nuove usano `proponi_bozza`. `proponi_automazione` resta in `LEGACY_TOOLS`:
+    non si offre più ma si esegue per le conversazioni aperte prima.
+
+  Test con lo scrittore simulato di `test/fakeWriter.ts` (automazioni, script, helper,
+  registro delle entità).
 - Suggerisci (`server/src/suggest/`):
   - `collect.ts` legge il logbook a blocchi di un giorno e classifica le cause dai campi
     `context_*`;

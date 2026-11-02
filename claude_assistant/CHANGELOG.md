@@ -3,6 +3,44 @@
 Tutte le modifiche rilevanti all'**Assistente Claude**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [0.8.0] — 2026-11-02
+### Aggiunto
+- **Script e helper dalla chat.** Oltre alle automazioni, Claude ora prepara bozze per
+  creare o modificare:
+  - **script**, con campi, sequenza e modalità;
+  - **helper**: interruttore, numero, elenco di opzioni, testo, data e ora, pulsante,
+    contatore, timer, programmazione settimanale.
+
+  Come per le automazioni, la scheda mostra controlli, YAML e differenze, e nulla viene
+  scritto finché non tocchi il pulsante.
+- **Pacchetti**: quando una richiesta ha bisogno di più oggetti collegati (per esempio una
+  "modalità ospiti" fatta di un interruttore, uno script che la attiva e un'automazione che
+  la usa), arrivano in **una sola scheda** con fino a 6 elementi. Con **Crea tutto** /
+  **Applica tutto** si scrivono in ordine (helper, script, automazioni). Se uno viene
+  rifiutato, quelli già scritti tornano come prima. **Annulla** li ripristina tutti insieme.
+- **Avvisi d'impatto** sugli helper: se una modifica toglie opzioni a un elenco o cambia un
+  helper usato da automazioni e script, la scheda elenca chi lo usa prima che tu applichi.
+- In chat Claude può leggere la configurazione completa di uno script e di un helper, chi li
+  usa e se si possono modificare da qui.
+- Gli script e gli helper creati ricevono la categoria **Claude**, come le automazioni.
+  Dopo l'applicazione, il pulsante della scheda apre l'editor dello script o la pagina degli
+  helper.
+
+### Modificato
+- La scheda della bozza mostra ogni elemento con tipo, nome, entity_id ed esito.
+- *Impostazioni → Modifiche fatte dall'assistente* elenca anche script e helper e apre
+  l'editor giusto per ciascuno.
+- Le conversazioni aperte da ora usano il nuovo strumento per le bozze. Quelle aperte prima
+  continuano a funzionare come prima, solo per le automazioni: per script e helper apri una
+  **Nuova chat**.
+
+### Note
+- Non si modificano gli helper definiti in YAML (`configuration.yaml`, packages) né gli
+  script e le automazioni creati da una blueprint: Claude propone lo YAML da copiare.
+- Sensori template, gruppi, contatori di consumo e gli altri helper con configurazione
+  guidata non sono ancora supportati.
+- Claude non elimina nulla: per rimuovere quello che ha creato usa **Annulla** sulla scheda.
+
 ## [0.7.3] — 2026-11-01
 ### Corretto
 - **"Apri nell'editor HA" con l'Assistente aperto da Liquid Dashboard** (pulsante con le

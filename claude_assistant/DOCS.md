@@ -2,8 +2,9 @@
 
 Un assistente per Home Assistant basato su Claude (Anthropic) che:
 
-- **chatta** con te conoscendo i dispositivi della casa e **crea automazioni** scrivendole
-  direttamente in Home Assistant dopo la tua conferma (un tap, con backup e "Annulla");
+- **chatta** con te conoscendo i dispositivi della casa e **crea automazioni, script e
+  helper** scrivendoli direttamente in Home Assistant dopo la tua conferma (un tap, con
+  backup e "Annulla");
 - con **Suggerisci** analizza gli storici di sensori e pulsanti e propone automazioni con i
   numeri a supporto;
 - con **Verifica** controlla le automazioni esistenti (riferimenti rotti, soglie mai
@@ -14,7 +15,8 @@ Un assistente per Home Assistant basato su Claude (Anthropic) che:
 
 > Dalla versione 0.7.0 ci sono tutte le funzioni principali: **Chat** con creazione e
 > modifica delle automazioni con un tocco, **Suggerisci**, **Verifica**, **Dispositivi**
-> (con la **Manutenzione**) e **Diagnostica**.
+> (con la **Manutenzione**) e **Diagnostica**. Dalla 0.8.0 la chat crea e modifica anche
+> script e helper, anche insieme in un'unica scheda.
 
 ## Cosa serve
 
@@ -76,33 +78,61 @@ Apri il pannello **Assistente** → **Chat** e fai una domanda, per esempio:
 - "Perché l'automazione *Luci sera* non è scattata ieri?"
 - "Quali automazioni usano il sensore di presenza della cucina?"
 - "Preparami un'automazione che spenga le luci quando esco di casa."
+- "Crea una modalità ospiti: un interruttore, uno script che la attiva e un'automazione che
+  la spegne a mezzanotte."
 
 Sotto la risposta vedi quali letture ha fatto Claude (etichette) e il costo stimato.
 
-### Creare o modificare un'automazione
+### Creare o modificare automazioni, script e helper
 
 Chiedilo in chat ("spegni le luci del soggiorno quando non c'è nessuno da 10 minuti",
-"nell'automazione *Luci sera* aggiungi la condizione che sia buio"). Claude prepara una
-**bozza** e in chat compare una scheda con:
+"nell'automazione *Luci sera* aggiungi la condizione che sia buio", "crea uno script che
+chiuda tutte le tapparelle", "aggiungi l'opzione *Vacanza* all'elenco *Modalità casa*").
+Claude prepara una **bozza** e in chat compare una scheda con:
 
-- spiegazione e **controlli** superati (YAML, entità, servizi, validazione di HA);
+- spiegazione e **controlli** superati (YAML, campi, entità, servizi, validazione di HA);
 - lo **YAML** e, se è una modifica, le **differenze** rispetto a ora;
-- **Crea automazione** / **Applica modifica**, oppure **Scarta**; per le nuove anche
+- **Crea** / **Applica modifica**, oppure **Scarta**; per le automazioni nuove anche
   *Crea disattivata*.
 
+Oltre alle automazioni, Claude può creare e modificare:
+
+- **script**, con campi, sequenza e modalità;
+- **helper**: interruttore, numero, elenco di opzioni, testo, data e ora, pulsante,
+  contatore, timer e programmazione settimanale. L'entity_id viene dal nome
+  ("Modalità ospiti" → `input_boolean.modalita_ospiti`).
+
+Sensori template, gruppi, contatori di consumo e gli altri helper con configurazione guidata
+non sono ancora supportati: Claude ti spiega come crearli dall'interfaccia.
+
+**Pacchetti.** Se una richiesta ha bisogno di più oggetti collegati, per esempio un
+interruttore "Modalità ospiti", uno script che la attiva e un'automazione che la usa, la
+scheda li contiene tutti (fino a 6), ognuno con il suo YAML. **Crea tutto** /
+**Applica tutto** li scrive in ordine: prima gli helper, poi gli script, poi le automazioni.
+Se Home Assistant ne rifiuta uno, quelli già scritti tornano come prima e nulla resta a metà.
+
+Quando una modifica riguarda un helper usato da automazioni o script, la scheda elenca chi lo
+usa. Se togli opzioni a un elenco, indica anche chi usa proprio quelle opzioni, e Claude può
+aggiornare quelle automazioni nella stessa bozza.
+
 Claude non può applicare nulla da solo: scrive l'add-on dopo il tuo tocco, con la stessa
-API dell'editor di Home Assistant. Dopo l'applicazione trovi **Apri nell'editor** e
-**Annulla** (elimina la nuova automazione o ripristina la versione precedente, salvata in un
-backup). Le automazioni create ricevono la categoria **Claude**; la cronologia è in
-*Impostazioni → Modifiche fatte dall'assistente*.
+API dell'editor di Home Assistant. Dopo l'applicazione trovi **Apri nell'editor** (per gli
+helper apre la pagina degli Aiutanti) e **Annulla**: elimina ciò che è stato creato o
+ripristina la versione precedente, salvata in un backup; in un pacchetto annulla tutti gli
+elementi insieme. Se nel frattempo hai modificato un elemento dall'editor, prima di
+sovrascriverlo ti chiede conferma. Automazioni, script e helper creati ricevono la
+categoria **Claude**; la cronologia è in *Impostazioni → Modifiche fatte dall'assistente*.
+Claude non elimina nulla: quello che ha creato lo rimuovi con **Annulla** o da Home
+Assistant.
 
 Per le automazioni che comandano **serrature, apriporta, allarmi, sirene, valvole, garage
 e cancelli o il citofono** serve una seconda conferma esplicita. Alcuni servizi non sono mai
 ammessi (comandi di shell, script Python, chiamate REST, riavvio di Home Assistant, pulizia
-del recorder, aggiornamenti). Le automazioni definite in YAML/packages o create da una
-blueprint non si modificano da qui: Claude ti propone lo YAML da copiare.
+del recorder, aggiornamenti). Automazioni, script e helper definiti in YAML/packages, e
+automazioni e script creati da una blueprint, non si modificano da qui: Claude ti propone lo
+YAML da copiare.
 
-**Notifiche**: se un'automazione deve avvisarti, Claude ti chiede prima su quale dispositivo
+**Notifiche**: se un'automazione o uno script deve avvisarti, Claude ti chiede prima su quale dispositivo
 inviarla (l'app Home Assistant su un telefono o tablet, Alexa, la notifica nell'interfaccia
 di Home Assistant…), anche più di uno, e non sceglie da solo. Per mostrarti le opzioni vede
 i nomi dei servizi di notifica (per esempio `notify.mobile_app_…`), non i dati dei telefoni.
@@ -119,7 +149,8 @@ non ti serve eliminalo dagli Aiutanti: non verrà ricreato.
 > commenti nel file vengono persi.
 
 Ogni chat "fotografa" la casa all'apertura: se aggiungi dispositivi o cambi i modelli
-nelle opzioni, apri una **Nuova chat**. Lo storico degli stati copre i giorni conservati
+nelle opzioni, apri una **Nuova chat**. Lo stesso vale per script e helper: le chat aperte
+prima della 0.8.0 preparano solo automazioni. Lo storico degli stati copre i giorni conservati
 dal recorder (10 per impostazione predefinita, vedi il consiglio in *Suggerisci*); oltre,
 per i sensori numerici, si usano le statistiche giornaliere.
 
@@ -363,6 +394,6 @@ di Home Assistant).
 ## Permessi
 
 L'add-on usa l'API di Home Assistant con i permessi del Supervisor (amministratore), perché
-deve leggere storici e tracce e, dopo la tua conferma, salvare automazioni e modificare i
+deve leggere storici e tracce e, dopo la tua conferma, salvare automazioni, script e helper e modificare i
 registri dei dispositivi (area, disattivazione, eliminazione dalla Manutenzione). Il pannello è
 riservato agli amministratori e l'add-on non apre porte sulla rete.

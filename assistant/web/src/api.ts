@@ -103,16 +103,37 @@ export interface DraftPublic {
   critical: Array<{ ref: string; reason: string }>
   target: { entityId: string; alias: string; automationId: string } | null
   diff: Array<{ op: ' ' | '+' | '-'; line: string }> | null
+  /** Dalla 0.8: tutte le parti della bozza, in ordine di applicazione (helper, script, automazioni). */
+  parts: DraftPartPublic[]
   applied: { at: string; by: string; automationId: string; entityId: string | null; enabled: boolean; warning: string | null } | null
   undone: { at: string; by: string } | null
   discarded: { at: string; by: string } | null
   lastError: string | null
 }
 
+export type DraftObject = 'automation' | 'script' | 'helper'
+
+export interface DraftPartPublic {
+  object: DraftObject
+  domain: string | null
+  kind: 'create' | 'update'
+  alias: string
+  yaml: string
+  diff: Array<{ op: ' ' | '+' | '-'; line: string }> | null
+  entityId: string | null
+  /** id dell'automazione, chiave dello script o id dell'helper */
+  key: string | null
+  enabled: boolean | null
+}
+
 export interface HistoryEntry {
   ts: string
   by: string
   action: 'creata' | 'modificata' | 'annullata_creazione' | 'ripristinata' | 'rollback_automatico'
+  /** assente nelle voci di prima della 0.8: automazione */
+  object?: DraftObject
+  domain?: string
+  /** id dell'oggetto (nome storico): automazione, chiave dello script, id dell'helper */
   automationId: string
   entityId: string | null
   alias: string

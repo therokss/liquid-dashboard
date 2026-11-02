@@ -62,6 +62,39 @@ actions:
 mode: single
 \`\`\``
 
+const BUNDLE = [
+  { tipo: 'helper', yaml: 'input_boolean:\n  name: Modalità ospiti\n  icon: mdi:account-group\n' },
+  {
+    tipo: 'script',
+    yaml: `alias: Accoglienza ospiti
+description: Attiva la modalità ospiti e accende la lampada arco
+icon: mdi:human-greeting
+sequence:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.modalita_ospiti
+  - action: light.turn_on
+    target:
+      entity_id: light.lampada_arco
+`,
+  },
+  {
+    tipo: 'automazione',
+    yaml: `alias: Ospiti al tramonto
+description: Al tramonto, se la modalità ospiti è attiva, esegue l'accoglienza
+triggers:
+  - trigger: sun
+    event: sunset
+conditions:
+  - condition: state
+    entity_id: input_boolean.modalita_ospiti
+    state: "on"
+actions:
+  - action: script.accoglienza_ospiti
+`,
+  },
+]
+
 const DRAFT_YAML = `alias: Spegni lampada arco senza presenza
 description: Spegne la lampada dopo 10 minuti senza nessuno in soggiorno
 triggers:
@@ -229,13 +262,19 @@ const preview: StreamFn = async (params, signal, h) => {
   const userText = JSON.stringify(params.messages.filter((m) => m.role === 'user').at(-1)?.content ?? '').toLowerCase()
   h.onBlockStart('thinking')
   await sleep(700)
-  if (/\bcrea\b|spegn/.test(userText) && !hasResult) {
-    h.onBlockStart('tool_use', 'proponi_automazione')
+  if (/ospiti/.test(userText) && !hasResult) {
+    // Pacchetto (0.8): helper, script che lo usa e automazione che richiama lo script.
+    h.onBlockStart('tool_use', 'proponi_bozza')
     await sleep(500)
-    return msg([thinking(), toolUse(`tu_${Date.now()}`, 'proponi_automazione', { yaml: DRAFT_YAML, spiegazione: 'Spegne la lampada arco quando il radar non rileva nessuno per 10 minuti, solo se è accesa.' })], 'tool_use')
+    return msg([thinking(), toolUse(`tu_${Date.now()}`, 'proponi_bozza', { elementi: BUNDLE, spiegazione: 'Un interruttore "Modalità ospiti", uno script che la attiva e accende la lampada, e un\'automazione che lo esegue al tramonto se la modalità è attiva.' })], 'tool_use')
   }
-  if (hasResult && /proponi_automazione|bozza/.test(JSON.stringify(last.content))) {
-    const text1 = 'Ho preparato la bozza: controlla i dettagli nella scheda e premi **Crea automazione** se ti va bene.'
+  if (/\bcrea\b|spegn/.test(userText) && !hasResult) {
+    h.onBlockStart('tool_use', 'proponi_bozza')
+    await sleep(500)
+    return msg([thinking(), toolUse(`tu_${Date.now()}`, 'proponi_bozza', { elementi: [{ tipo: 'automazione', yaml: DRAFT_YAML }], spiegazione: 'Spegne la lampada arco quando il radar non rileva nessuno per 10 minuti, solo se è accesa.' })], 'tool_use')
+  }
+  if (hasResult && /proponi_|bozza/.test(JSON.stringify(last.content))) {
+    const text1 = 'Ho preparato la bozza: controlla i dettagli nella scheda e confermala se ti va bene.'
     h.onBlockStart('text')
     h.onText(text1)
     return msg([thinking(), text(text1)], 'end_turn')

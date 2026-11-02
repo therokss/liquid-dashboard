@@ -23,7 +23,7 @@ export interface ParseResult {
   warnings: string[]
 }
 
-function isPlainObject(v: unknown): v is Record<string, unknown> {
+export function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
@@ -48,13 +48,13 @@ export function parseYaml(text: string): { value?: unknown; errors: string[] } {
   }
 }
 
-function asList(v: unknown): unknown[] {
+export function asList(v: unknown): unknown[] {
   if (v === undefined || v === null) return []
   return Array.isArray(v) ? v : [v]
 }
 
 /** service: → action: in ogni passo, anche annidato (choose, if, parallel, repeat, sequence). */
-function normalizeSteps(steps: unknown[], fixes: Set<string>): unknown[] {
+export function normalizeSteps(steps: unknown[], fixes: Set<string>): unknown[] {
   return steps.map((step) => {
     if (!isPlainObject(step)) return step
     const s: Record<string, unknown> = { ...step }
@@ -158,6 +158,21 @@ export function normalizeAutomation(raw: unknown): ParseResult {
   for (const k of KEY_ORDER) if (c[k] !== undefined) ordered[k] = c[k]
   if ((ordered.conditions as unknown[]).length === 0) delete ordered.conditions
   return { config: errors.length ? undefined : ordered, errors, fixes: [...fixes], warnings }
+}
+
+/**
+ * Come lo slugify di Home Assistant per i casi comuni (accenti, spazi, apostrofi): da qui
+ * vengono gli id degli helper creati dall'interfaccia e la chiave dei nuovi script.
+ */
+export function haSlug(text: string): string {
+  return (
+    text
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'unknown'
+  )
 }
 
 /**

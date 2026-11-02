@@ -37,3 +37,13 @@ export function navigateHomeAssistant(path: string): void {
 }
 
 export const automationEditorPath = (automationId: string) => `/config/automation/edit/${encodeURIComponent(automationId)}`
+export const scriptEditorPath = (key: string) => `/config/script/edit/${encodeURIComponent(key)}`
+/** Gli helper non hanno una pagina di modifica propria: si aprono dall'elenco. */
+export const HELPERS_PATH = '/config/helpers'
+
+/** Pagina di Home Assistant da cui si modifica l'oggetto (automazione, script o helper). */
+export function editorPath(object: 'automation' | 'script' | 'helper' | undefined, key: string): string {
+  if (object === 'script') return scriptEditorPath(key)
+  if (object === 'helper') return HELPERS_PATH
+  return automationEditorPath(key)
+}

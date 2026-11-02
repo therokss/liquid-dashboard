@@ -198,11 +198,12 @@ test('Verifica: controllo rapido sui casi noti, correzione con un tap annullabil
     await service.fix(run.id, id, [pump.id, find('Pompa giardino la sera', 'sintassi_vecchia').id], 'Demo')
     const draftId = s.store.get(run.id)!.fixes[id]!.draftId!
     const draft = s.draftStore.get(draftId)!
-    assert.equal(draft.kind, 'update')
+    const part = draft.parts[0]!
+    assert.equal(part.kind, 'update')
     assert.deepEqual(draft.verification, { runId: run.id, automation: id })
-    assert.match(draft.yaml, /switch\.shelly_uscita_0/)
-    assert.doesNotMatch(draft.yaml, /service:|platform:/)
-    assert.ok(draft.diff!.some((l) => l.op === '-' && l.line.includes('switch.pompa_giardino')))
+    assert.match(part.yaml, /switch\.shelly_uscita_0/)
+    assert.doesNotMatch(part.yaml, /service:|platform:/)
+    assert.ok(part.diff!.some((l) => l.op === '-' && l.line.includes('switch.pompa_giardino')))
     await s.drafts.apply(draftId, { enabled: true, confirmCritical: false, by: 'Demo' })
     assert.match(JSON.stringify(s.writer.files.get('9000000000001')), /shelly_uscita_0/)
     await s.drafts.undo(draftId, { force: false, by: 'Demo' })
@@ -287,7 +288,7 @@ test('Verifica: analisi approfondita a lotti, bozze di correzione con una ripara
     const a = done.reviews['automation.assenza_soggiorno']!
     assert.equal(a.giudizio, 'problemi')
     const d = s.draftStore.get(a.draftId!)!
-    assert.equal(d.kind, 'update')
+    assert.equal(d.parts[0]!.kind, 'update')
     assert.deepEqual(d.verification, { runId: run.id, automation: 'automation.assenza_soggiorno' })
     const lav = done.reviews['automation.5_min_lavatrice']!
     assert.equal(lav.repaired, true)

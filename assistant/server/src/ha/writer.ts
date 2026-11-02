@@ -1,11 +1,14 @@
 import type { HAConnection } from './connection.ts'
 import type { HARest } from './rest.ts'
 import type { HAState } from './types.ts'
+import { isHelperDomain } from '../drafts/objects.ts'
 
 // Le UNICHE scritture verso Home Assistant, chiamate solo dal server dopo il tap di un
 // amministratore (mai da Claude): salvare/eliminare un'automazione con l'API REST dell'editor,
 // assegnarle la categoria "Claude", attivarla o disattivarla; dalla 0.7 (Manutenzione)
-// spostare, disattivare o eliminare dispositivi ed eliminare entità non più fornite.
+// spostare, disattivare o eliminare dispositivi ed eliminare entità non più fornite; dalla
+// 0.8 salvare/eliminare script (scripts.yaml, stessa API dell'editor) e creare, modificare o
+// eliminare helper dell'interfaccia (comandi <dominio>/create|update|delete).
 
 export class WriteError extends Error {
   constructor(readonly status: number, message: string) {
@@ -13,7 +16,10 @@ export class WriteError extends Error {
   }
 }
 
-export interface AutomationWriter {
+/** Ambito delle categorie nel registro: una per pagina di Home Assistant. */
+export type CategoryScope = 'automation' | 'script' | 'helpers'
+
+export interface DraftWriter {
   /** Configurazione salvata in automations.yaml, o null se l'id non è modificabile dall'editor. */
   getConfig(id: string): Promise<Record<string, unknown> | null>
   save(id: string, config: Record<string, unknown>): Promise<void>
@@ -21,10 +27,31 @@ export interface AutomationWriter {
   getState(entityId: string): Promise<HAState | null>
   /** Configurazione caricata (dopo il reload) dell'automazione. */
   loadedConfig(entityId: string): Promise<Record<string, unknown> | null>
-  ensureCategory(name: string, icon: string): Promise<string>
-  setCategory(entityId: string, categoryId: string): Promise<void>
+  ensureCategory(name: string, icon: string, scope?: CategoryScope): Promise<string>
+  setCategory(entityId: string, categoryId: string, scope?: CategoryScope): Promise<void>
   setEnabled(entityId: string, enabled: boolean): Promise<void>
+
+  /** Script in scripts.yaml (chiave = object_id), o null se non c'è (YAML altrove, packages). */
+  getScript(key: string): Promise<Record<string, unknown> | null>
+  saveScript(key: string, config: Record<string, unknown>): Promise<void>
+  removeScript(key: string): Promise<void>
+  /** Configurazione caricata dello script. */
+  loadedScript(entityId: string): Promise<Record<string, unknown> | null>
+
+  /** Helper creati dall'interfaccia (quelli in YAML non ci sono). */
+  listHelpers(domain: string): Promise<Array<Record<string, unknown>>>
+  createHelper(domain: string, config: Record<string, unknown>): Promise<Record<string, unknown>>
+  updateHelper(domain: string, id: string, config: Record<string, unknown>): Promise<Record<string, unknown>>
+  removeHelper(domain: string, id: string): Promise<void>
+
+  /** Voce del registro delle entità (integrazione e unique_id), o null. */
+  registryEntry(entityId: string): Promise<{ platform: string; unique_id: string } | null>
+  /** entity_id dell'entità con questo unique_id (ricerca nell'intero registro). */
+  entityIdFor(platform: string, uniqueId: string): Promise<string | null>
 }
+
+/** Nome storico: le automazioni sono state le prime e per anni le sole scritture. */
+export type AutomationWriter = DraftWriter
 
 /** Registri dei dispositivi e delle entità (Manutenzione). */
 export interface RegistryWriter {
@@ -45,7 +72,7 @@ function message(data: unknown, fallback: string): string {
   return typeof data === 'string' && data ? data : fallback
 }
 
-export class HAWriter implements AutomationWriter, HelperWriter, RegistryWriter {
+export class HAWriter implements DraftWriter, HelperWriter, RegistryWriter {
   constructor(
     private readonly rest: HARest,
     private readonly conn: Pick<HAConnection, 'sendMessage'>,
@@ -87,17 +114,87 @@ export class HAWriter implements AutomationWriter, HelperWriter, RegistryWriter 
     }
   }
 
-  async ensureCategory(name: string, icon: string): Promise<string> {
-    const list = await this.conn.sendMessage<Array<{ category_id: string; name: string }>>({ type: 'config/category_registry/list', scope: 'automation' })
+  async ensureCategory(name: string, icon: string, scope: CategoryScope = 'automation'): Promise<string> {
+    const list = await this.conn.sendMessage<Array<{ category_id: string; name: string }>>({ type: 'config/category_registry/list', scope })
     const found = list.find((c) => c.name.toLowerCase() === name.toLowerCase())
     if (found) return found.category_id
-    const created = await this.conn.sendMessage<{ category_id: string }>({ type: 'config/category_registry/create', scope: 'automation', name, icon })
+    const created = await this.conn.sendMessage<{ category_id: string }>({ type: 'config/category_registry/create', scope, name, icon })
     return created.category_id
   }
 
-  async setCategory(entityId: string, categoryId: string): Promise<void> {
-    if (!entityId.startsWith('automation.')) throw new WriteError(400, 'Solo le automazioni possono ricevere la categoria')
-    await this.conn.sendMessage({ type: 'config/entity_registry/update', entity_id: entityId, categories: { automation: categoryId } })
+  async setCategory(entityId: string, categoryId: string, scope: CategoryScope = 'automation'): Promise<void> {
+    const domain = entityId.split('.')[0]!
+    const ok = scope === 'helpers' ? isHelperDomain(domain) : domain === scope
+    if (!ok) throw new WriteError(400, `${entityId} non può ricevere una categoria di tipo ${scope}`)
+    await this.conn.sendMessage({ type: 'config/entity_registry/update', entity_id: entityId, categories: { [scope]: categoryId } })
+  }
+
+  private scriptPath(key: string): string {
+    if (!/^[a-z0-9_]{1,64}$/.test(key)) throw new WriteError(400, `chiave di script non valida: ${key}`)
+    return `/config/script/config/${key}`
+  }
+
+  async getScript(key: string): Promise<Record<string, unknown> | null> {
+    const r = await this.rest.get<Record<string, unknown>>(this.scriptPath(key))
+    if (r.status === 404 || r.status === 400) return null
+    if (!r.ok || !r.data || typeof r.data !== 'object') throw new WriteError(r.status, message(r.data, `Lettura dello script non riuscita (HTTP ${r.status})`))
+    return r.data
+  }
+
+  async saveScript(key: string, config: Record<string, unknown>): Promise<void> {
+    const r = await this.rest.request('POST', this.scriptPath(key), config, 30_000)
+    if (!r.ok) throw new WriteError(r.status, message(r.data, `Salvataggio dello script rifiutato da Home Assistant (HTTP ${r.status})`))
+  }
+
+  async removeScript(key: string): Promise<void> {
+    const r = await this.rest.request('DELETE', this.scriptPath(key), undefined, 30_000)
+    if (!r.ok) throw new WriteError(r.status, message(r.data, `Eliminazione dello script rifiutata da Home Assistant (HTTP ${r.status})`))
+  }
+
+  async loadedScript(entityId: string): Promise<Record<string, unknown> | null> {
+    try {
+      const r = await this.conn.sendMessage<{ config: Record<string, unknown> }>({ type: 'script/config', entity_id: entityId })
+      return r?.config ?? null
+    } catch {
+      return null
+    }
+  }
+
+  private helperDomain(domain: string): string {
+    if (!isHelperDomain(domain)) throw new WriteError(400, `tipo di helper non ammesso: ${domain}`)
+    return domain
+  }
+
+  async listHelpers(domain: string): Promise<Array<Record<string, unknown>>> {
+    const r = await this.conn.sendMessage<Array<Record<string, unknown>>>({ type: `${this.helperDomain(domain)}/list` })
+    return Array.isArray(r) ? r : []
+  }
+
+  async createHelper(domain: string, config: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return this.conn.sendMessage<Record<string, unknown>>({ ...config, type: `${this.helperDomain(domain)}/create` }, 30_000)
+  }
+
+  async updateHelper(domain: string, id: string, config: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const { id: _ignored, ...fields } = config
+    return this.conn.sendMessage<Record<string, unknown>>({ ...fields, type: `${this.helperDomain(domain)}/update`, [`${domain}_id`]: id }, 30_000)
+  }
+
+  async removeHelper(domain: string, id: string): Promise<void> {
+    await this.conn.sendMessage({ type: `${this.helperDomain(domain)}/delete`, [`${domain}_id`]: id }, 30_000)
+  }
+
+  async registryEntry(entityId: string): Promise<{ platform: string; unique_id: string } | null> {
+    try {
+      const r = await this.conn.sendMessage<{ platform?: string; unique_id?: string }>({ type: 'config/entity_registry/get', entity_id: entityId })
+      return r && typeof r.platform === 'string' && typeof r.unique_id === 'string' ? { platform: r.platform, unique_id: r.unique_id } : null
+    } catch {
+      return null
+    }
+  }
+
+  async entityIdFor(platform: string, uniqueId: string): Promise<string | null> {
+    const list = await this.conn.sendMessage<Array<{ entity_id: string; platform: string; unique_id: string }>>({ type: 'config/entity_registry/list' }, 60_000).catch(() => [])
+    return list.find((e) => e.platform === platform && e.unique_id === uniqueId)?.entity_id ?? null
   }
 
   async createInputBoolean(name: string, icon: string): Promise<{ id: string }> {

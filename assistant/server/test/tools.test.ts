@@ -179,5 +179,5 @@ test('elenca_notifiche: telefoni col nome del dispositivo, Alexa, interfaccia di
   // La regola nel prompt della chat: chiedere il dispositivo prima della bozza.
   resetSnapshotCache()
   const prompt = buildSystemPrompt(await buildHomeSnapshot(fakeHA(), DEFAULT_CONSENTS))[0]!.text
-  assert.match(prompt, /Notifiche: prima di proporre un'automazione che avvisa qualcuno, chiedi all'utente su quale dispositivo/)
+  assert.match(prompt, /Notifiche: prima di proporre un'automazione o uno script che avvisa qualcuno, chiedi all'utente su quale dispositivo/)
 })

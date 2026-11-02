@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ExternalLink, Eye, Loader2, ShieldAlert, Stethoscope } from 'lucide-react'
 import { api, type Budget, type ConsentKey, type Consents, type HAUser, type HistoryEntry, type InventoryStats, type SettingsData, type UsageSlice } from '../api'
-import { automationEditorPath, navigateHomeAssistant } from '../lib/navigate'
+import { editorPath, navigateHomeAssistant } from '../lib/navigate'
 import { Button, Section } from '../components/Glass'
 import { t, type TextKey } from '../i18n/it'
 
@@ -210,7 +210,7 @@ function History() {
                 </p>
               </div>
               {(e.action === 'creata' || e.action === 'modificata' || e.action === 'ripristinata') && (
-                <button type="button" className="as-icon-btn" onClick={() => navigateHomeAssistant(automationEditorPath(e.automationId))} aria-label={t('draftOpenEditor')} title={t('draftOpenEditor')}>
+                <button type="button" className="as-icon-btn" onClick={() => navigateHomeAssistant(editorPath(e.object, e.automationId))} aria-label={e.object === 'helper' ? t('draftOpenHelpers') : t('draftOpenEditor')} title={e.object === 'helper' ? t('draftOpenHelpers') : t('draftOpenEditor')}>
                   <ExternalLink size={16} />
                 </button>
               )}

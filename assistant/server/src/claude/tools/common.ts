@@ -6,14 +6,26 @@ import { entityName } from '../../inventory/inventory.ts'
 import type { CatalogEntry } from '../../devices/catalog.ts'
 import type { Card } from '../../devices/kb.ts'
 
+export interface ProposedDraft {
+  id: string
+  parts: Array<{ object: 'automation' | 'script' | 'helper'; domain?: string; kind: 'create' | 'update'; alias: string; entityId?: string; target?: { entityId: string } }>
+  fixes: string[]
+  warnings: string[]
+  critical: Array<{ ref: string; reason: string }>
+}
+
+export type ProposeOutcome = { ok: true; draft: ProposedDraft } | { ok: false; errors: string[]; warnings: string[]; fixes: string[] }
+
 export interface DraftProposer {
-  propose(
-    input: { yaml: string; spiegazione: string; sostituisce?: string },
+  /** Una sola automazione (strumento proponi_automazione delle chat fino alla 0.7). */
+  propose(input: { yaml: string; spiegazione: string; sostituisce?: string }, call: { conversationId: string; toolUseId: string }): Promise<ProposeOutcome>
+  /** Una o più parti (automazioni, script, helper) da applicare insieme (dalla 0.8). */
+  proposeParts(
+    input: { elementi: Array<{ tipo: 'automazione' | 'script' | 'helper'; yaml: string; sostituisce?: string }>; spiegazione: string },
     call: { conversationId: string; toolUseId: string },
-  ): Promise<
-    | { ok: true; draft: { id: string; kind: 'create' | 'update'; alias: string; fixes: string[]; warnings: string[]; critical: Array<{ ref: string; reason: string }>; target?: { entityId: string } } }
-    | { ok: false; errors: string[]; warnings: string[]; fixes: string[] }
-  >
+  ): Promise<ProposeOutcome>
+  /** Script o helper esistente: chiave, modificabilità da qui e configurazione salvata. */
+  inspect(entityId: string): Promise<{ key: string | null; editable: boolean; reason?: string; config?: Record<string, unknown> }>
 }
 
 /** Conoscenza dei modelli di dispositivo (catalogo + schede KB), per i tool della chat. */
@@ -28,7 +40,7 @@ export interface ToolContext {
   /** Letti a ogni chiamata: se l'utente revoca un consenso vale subito, anche nelle chat aperte. */
   consents: () => Consents
   now: () => Date
-  /** Solo nella chat: serve a proponi_automazione per legare la bozza alla scheda. */
+  /** Solo nella chat: serve a proponi_bozza per legare la bozza alla scheda. */
   drafts?: DraftProposer
   call?: { conversationId: string; toolUseId: string }
   /** Schede dei dispositivi (dalla 0.6). */

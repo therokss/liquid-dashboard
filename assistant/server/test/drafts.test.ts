@@ -1,12 +1,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { lineDiff, normalizeAutomation, parseYaml, toYaml } from '../src/drafts/automation.ts'
 import { checkAutomation, type CheckContext } from '../src/drafts/checks.ts'
 import { DraftService, DraftError, configHash, slugCandidates } from '../src/drafts/service.ts'
 import { DraftStore } from '../src/drafts/store.ts'
+import { normalizeHelper, normalizeScript } from '../src/drafts/objects.ts'
+import { publicDraft } from '../src/drafts/service.ts'
+import { executeTool } from '../src/claude/tools/registry.ts'
+import { DEFAULT_CONSENTS } from '../src/inventory/privacy.ts'
 import { ConversationStore } from '../src/chat/store.ts'
 import { AUTOMATION_CONFIG, fakeHA, SERVICES } from './fakeHome.ts'
 import { fakeWriter } from './fakeWriter.ts'
@@ -142,11 +146,11 @@ test('diff a righe e slug degli entity_id', () => {
   assert.ok(slugCandidates("Spegni l'aria")!.includes('automation.spegni_l_aria'))
 })
 
-async function setup(opts: { initial?: Record<string, any> } = {}) {
+async function setup(opts: { initial?: Record<string, any>; scripts?: Record<string, any>; helpers?: Record<string, Record<string, any>> } = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'assistente-bozze-'))
   const ha = fakeHA()
   const states = await ha.states()
-  const writer = fakeWriter(states, opts.initial ?? { '1700000000001': (({ id: _id, ...rest }) => rest)(AUTOMATION_CONFIG) })
+  const writer = fakeWriter(states, opts.initial ?? { '1700000000001': (({ id: _id, ...rest }) => rest)(AUTOMATION_CONFIG) }, { scripts: opts.scripts, helpers: opts.helpers })
   const store = new DraftStore(dir)
   await store.load()
   const conversations = new ConversationStore(dir)
@@ -167,7 +171,7 @@ test('bozza nuova: proposta, conferma, categoria, disattivata, evento, Annulla',
     const p = await t.service.propose({ yaml: GOOD, spiegazione: 'Spegne la lampada quando la stanza resta vuota.' }, t.call)
     assert.equal(p.ok, true)
     if (!p.ok) return
-    assert.equal(p.draft.kind, 'create')
+    assert.equal(p.draft.parts[0]!.kind, 'create')
     assert.equal(p.draft.checks.every((c) => c.ok), true)
     assert.equal(t.writer.calls.filter((c) => c.startsWith('save')).length, 0, 'proporre non scrive nulla')
     const vc = t.ha.calls.find((c) => c.type === 'validate_config')!
@@ -175,9 +179,9 @@ test('bozza nuova: proposta, conferma, categoria, disattivata, evento, Annulla',
 
     const applied = await t.service.apply(p.draft.id, { enabled: false, confirmCritical: false, by: 'Admin Demo' })
     assert.equal(applied.status, 'applied')
-    const a = applied.applied!
+    const a = applied.parts[0]!.applied!
     assert.equal(a.entityId, 'automation.spegni_lampada_senza_presenza')
-    assert.equal(t.writer.files.get(a.automationId)!.id, a.automationId)
+    assert.equal(t.writer.files.get(a.key)!.id, a.key)
     assert.equal(t.writer.entityCategory.get(a.entityId!), 'cat_claude')
     assert.equal(t.states.get(a.entityId!)!.state, 'off', 'creata disattivata')
     assert.ok(t.writer.calls.includes(`enabled ${a.entityId} false`))
@@ -194,7 +198,7 @@ test('bozza nuova: proposta, conferma, categoria, disattivata, evento, Annulla',
 
     const undone = await t.service.undo(p.draft.id, { force: false, by: 'Admin Demo' })
     assert.equal(undone.status, 'undone')
-    assert.equal(t.writer.files.has(a.automationId), false)
+    assert.equal(t.writer.files.has(a.key), false)
     assert.equal((await t.store.history())[0]!.action, 'annullata_creazione')
   } finally {
     await rm(t.dir, { recursive: true, force: true })
@@ -247,9 +251,10 @@ test('modifica: diff, backup, conflitto, Annulla ripristina, Annulla dopo modifi
     const p = await t.service.propose({ yaml: changed, spiegazione: 'Riparte se scatta di nuovo.', sostituisce: '1700000000001' }, t.call)
     assert.equal(p.ok, true)
     if (!p.ok) return
-    assert.equal(p.draft.kind, 'update')
-    assert.ok(p.draft.diff!.some((l) => l.op === '+' && l.line === 'mode: restart'))
-    assert.ok(p.draft.diff!.some((l) => l.op === '-' && l.line === 'mode: single'))
+    const part = p.draft.parts[0]!
+    assert.equal(part.kind, 'update')
+    assert.ok(part.diff!.some((l) => l.op === '+' && l.line === 'mode: restart'))
+    assert.ok(part.diff!.some((l) => l.op === '-' && l.line === 'mode: single'))
 
     // Modificata da qualcun altro dopo la proposta → rifiuto
     t.writer.externalEdit('1700000000001', { description: 'cambiata a mano' })
@@ -258,7 +263,7 @@ test('modifica: diff, backup, conflitto, Annulla ripristina, Annulla dopo modifi
 
     const applied = await t.service.apply(p.draft.id, { enabled: true, confirmCritical: false, by: 'x' })
     assert.equal(t.writer.files.get('1700000000001')!.mode, 'restart')
-    const backup = JSON.parse(await readFile(applied.applied!.backupFile!, 'utf8'))
+    const backup = JSON.parse(await readFile(applied.parts[0]!.applied!.backupFile!, 'utf8'))
     assert.equal(backup.config.mode, 'single')
     assert.equal(t.writer.entityCategory.size, 0, 'nelle modifiche la categoria esistente non si tocca')
 
@@ -300,6 +305,310 @@ test('scarta: stato e evento per Claude', async () => {
     const reloaded = new DraftStore(t.dir)
     await reloaded.load()
     assert.equal(reloaded.get(p.draft.id)!.status, 'discarded')
+  } finally {
+    await rm(t.dir, { recursive: true, force: true })
+  }
+})
+
+// --- Script e helper (0.8) ----------------------------------------------------------------
+
+test('script: forma di scripts.yaml, actions → sequence, campi e chiavi controllati', () => {
+  const r = normalizeScript(parseYaml(`attiva_ospiti:
+  alias: Attiva ospiti
+  sequence:
+    - service: light.turn_on
+      target: { entity_id: light.lampada_arco }
+`).value)
+  assert.deepEqual(r.errors, [])
+  assert.deepEqual(Object.keys(r.config!), ['alias', 'mode', 'sequence'])
+  assert.equal((r.config!.sequence as any[])[0].action, 'light.turn_on')
+  assert.ok(r.fixes.some((f) => f.includes('attiva_ospiti')))
+  assert.match(r.warnings.join(), /description/)
+  const a = normalizeScript({ alias: 'x', actions: [{ action: 'light.turn_off' }] })
+  assert.ok(a.config && a.fixes.some((f) => f.includes('sequence')))
+  assert.match(normalizeScript({ sequence: [{ action: 'light.turn_off' }] }).errors.join(), /alias/)
+  assert.match(normalizeScript({ alias: 'x', sequence: [] }).errors.join(), /almeno un'azione/)
+  assert.match(normalizeScript({ alias: 'x', sequence: [{ delay: 1 }], fields: { 'Nome Campo': {} } }).errors.join(), /minuscole/)
+  assert.match(normalizeScript({ alias: 'x', sequence: [{ delay: 1 }], trigger: [] }).errors.join(), /Chiavi non ammesse/)
+})
+
+test('helper: dominio unico, campi per tipo, valori predefiniti di Home Assistant', () => {
+  assert.match(normalizeHelper({ template: { name: 'x' } }).errors.join(), /non è un helper/)
+  assert.match(normalizeHelper({ input_boolean: { name: 'a' }, input_number: {} }).errors.join(), /una sola chiave/)
+  assert.match(normalizeHelper({ input_boolean: { icon: 'mdi:x' } }).errors.join(), /name/)
+  const n = normalizeHelper({ input_number: { name: 'Soglia luce', min: '10', max: 500, id: 'x' } })
+  assert.deepEqual(n.config, { name: 'Soglia luce', min: 10, max: 500, step: 1, mode: 'slider' })
+  assert.ok(n.fixes.some((f) => f.includes('id')))
+  assert.match(normalizeHelper({ input_number: { name: 'x', min: 5, max: 5 } }).errors.join(), /minore/)
+  const sel = normalizeHelper({ input_select: { name: 'Modo', options: ['Normale', 2] } })
+  assert.deepEqual(sel.config!.options, ['Normale', '2'])
+  assert.match(normalizeHelper({ input_select: { name: 'Modo', options: ['a', 'a'] } }).errors.join(), /doppioni/)
+  assert.match(normalizeHelper({ input_select: { name: 'Modo', options: ['a'], initial: 'b' } }).errors.join(), /initial/)
+  assert.match(normalizeHelper({ input_datetime: { name: 'Sveglia' } }).errors.join(), /has_date/)
+  assert.equal(normalizeHelper({ timer: { name: 'Timer', duration: 300 } }).config!.duration, '0:05:00')
+  assert.match(normalizeHelper({ schedule: { name: 'Orari', monday: [{ from: '08:00', to: '12:00' }, { from: '11:00', to: '13:00' }] } }).errors.join(), /sovrappongono/)
+  assert.deepEqual(normalizeHelper({ schedule: { name: 'Orari', monday: [{ from: '08:00', to: '12:00' }] } }).config!.monday, [{ from: '08:00:00', to: '12:00:00' }])
+  assert.match(normalizeHelper({ counter: { name: 'Caffè', minimum: 5, maximum: 1 } }).errors.join(), /minimum/)
+})
+
+const SCRIPT_YAML = `alias: Attiva ospiti
+description: Accende la modalità ospiti e la lampada
+sequence:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.modalita_ospiti
+  - action: light.turn_on
+    target:
+      entity_id: light.lampada_arco
+`
+const HELPER_YAML = `input_boolean:
+  name: Modalità ospiti
+  icon: mdi:account-group
+`
+const AUTO_YAML = `alias: Ospiti la sera
+description: Al tramonto, con la modalità ospiti attiva, esegue lo script
+triggers:
+  - trigger: state
+    entity_id: input_boolean.modalita_ospiti
+    to: "on"
+actions:
+  - action: script.attiva_ospiti
+`
+
+test('script nuovo: chiave dall\'alias, categoria "Claude" degli script, Annulla lo elimina', async () => {
+  const t = await setup()
+  try {
+    const yaml = SCRIPT_YAML.replace(/  - action: input_boolean[\s\S]*?modalita_ospiti\n/, '')
+    const p = await t.service.proposeParts({ elementi: [{ tipo: 'script', yaml }], spiegazione: 'Accende la lampada.' }, t.call)
+    assert.equal(p.ok, true, p.ok ? '' : p.errors.join())
+    if (!p.ok) return
+    const part = p.draft.parts[0]!
+    assert.deepEqual([part.object, part.kind, part.key, part.entityId], ['script', 'create', 'attiva_ospiti', 'script.attiva_ospiti'])
+    assert.ok(p.draft.checks.some((c) => c.label === 'Nomi liberi' && c.detail === 'script.attiva_ospiti'))
+    const vc = t.ha.calls.filter((c) => c.type === 'validate_config').at(-1)!
+    assert.ok(vc.actions && !('triggers' in vc), 'per gli script si validano solo le azioni')
+
+    const d = await t.service.apply(p.draft.id, { enabled: true, confirmCritical: false, by: 'Demo' })
+    assert.equal(d.parts[0]!.applied!.entityId, 'script.attiva_ospiti')
+    assert.equal(t.writer.scripts.get('attiva_ospiti')!.alias, 'Attiva ospiti')
+    assert.equal(t.writer.entityCategory.get('script.attiva_ospiti'), 'cat_script_claude')
+    const ev = (await t.conversations.get('cprova00000001'))!.lines.filter((l) => l.type === 'event')
+    assert.match((ev[0] as any).text, /creato lo script "Attiva ospiti" \(script\.attiva_ospiti\)/)
+    assert.equal((await t.store.history())[0]!.object, 'script')
+
+    // Un secondo script con lo stesso alias: chiave occupata.
+    const again = await t.service.proposeParts({ elementi: [{ tipo: 'script', yaml }], spiegazione: 'x' }, t.call)
+    assert.equal(again.ok, false)
+    if (!again.ok) assert.match(again.errors.join(), /Esiste già uno script con chiave attiva_ospiti/)
+
+    await t.service.undo(p.draft.id, { force: false, by: 'Demo' })
+    assert.equal(t.writer.scripts.has('attiva_ospiti'), false)
+    assert.equal(t.states.has('script.attiva_ospiti'), false)
+  } finally {
+    await rm(t.dir, { recursive: true, force: true })
+  }
+})
+
+test('script esistente: modifica con diff, conflitto, script fuori da scripts.yaml in sola lettura', async () => {
+  const t = await setup({ scripts: { notte: { alias: 'Notte', sequence: [{ action: 'light.turn_off', target: { entity_id: 'light.lampada_arco' } }], mode: 'single' } } })
+  try {
+    const yaml = toYaml({ alias: 'Notte', description: 'Spegne tutto', sequence: [{ action: 'light.turn_off', target: { entity_id: 'light.lampada_arco' } }], mode: 'restart' })
+    const p = await t.service.proposeParts({ elementi: [{ tipo: 'script', yaml, sostituisce: 'script.notte' }], spiegazione: 'x' }, t.call)
+    assert.equal(p.ok, true, p.ok ? '' : p.errors.join())
+    if (!p.ok) return
+    assert.ok(p.draft.parts[0]!.diff!.some((l) => l.op === '+' && l.line === 'mode: restart'))
+    t.writer.externalScriptEdit('notte', { icon: 'mdi:weather-night' })
+    await assert.rejects(t.service.apply(p.draft.id, { enabled: true, confirmCritical: false, by: 'x' }), (e: unknown) => e instanceof DraftError && e.code === 'modificata_nel_frattempo')
+    const { icon: _icon, ...orig } = t.writer.scripts.get('notte')!
+    t.writer.scripts.set('notte', orig)
+    const d = await t.service.apply(p.draft.id, { enabled: true, confirmCritical: false, by: 'x' })
+    assert.equal(t.writer.scripts.get('notte')!.mode, 'restart')
+    assert.equal(t.writer.entityCategory.size, 0, 'nelle modifiche la categoria non si tocca')
+    assert.match(d.parts[0]!.applied!.backupFile!, /backups\/scripts\/notte\//)
+    await t.service.undo(p.draft.id, { force: false, by: 'x' })
+    assert.equal(t.writer.scripts.get('notte')!.mode, 'single')
+
+    const yamlOnly = await t.service.proposeParts({ elementi: [{ tipo: 'script', yaml, sostituisce: 'script.inesistente' }], spiegazione: 'x' }, t.call)
+    assert.equal(yamlOnly.ok, false)
+  } finally {
+    await rm(t.dir, { recursive: true, force: true })
+  }
+})
+
+test('helper: nuovo con nome libero, modifica con avviso su chi usa le opzioni tolte, YAML in sola lettura', async () => {
+  const t = await setup({ helpers: { input_select: { modalita_casa: { name: 'Modalità casa', options: ['Normale', 'Ospiti', 'Vacanza'], icon: 'mdi:home' } } } })
+  const call = t.ha.call.bind(t.ha)
+  t.ha.call = (async (msg: any) => {
+    if (msg.type === 'search/related' && msg.item_id === 'input_select.modalita_casa') return { automation: ['automation.luci_sera'] }
+    if (msg.type === 'automation/config' && msg.entity_id === 'automation.luci_sera') return { config: { ...AUTOMATION_CONFIG, conditions: [{ condition: 'state', entity_id: 'input_select.modalita_casa', state: 'Vacanza' }] } }
+    return call(msg)
+  }) as typeof t.ha.call
+  try {
+    const taken = await t.service.proposeParts({ elementi: [{ tipo: 'helper', yaml: 'input_boolean:\n  name: Ospiti\n' }], spiegazione: 'x' }, t.call)
+    assert.equal(taken.ok, false)
+    if (!taken.ok) assert.match(taken.errors.join(), /Esiste già input_boolean\.ospiti/)
+    const yamlHelper = await t.service.proposeParts({ elementi: [{ tipo: 'helper', yaml: 'input_boolean:\n  name: Ospiti presenti\n', sostituisce: 'input_boolean.ospiti' }], spiegazione: 'x' }, t.call)
+    assert.equal(yamlHelper.ok, false)
+    if (!yamlHelper.ok) assert.match(yamlHelper.errors.join(), /definito in YAML/)
+
+    const created = await t.service.proposeParts({ elementi: [{ tipo: 'helper', yaml: 'input_number:\n  name: Soglia luce\n  min: 0\n  max: 1000\n  unit_of_measurement: lx\n' }], spiegazione: 'Soglia regolabile.' }, t.call)
+    assert.equal(created.ok, true, created.ok ? '' : created.errors.join())
+    if (!created.ok) return
+    const cd = await t.service.apply(created.draft.id, { enabled: true, confirmCritical: false, by: 'x' })
+    assert.equal(cd.parts[0]!.applied!.entityId, 'input_number.soglia_luce')
+    assert.equal(t.writer.entityCategory.get('input_number.soglia_luce'), 'cat_helpers_claude')
+    assert.deepEqual(publicDraft(cd).parts[0], { object: 'helper', domain: 'input_number', kind: 'create', alias: 'Soglia luce', yaml: cd.parts[0]!.yaml, diff: null, entityId: 'input_number.soglia_luce', key: 'soglia_luce', enabled: null })
+
+    const p = await t.service.proposeParts(
+      { elementi: [{ tipo: 'helper', yaml: 'input_select:\n  name: Modalità casa\n  icon: mdi:home\n  options: [Normale, Ospiti]\n', sostituisce: 'input_select.modalita_casa' }], spiegazione: 'Tolgo Vacanza.' },
+      t.call,
+    )
+    assert.equal(p.ok, true, p.ok ? '' : p.errors.join())
+    if (!p.ok) return
+    assert.ok(p.draft.warnings.some((w) => /usato da automation\.luci_sera/.test(w)))
+    assert.ok(p.draft.warnings.some((w) => /automation\.luci_sera usa l'opzione "Vacanza"/.test(w)))
+    assert.ok(p.draft.parts[0]!.diff!.some((l) => l.op === '-' && l.line.includes('Vacanza')))
+    await t.service.apply(p.draft.id, { enabled: true, confirmCritical: false, by: 'x' })
+    assert.deepEqual(t.writer.helpers.get('input_select')!.get('modalita_casa')!.options, ['Normale', 'Ospiti'])
+    await t.service.undo(p.draft.id, { force: false, by: 'x' })
+    assert.deepEqual(t.writer.helpers.get('input_select')!.get('modalita_casa')!.options, ['Normale', 'Ospiti', 'Vacanza'])
+  } finally {
+    await rm(t.dir, { recursive: true, force: true })
+  }
+})
+
+test('pacchetto: helper + script + automazione con un tap, nell\'ordine giusto, Annulla tutto al contrario', async () => {
+  const t = await setup()
+  try {
+    // L'automazione arriva per prima: il server riordina (helper, script, automazione).
+    const p = await t.service.proposeParts(
+      { elementi: [{ tipo: 'automazione', yaml: AUTO_YAML }, { tipo: 'script', yaml: SCRIPT_YAML }, { tipo: 'helper', yaml: HELPER_YAML }], spiegazione: 'Modalità ospiti completa.' },
+      t.call,
+    )
+    assert.equal(p.ok, true, p.ok ? '' : p.errors.join())
+    if (!p.ok) return
+    assert.deepEqual(p.draft.parts.map((x) => x.object), ['helper', 'script', 'automation'])
+    assert.ok(p.draft.checks.some((c) => c.label === 'Nomi liberi' && c.detail === 'input_boolean.modalita_ospiti, script.attiva_ospiti'))
+    assert.equal(t.writer.calls.filter((c) => /^(save|saveScript|createHelper) /.test(c)).length, 0, 'proporre non scrive nulla')
+
+    const d = await t.service.apply(p.draft.id, { enabled: false, confirmCritical: false, by: 'Demo' })
+    assert.deepEqual(d.parts.map((x) => x.applied!.entityId), ['input_boolean.modalita_ospiti', 'script.attiva_ospiti', 'automation.ospiti_la_sera'])
+    const order = t.writer.calls.filter((c) => /^(save |saveScript|createHelper)/.test(c))
+    assert.deepEqual(order.map((c) => c.split(' ')[0]), ['createHelper', 'saveScript', 'save'])
+    assert.equal(t.states.get('automation.ospiti_la_sera')!.state, 'off', 'solo l\'automazione creata disattivata')
+    assert.equal(d.parts[2]!.applied!.enabled, false)
+    const ev = (await t.conversations.get('cprova00000001'))!.lines.filter((l) => l.type === 'event')
+    assert.match((ev[0] as any).text, /input_boolean\.modalita_ospiti.*script\.attiva_ospiti.*automation\.ospiti_la_sera.*disattivata/)
+    assert.equal((await t.store.history()).filter((h) => h.action === 'creata').length, 3)
+    const pub = publicDraft(d)
+    assert.equal(pub.alias, 'Ospiti la sera')
+    assert.equal(pub.applied!.entityId, 'automation.ospiti_la_sera')
+
+    await t.service.undo(p.draft.id, { force: false, by: 'Demo' })
+    assert.equal(t.writer.files.size, 1)
+    assert.equal(t.writer.scripts.size, 0)
+    assert.equal(t.writer.helpers.get('input_boolean')!.size, 0)
+    const removed = t.writer.calls.filter((c) => /^remove/.test(c)).map((c) => c.split(' ')[0])
+    assert.deepEqual(removed, ['remove', 'removeScript', 'removeHelper'], 'prima chi usa, poi ciò che è usato')
+  } finally {
+    await rm(t.dir, { recursive: true, force: true })
+  }
+})
+
+test('pacchetto: se una parte viene rifiutata, quelle già scritte tornano indietro', async () => {
+  const t = await setup()
+  try {
+    const p = await t.service.proposeParts(
+      { elementi: [{ tipo: 'helper', yaml: HELPER_YAML }, { tipo: 'script', yaml: SCRIPT_YAML }, { tipo: 'automazione', yaml: AUTO_YAML.replace('description: Al', 'description: RIFIUTA Al') }], spiegazione: 'x' },
+      t.call,
+    )
+    assert.equal(p.ok, true, p.ok ? '' : p.errors.join())
+    if (!p.ok) return
+    await assert.rejects(t.service.apply(p.draft.id, { enabled: true, confirmCritical: false, by: 'x' }), (e: unknown) => e instanceof DraftError && e.code === 'scrittura_rifiutata' && /già scritte sono state annullate/.test(e.message))
+    assert.equal(t.writer.scripts.size, 0)
+    assert.equal(t.writer.helpers.get('input_boolean')!.size, 0)
+    assert.equal(t.states.has('input_boolean.modalita_ospiti'), false)
+    const d = t.store.get(p.draft.id)!
+    assert.equal(d.status, 'pending')
+    assert.ok(d.parts.every((x) => !x.applied))
+    assert.equal((await t.store.history()).filter((h) => h.action === 'rollback_automatico').length, 2)
+  } finally {
+    await rm(t.dir, { recursive: true, force: true })
+  }
+})
+
+test('riferimenti a parti assenti: errore con gli entity_id che la bozza crea davvero', async () => {
+  const t = await setup()
+  try {
+    const p = await t.service.proposeParts(
+      { elementi: [{ tipo: 'helper', yaml: HELPER_YAML }, { tipo: 'automazione', yaml: AUTO_YAML.replace(/input_boolean\.modalita_ospiti/, 'input_boolean.ospiti_modalita').replace('script.attiva_ospiti', 'light.turn_on') }], spiegazione: 'x' },
+      t.call,
+    )
+    assert.equal(p.ok, false)
+    if (!p.ok) {
+      assert.match(p.errors.join('\n'), /Automazione "Ospiti la sera": L'entità input_boolean\.ospiti_modalita non esiste/)
+      assert.match(p.errors.join('\n'), /Nella bozza vengono creati: input_boolean\.modalita_ospiti/)
+    }
+    const dup = await t.service.proposeParts({ elementi: [{ tipo: 'helper', yaml: HELPER_YAML }, { tipo: 'helper', yaml: HELPER_YAML }], spiegazione: 'x' }, t.call)
+    assert.equal(dup.ok, false)
+  } finally {
+    await rm(t.dir, { recursive: true, force: true })
+  }
+})
+
+test('bozze salvate fino alla 0.7: convertite al caricamento, ancora annullabili', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'assistente-vecchie-'))
+  try {
+    await mkdir(join(dir, 'drafts'), { recursive: true })
+    const legacy = {
+      id: 'dlegacy00001', conversationId: 'c1', toolUseId: 'tu_x', createdAt: '2026-10-01T10:00:00.000Z', status: 'applied', kind: 'create', alias: 'Vecchia',
+      explanation: 'x', config: { alias: 'Vecchia' }, yaml: 'alias: Vecchia\n', fixes: [], warnings: [], checks: [], critical: [],
+      applied: { at: '2026-10-01T10:01:00.000Z', by: 'Demo', automationId: '1759312860000', entityId: 'automation.vecchia', enabled: true, writtenHash: 'h', backupFile: null },
+    }
+    await writeFile(join(dir, 'drafts', 'dlegacy00001.json'), JSON.stringify(legacy))
+    const store = new DraftStore(dir)
+    await store.load()
+    const d = store.get('dlegacy00001')!
+    assert.deepEqual(d.parts[0]!.applied, { key: '1759312860000', entityId: 'automation.vecchia', enabled: true, writtenHash: 'h', backupFile: null })
+    assert.deepEqual(d.applied, { at: '2026-10-01T10:01:00.000Z', by: 'Demo' })
+    assert.equal(publicDraft(d).applied!.automationId, '1759312860000')
+    assert.equal((d as any).kind, undefined)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test('leggi_helper e leggi_script: configurazione, modificabilità, chi li usa', async () => {
+  const t = await setup({ scripts: { notte: { alias: 'Notte', sequence: [{ action: 'light.turn_off' }] } }, helpers: { input_number: { soglia: { name: 'Soglia', min: 0, max: 100, step: 1, mode: 'slider' } } } })
+  try {
+    const ctx = { ha: t.ha, consents: () => DEFAULT_CONSENTS, now: () => new Date('2026-10-14T12:00:00Z'), drafts: t.service }
+    const h = JSON.parse((await executeTool('leggi_helper', { entity_id: 'input_number.soglia' }, ctx)).content)
+    assert.equal(h.modificabile, true)
+    assert.deepEqual(h.configurazione, { name: 'Soglia', min: 0, max: 100, step: 1, mode: 'slider' })
+    const y = JSON.parse((await executeTool('leggi_helper', { entity_id: 'input_boolean.ospiti' }, ctx)).content)
+    assert.equal(y.modificabile, false)
+    assert.match(y.motivo, /YAML/)
+    const notHelper = await executeTool('leggi_helper', { entity_id: 'light.lampada_arco' }, ctx)
+    assert.equal(notHelper.isError, true)
+    const s = JSON.parse((await executeTool('leggi_script', { script: 'notte' }, ctx)).content)
+    assert.equal(s.entity_id, 'script.notte')
+    assert.equal(s.chiave, 'notte')
+    assert.equal(s.modificabile, true)
+  } finally {
+    await rm(t.dir, { recursive: true, force: true })
+  }
+})
+
+test('proponi_automazione resta eseguibile per le chat aperte prima della 0.8', async () => {
+  const t = await setup()
+  try {
+    const ctx = { ha: t.ha, consents: () => DEFAULT_CONSENTS, now: () => new Date('2026-10-14T12:00:00Z'), drafts: t.service, call: t.call }
+    const r = await executeTool('proponi_automazione', { yaml: GOOD, spiegazione: 'x' }, ctx)
+    assert.equal(r.isError, false, r.content)
+    assert.match(JSON.parse(r.content).tipo, /nuova automazione/)
+    const b = await executeTool('proponi_bozza', { elementi: [{ tipo: 'helper', yaml: 'input_boolean:\n  name: Ospiti presenti\n' }], spiegazione: 'x' }, { ...ctx, call: { ...t.call, toolUseId: 'tu_2' } })
+    assert.equal(b.isError, false, b.content)
+    assert.deepEqual(JSON.parse(b.content).elementi, [{ tipo: 'helper input_boolean', azione: 'creazione', nome: 'Ospiti presenti', entity_id: 'input_boolean.ospiti_presenti' }])
   } finally {
     await rm(t.dir, { recursive: true, force: true })
   }

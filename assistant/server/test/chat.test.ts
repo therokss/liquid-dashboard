@@ -174,13 +174,13 @@ test('chat: eventi riascoltabili da Last-Event-ID dopo una disconnessione', asyn
   }
 })
 
-test('chat + bozze: proponi_automazione crea la scheda, l\'evento arriva a Claude al turno dopo', async () => {
+test('chat + bozze: proponi_bozza crea la scheda, l\'evento arriva a Claude al turno dopo', async () => {
   const { DraftStore } = await import('../src/drafts/store.ts')
   const { DraftService } = await import('../src/drafts/service.ts')
   const { fakeWriter } = await import('./fakeWriter.ts')
   const YAML = 'alias: Luce ospiti\ndescription: Accende la lampada quando arrivano ospiti\ntriggers:\n  - trigger: state\n    entity_id: input_boolean.ospiti\n    to: "on"\nactions:\n  - action: light.turn_on\n    target:\n      entity_id: light.lampada_arco\n'
   const t = await setup([
-    msg([toolUse('tu_bozza', 'proponi_automazione', { yaml: YAML, spiegazione: 'Accende la lampada per gli ospiti.' })], 'tool_use'),
+    msg([toolUse('tu_bozza', 'proponi_bozza', { elementi: [{ tipo: 'automazione', yaml: YAML }], spiegazione: 'Accende la lampada per gli ospiti.' })], 'tool_use'),
     msg([text('Ecco la bozza: controllala nella scheda.')], 'end_turn'),
     msg([text('Perfetto, ora è attiva.')], 'end_turn'),
     msg([text('Prego!')], 'end_turn'),
@@ -193,6 +193,8 @@ test('chat + bozze: proponi_automazione crea la scheda, l\'evento arriva a Claud
     const service = new DraftService({ store: drafts, ha, writer, conversations: t.store, pollMs: 5, pollTimeoutMs: 1_000 })
     const chat = new ChatService({ ...(t.chat as any).deps, drafts: service })
     const { id } = await chat.create('admin')
+    const tools = (await t.store.get(id))!.header.tools as Array<{ name: string }>
+    assert.ok(tools.some((x) => x.name === 'proponi_bozza') && !tools.some((x) => x.name === 'proponi_automazione'), 'le chat nuove usano proponi_bozza')
     await chat.send(id, 'Accendi la lampada quando attivo ospiti')
     await collect(chat, id)
     const [draft] = drafts.byConversation(id)
