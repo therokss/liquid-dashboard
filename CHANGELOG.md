@@ -3,6 +3,18 @@
 Tutte le modifiche rilevanti a **Liquid Dashboard**. Formato ispirato a
 [Keep a Changelog](https://keepachangelog.com/it/1.1.0/).
 
+## [1.48.6] — 2026-11-04
+### Aggiunto
+- **Prossime raccolte dei rifiuti**: tocca il widget *Rifiuti* nella Home per aprire il
+  calendario delle prossime 4 settimane. Per ogni giorno trovi cosa passa, con "Esponi
+  stasera" evidenziato la sera prima. Sotto, per ogni tipo di rifiuto, ci sono i giorni, la
+  frequenza (ogni settimana, ogni 2 settimane…) e la prossima data.
+
+### Corretto
+- Nel widget *Rifiuti* il sottotitolo usciva con tutte le iniziali maiuscole ("Domani Passa
+  La Raccolta").
+- I nomi dei rifiuti e delle frequenze sono tradotti anche in inglese e spagnolo.
+
 ## [1.48.5] — 2026-11-02
 ### Corretto
 - **Pulsante Assistente Claude sulle dashboard personalizzate**: sugli schermi a cui hai

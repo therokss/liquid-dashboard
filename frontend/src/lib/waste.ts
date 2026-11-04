@@ -50,3 +50,36 @@ export function isCollectionDay(date: Date, days: number[], interval: number, an
   const weeks = Math.round((w.getTime() - a.getTime()) / (7 * 86400000))
   return (((weeks % interval) + interval) % interval) === 0
 }
+
+export interface Collection {
+  date: Date
+  diff: number // giorni da oggi (0 = oggi)
+  types: WasteType[]
+}
+
+// Raccolte dei prossimi `days` giorni (oggi compreso), raggruppate per data
+export function upcomingCollections(
+  schedule: Record<string, number[]>,
+  intervals: Record<string, number>,
+  anchors: Record<string, string>,
+  days: number,
+): Collection[] {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const out: Collection[] = []
+  for (let i = 0; i < days; i++) {
+    const d = new Date(today)
+    d.setDate(d.getDate() + i)
+    const types = WASTE_TYPES.filter((t) => {
+      const ds = schedule[t.id] ?? []
+      return ds.length > 0 && isCollectionDay(d, ds, intervals[t.id] ?? 1, anchors[t.id])
+    })
+    if (types.length) out.push({ date: d, diff: i, types })
+  }
+  return out
+}
+
+// Nome del giorno della settimana nella lingua indicata (0 = Domenica)
+export function weekdayName(day: number, locale: string, style: 'long' | 'short' = 'short'): string {
+  return new Date(2025, 0, 5 + day).toLocaleDateString(locale, { weekday: style }) // 5/1/2025 è domenica
+}
